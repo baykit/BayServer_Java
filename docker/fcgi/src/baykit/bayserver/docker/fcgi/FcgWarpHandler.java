@@ -1,0 +1,340 @@
+package baykit.bayserver.docker.fcgi;
+
+import baykit.bayserver.BayLog;
+import baykit.bayserver.BayServer;
+import baykit.bayserver.Sink;
+import baykit.bayserver.agent.NextSocketAction;
+import baykit.bayserver.protocol.*;
+import baykit.bayserver.watercraft.Ship;
+import baykit.bayserver.docker.warp.WarpShip;
+import baykit.bayserver.tour.Tour;
+import baykit.bayserver.docker.fcgi.command.*;
+import baykit.bayserver.docker.warp.*;
+import baykit.bayserver.util.*;
+
+import java.io.CharArrayWriter;
+import java.io.IOException;
+import java.util.StringTokenizer;
+
+import static baykit.bayserver.agent.NextSocketAction.*;
+import static baykit.bayserver.docker.fcgi.FcgWarpHandler.CommandState.ReadContent;
+import static baykit.bayserver.docker.fcgi.FcgWarpHandler.CommandState.ReadHeader;
+
+/**
+ * AJP Protocol
+ * https://tomcat.apache.org/connectors-doc/ajp/ajpv13a.html
+ */
+public class FcgWarpHandler extends FcgProtocolHandler implements WarpHandler {
+
+    static class WarpProtocolHandlerFactory implements ProtocolHandlerFactory<FcgCommand, FcgPacket, FcgType> {
+
+        @Override
+        public ProtocolHandler<FcgCommand, FcgPacket, FcgType> createProtocolHandler(
+                PacketStore<FcgPacket, FcgType> pktStore) {
+            return new FcgWarpHandler(pktStore);
+        }
+    }
+
+    int curWarpId;
+
+    public FcgWarpHandler(PacketStore<FcgPacket, FcgType> pktStore) {
+        super(pktStore, false);
+        resetState();
+    }
+
+    enum CommandState {
+        ReadHeader,
+        ReadContent,
+    }
+
+    CommandState state;
+    CharArrayWriter lineBuf = new CharArrayWriter();
+
+    // for read header/contents
+    int pos;
+    int last;
+    byte[] data;
+
+    /////////////////////////////////////////////////////////////////////////////////
+    // Implements Ship
+    /////////////////////////////////////////////////////////////////////////////////
+    @Override
+    public void reset() {
+        super.reset();
+        resetState();
+        lineBuf.reset();
+        pos = 0;
+        last = 0;
+        data = null;
+        curWarpId++;
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////
+    // Implements WarpShip
+    /////////////////////////////////////////////////////////////////////////////////
+    @Override
+    public synchronized int nextWarpId() {
+        return ++curWarpId;
+    }
+
+    @Override
+    public WarpData newWarpData(int warpId){
+        return new WarpData(ship(), warpId);
+    }
+
+    @Override
+    public void postWarpHeaders(Tour tur) throws IOException {
+        sendBeginReq(tur);
+        sendParams(tur);
+    }
+
+    @Override
+    public void postWarpContents(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
+        sendStdIn(tur, buf, start, len, lis);
+    }
+
+    @Override
+    public void postWarpEnd(Tour tur) throws IOException {
+        sendStdIn(tur, null, 0, 0, null);
+    }
+
+    @Override
+    public void verifyProtocol(String protocol) throws IOException {
+    }
+
+
+    /////////////////////////////////////////////////////////////////////////////////
+    // Implement FcgCommandHandler
+    /////////////////////////////////////////////////////////////////////////////////
+    @Override
+    public NextSocketAction handleBeginRequest(CmdBeginRequest cmd) throws IOException {
+        throw new ProtocolException("Invalid FCGI command: " + cmd.type);
+    }
+
+    @Override
+    public NextSocketAction handleEndRequest(CmdEndRequest cmd) throws IOException {
+        Tour tur = ship().getTour(cmd.reqId);
+        endReqContent(tur);
+        return Continue;
+    }
+
+    @Override
+    public NextSocketAction handleParams(CmdParams cmd) throws IOException {
+        throw new ProtocolException("Invalid FCGI command: " + cmd.type);
+    }
+
+    @Override
+    public NextSocketAction handleStdErr(CmdStdErr cmd) throws IOException {
+        String msg = new String(cmd.data, cmd.start, cmd.length);
+        BayLog.error(this + " server error:" + msg);
+        return Continue;
+    }
+
+    @Override
+    public NextSocketAction handleStdIn(CmdStdIn cmd) throws IOException {
+        throw new ProtocolException("Invalid FCGI command: " + cmd.type);
+    }
+
+    @Override
+    public NextSocketAction handleStdOut(CmdStdOut cmd) throws IOException {
+        Tour tur = ship().getTour(cmd.reqId);
+        if(tur == null)
+            throw new Sink("Tour not found");
+
+        if (cmd.length == 0) {
+            // stdout end
+            resetState();
+            return Continue;
+        }
+
+        data = cmd.data;
+        pos = cmd.start;
+        last = cmd.start + cmd.length;
+
+        if (state == ReadHeader)
+            readHeader(tur);
+
+        if (pos < last) {
+            if (state == ReadContent) {
+                boolean available = tur.res.sendContent(Tour.TOUR_ID_NOCHECK, data, pos, last - pos);
+                if(!available)
+                    return Suspend;
+            }
+        }
+
+        return Continue;
+    }
+
+
+    /////////////////////////////////////////////////////////////////////////////////
+    // Custom methods
+    /////////////////////////////////////////////////////////////////////////////////
+    private void readHeader(Tour tur) throws IOException {
+        WarpData wdat = WarpData.get(tur);
+
+        boolean headerFinished = parseHeader(wdat.resHeaders);
+        if (headerFinished) {
+
+            wdat.resHeaders.copyTo(tur.res.headers);
+
+            // Check HTTP Status from headers
+            String status = wdat.resHeaders.get(Headers.STATUS);
+            if (!StringUtil.empty(status)) {
+                StringTokenizer st = new StringTokenizer(status);
+                try {
+                    String code = st.nextToken();
+                    int stCode = Integer.parseInt(code);
+                    tur.res.headers.setStatus(stCode);
+                    tur.res.headers.remove(Headers.STATUS);
+                } catch (Exception e) {
+                    BayLog.error(e);
+                    throw new ProtocolException("warp: Status header of server is invalid: " + status);
+                }
+            }
+
+            Ship sip = ship();
+
+            BayLog.debug(sip + " fcgi: read header status=" + status + " contlen=" + wdat.resHeaders.contentLength());
+            int sid = sip.id();
+            tur.res.setConsumeListener((len, resume) -> {
+                if(resume) {
+                    sip.resume(sid);
+                }
+            });
+
+            tur.res.sendHeaders(Tour.TOUR_ID_NOCHECK);
+            changeState(ReadContent);
+        }
+    }
+
+    private boolean parseHeader(Headers headers) throws IOException {
+
+        while (true) {
+            if (pos == last) {
+                // no byte data
+                break;
+            }
+
+            int c = data[pos++];
+
+            if (c == '\r')
+                continue;
+            else if (c == '\n') {
+                String line = lineBuf.toString();
+                if (line.length() == 0)
+                    return true;
+                int colonPos = line.indexOf(':');
+                if (colonPos < 0)
+                    throw new ProtocolException("fcgi: Header line of server is invalid: " + line);
+                else {
+                    String name = null, value = null;
+                    int p;
+                    for (p = colonPos - 1; p >= 0; p--) {
+                        // trimming header name
+                        if (!Character.isWhitespace(line.charAt(p))) {
+                            name = line.substring(0, p + 1);
+                            break;
+                        }
+                    }
+                    for (p = colonPos + 1; p < line.length(); p++) {
+                        // trimming header value
+                        if (!Character.isWhitespace(line.charAt(p))) {
+                            value = line.substring(p);
+                            break;
+                        }
+                    }
+                    if (name == null || value == null)
+                        throw new ProtocolException("fcgi: Header line of server is invalid: " + line);
+                    headers.add(name, value);
+                    if (BayServer.harbor.traceHeader())
+                        BayLog.info("%s fcgi_warp: resHeader: %s=%s", ship(), name, value);
+                }
+                lineBuf.reset();
+            } else {
+                lineBuf.write(c);
+            }
+        }
+        return false;
+    }
+
+    private void endReqContent(Tour tur) throws IOException {
+        ship().endWarpTour(tur);
+        tur.res.endContent(Tour.TOUR_ID_NOCHECK);
+        resetState();
+    }
+
+    private void changeState(CommandState newState) {
+        state = newState;
+    }
+
+    void resetState() {
+        changeState(CommandState.ReadHeader);
+    }
+
+
+
+    private void sendStdIn(Tour tur, byte[] data, int ofs, int len, DataConsumeListener lis) throws IOException {
+        CmdStdIn cmd = new CmdStdIn(WarpData.get(tur).warpId, data, ofs, len);
+        commandPacker.post(ship, cmd, lis);
+    }
+
+    private void sendBeginReq(Tour tur) throws IOException {
+        CmdBeginRequest cmd = new CmdBeginRequest(WarpData.get(tur).warpId);
+        cmd.role = CmdBeginRequest.FCGI_RESPONDER;
+        cmd.keepConn = true;
+        commandPacker.post(ship, cmd);
+    }
+
+
+    private void sendParams(Tour tur) throws IOException {
+        String scriptBase =  ((FcgWarpDocker) ship().docker()).scriptBase;
+        if(scriptBase == null)
+            scriptBase = tur.town.location();
+
+        if(StringUtil.empty(scriptBase)) {
+            throw new IOException(tur.town + " scriptBase of fcgi docker or location of town is not specified.");
+        }
+
+        String docRoot = ((FcgWarpDocker) ship().docker()).docRoot;
+        if(docRoot == null)
+            docRoot = tur.town.location();
+
+        if(StringUtil.empty(docRoot)) {
+            throw new IOException(tur.town + " docRoot of fcgi docker or location of town is not specified.");
+        }
+
+        int warpId = WarpData.get(tur).warpId;
+        final CmdParams cmd = new CmdParams(warpId);
+
+        final String scriptFname[] = new String[1];
+        CGIUtil.getEnv(tur.town.name(), docRoot, scriptBase, tur, (name, value) -> {
+            if(name.equals(CGIUtil.SCRIPT_FILENAME))
+                scriptFname[0] = value;
+            else
+                cmd.addParam(name, value);
+        });
+
+        scriptFname[0] = "proxy:fcgi://" +  ((FcgWarpDocker) ship().docker()).host + ":" +  ((FcgWarpDocker) ship().docker()).port + scriptFname[0];
+        cmd.addParam(CGIUtil.SCRIPT_FILENAME, scriptFname[0]);
+
+        cmd.addParam(FcgParams.CONTEXT_PREFIX, "");
+        cmd.addParam(FcgParams.UNIQUE_ID, Long.toString(System.currentTimeMillis()));
+        //cmd.addParam(FcgParams.X_FORWARDED_FOR, tour.remoteAddress);
+        //cmd.addParam(FcgParams.X_FORRARDED_PROTO, tour.isSecure ? "https" : "http");
+        //cmd.addParam(FcgParams.X_FORWARDED_PORT, Integer.toString(tour.serverPort));
+
+        if(BayServer.harbor.traceHeader()) {
+            cmd.params.forEach( kv ->
+                    BayLog.info("%s fcgi_warp: env: %s=%s", ship(), kv[0], kv[1]));
+        }
+
+        commandPacker.post(ship, cmd);
+
+        CmdParams cmdParamsEnd = new CmdParams(warpId);
+        commandPacker.post(ship, cmdParamsEnd);
+    }
+
+    WarpShip ship() {
+        return (WarpShip) ship;
+    }
+}

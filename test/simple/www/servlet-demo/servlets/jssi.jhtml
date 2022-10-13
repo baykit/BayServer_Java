@@ -1,0 +1,38 @@
+<html>
+<body bgcolor="#eeeeff">
+
+<CENTER>
+<H1><I>JSSI Test</I></H1>
+<HR>
+</CENTER>
+
+<UL>
+<LI><H2>Insert <i><a href="servlet/Hello">Hello</a></i> Servlet</H2>
+<BLOCKQUOTE>
+<!--- Inserted herer begin {-->
+<table border=5 cellpadding=20>
+<tr><td>
+<SERVLET CODE=Hello.class>
+</SERVLET>
+<!--- } end -->
+</td></tr>
+</table>
+</BLOCKQUOTE>
+
+
+<LI><H2>Insert <i><a href="servlet/InitParams">InitParams</a></i> servlet</H2>
+<BLOCKQUOTE>
+<table border=5 cellpadding=20>
+<tr><td>
+<!--- Inserted herer begin {-->
+<SERVLET CODE=InitParams.class>
+</SERVLET>
+<!--- } end -->
+</td></tr>
+</table>
+</BLOCKQUOTE>
+
+</UL>
+
+</body>
+</html>
