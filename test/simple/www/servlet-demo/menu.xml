@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="Shift_JIS"?>
+<?xml-stylesheet href="menu.xsl" type="text/xsl"?>
+<menu>
+  <group title="Servlet Demos">
+     <item title="Query Parameters" href="servlets/showquery.html"/>
+     <item title="Counter" href="servlet/Counter"/>
+     <item title="Init Parameter" href="servlet/InitParams"/>
+     <item title="Session" href="servlet/Session"/>
+     <item title="Session(URL redirection)" href="servlet/Redirect1"/>
+  </group>
+ 
+  <group title="JSP Demos">
+     <item title="Hello" href="jsp/hello.jsp"/>
+     <item title="Snoop" href="jsp/snoop.jsp"/>
+     <item title="Bean" href="jsp/bean.jsp"/>
+     <item title="Cookie" href="jsp/cookie.jsp"/>
+  </group>
+
+  <group title="Include/Foward Demos">
+     <item title="Include" href="servlet/Include"/>
+     <item title="Servlet" href="servlet/Forward"/>
+  </group>
+
+  <group title="JNDI Demos">
+     <item title="DataSource" href="servlet/ResourceServlet"/>
+  </group>
+
+  <group title="Japanese Demos">
+     <item title="Hello(EUC)" href="jsp/helloja_euc.jsp"/>
+     <item title="Hello(SJIS)" href="jsp/helloja_sjis.jsp"/>
+  </group>
+
+</menu>
