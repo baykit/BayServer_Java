@@ -1,4 +1,4 @@
-# BayServer for PHP
+# BayServer for Java
 
 
 # 2.0.1
