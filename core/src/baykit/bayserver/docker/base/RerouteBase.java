@@ -8,6 +8,10 @@ import baykit.bayserver.docker.base.DockerBase;
 
 public abstract class RerouteBase extends DockerBase implements Reroute {
 
+    //////////////////////////////////////////////////////
+    // Implements Docker
+    //////////////////////////////////////////////////////
+
     @Override
     public void init(BcfElement elm, Docker parent) throws ConfigException {
         String name = elm.arg;
