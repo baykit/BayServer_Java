@@ -146,7 +146,7 @@ public class BayServer {
         }
 
         if(mkpass != null) {
-            System.out.println(new MD5Password().encode(mkpass));
+            System.out.println(MD5Password.encode(mkpass));
             return;
         }
         
