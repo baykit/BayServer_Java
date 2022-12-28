@@ -191,7 +191,8 @@ public class InboundShip extends Ship {
             // Don't send peer any data. Do nothing
             BayLog.debug("%s Aborted or zombie tour. do nothing: %s state=%s", this, tur, tur.state);
             tur.changeState(chkId, Tour.TourState.ENDED);
-            lis.dataConsumed();
+            if(lis != null)
+                lis.dataConsumed();
             return;
         }
 
