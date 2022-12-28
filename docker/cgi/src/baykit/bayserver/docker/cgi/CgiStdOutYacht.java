@@ -151,13 +151,13 @@ public class CgiStdOutYacht extends Yacht {
     ////////////////////////////////////////////////////////////////////
     // Custom methods
     ////////////////////////////////////////////////////////////////////
-    public void init(Tour tur, Valve tp) {
+    public void init(Tour tur, Valve vv) {
         super.initYacht();
         this.tour = tur;
         this.tourId = tur.tourId;
         tur.res.setConsumeListener((len, resume) -> {
             if(resume) {
-                tp.openValve();
+                vv.openValve();
             }
         });
     }
