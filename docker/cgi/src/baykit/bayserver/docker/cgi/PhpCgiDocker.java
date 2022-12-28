@@ -12,6 +12,10 @@ public class PhpCgiDocker extends CgiDocker {
 
     public static final String PHP_SELF = "PHP_SELF";
 
+    //////////////////////////////////////////////////////
+    // Implements Docker
+    //////////////////////////////////////////////////////
+
     @Override
     public void init(BcfElement elm, Docker parent) throws ConfigException {
         super.init(elm, parent);
@@ -21,6 +25,10 @@ public class PhpCgiDocker extends CgiDocker {
 
         BayLog.info("PHP interpreter: " + interpreter);
     }
+
+    //////////////////////////////////////////////////////
+    // Implements CgiDocker
+    //////////////////////////////////////////////////////
 
     @Override
     protected Process createProcess(Map<String, String> env) throws IOException {
