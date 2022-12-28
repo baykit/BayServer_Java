@@ -9,7 +9,7 @@ import java.util.StringTokenizer;
 
 public class Groups {
 
-    public static class Member {
+    static class Member {
         String name;
         String digest;
 
@@ -21,7 +21,7 @@ public class Groups {
         public boolean validate(String password) {
             if(password == null)
                 return false;
-            String dig = new MD5Password().encode(password);
+            String dig = MD5Password.encode(password);
             return digest.equals(dig);
         }
     }
