@@ -20,6 +20,7 @@ import java.net.SocketAddress;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
+import java.util.Collection;
 
 public abstract class PortBase extends DockerBase implements Port {
 
@@ -31,7 +32,7 @@ public abstract class PortBase extends DockerBase implements Port {
     public Secure secureDocker;
     boolean anchored = true;
     ArrayList<String[]> additionalHeaders = new ArrayList<>();
-    public Cities cities = new Cities();
+    private Cities cities = new Cities();
 
     ///////////////////////////////////////////////////////////////////////
     // abstract methods
@@ -41,7 +42,7 @@ public abstract class PortBase extends DockerBase implements Port {
     abstract protected boolean supportUnanchored();
 
     ///////////////////////////////////////////////////////////////////////
-    // Implements DockerBase
+    // Implements Docker
     ///////////////////////////////////////////////////////////////////////
 
     @Override
@@ -105,6 +106,10 @@ public abstract class PortBase extends DockerBase implements Port {
                 throw new ConfigException(elm.fileName, elm.lineNo, BayMessage.get(Symbol.CFG_UDP_NOT_SUPPORTED));
         }
     }
+
+    ///////////////////////////////////////////////////////////////////////
+    // Implements DockerBase
+    ///////////////////////////////////////////////////////////////////////
 
     @Override
     public boolean initDocker(Docker dkr) throws ConfigException {
@@ -204,6 +209,11 @@ public abstract class PortBase extends DockerBase implements Port {
         for(Permission p : permissionList) {
             p.socketAdmitted(ch);
         }
+    }
+
+    @Override
+    public Collection<City> cities() {
+        return cities.cities();
     }
 
     @Override
