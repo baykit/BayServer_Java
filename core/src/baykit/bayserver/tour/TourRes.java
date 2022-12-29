@@ -202,7 +202,7 @@ public class TourRes implements Reusable {
 
 
     ////////////////////////////////////////////////////////////////////////////////
-    // Sending error methods
+    // Methods to sending error
     ////////////////////////////////////////////////////////////////////////////////
     public void sendHttpException(int checkId, HttpException e) throws IOException {
         if (e.status == HttpStatus.MOVED_TEMPORARILY || e.status == HttpStatus.MOVED_PERMANENTLY)
@@ -302,7 +302,8 @@ public class TourRes implements Reusable {
                 new SendFileTrain(tour, file).depart();
             }
         } catch (IOException e) {
-            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e, file.getPath());
+            BayLog.error(e);
+            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, file.getPath());
         }
     }
 

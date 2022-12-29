@@ -71,10 +71,12 @@ public class BayDockers {
             return c.getDeclaredConstructor().newInstance();
         }
         catch(InvocationTargetException e) {
-            throw new BayException(e.getTargetException());
+            BayLog.error(e);
+            throw new BayException(e.getMessage());
         }
         catch(Exception e) {
-            throw new BayException(e);
+            BayLog.error(e);
+            throw new BayException(e.getMessage());
         }
     }
 }

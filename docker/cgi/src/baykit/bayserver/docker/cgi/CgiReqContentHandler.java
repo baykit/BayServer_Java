@@ -66,7 +66,8 @@ public class CgiReqContentHandler implements ReqContentHandler {
             process = cgiDocker.createProcess(env);
             BayLog.debug("%s created process; %s", tour, process);
         } catch (IOException e) {
-            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e, "Cannot create process");
+            BayLog.error(e);
+            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Cannot create process");
         }
 
         stdOutClosed = false;

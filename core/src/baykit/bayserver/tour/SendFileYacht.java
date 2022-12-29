@@ -24,6 +24,19 @@ public class SendFileYacht extends Yacht {
         reset();
     }
 
+    public void init(Tour tur, File file, Valve tp) throws IOException{
+        super.initYacht();
+        this.tour = tur;
+        this.tourId = tur.tourId;
+        this.file = file;
+        this.fileLen = (int)file.length();
+        tur.res.setConsumeListener((len, resume) -> {
+            if(resume) {
+                tp.openValve();
+            }
+        });
+    }
+
     public String toString() {
         return "fyacht#" + yachtId + "/" + objectId + " tour=" + tour + " id=" + tourId;
     }
@@ -40,7 +53,7 @@ public class SendFileYacht extends Yacht {
     }
 
     ////////////////////////////////////////////////////////////////////
-    // Implements Yacht
+    // Implements DataListener
     ////////////////////////////////////////////////////////////////////
 
     @Override
@@ -76,20 +89,4 @@ public class SendFileYacht extends Yacht {
         throw new Sink();
     }
 
-
-    ////////////////////////////////////////////////////////////////////
-    // Custom methods
-    ////////////////////////////////////////////////////////////////////
-    public void init(Tour tur, File file, Valve tp) throws IOException{
-        super.initYacht();
-        this.tour = tur;
-        this.tourId = tur.tourId;
-        this.file = file;
-        this.fileLen = (int)file.length();
-        tur.res.setConsumeListener((len, resume) -> {
-            if(resume) {
-                tp.openValve();
-            }
-        });
-    }
 }

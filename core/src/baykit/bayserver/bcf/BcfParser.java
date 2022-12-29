@@ -1,5 +1,6 @@
 package baykit.bayserver.bcf;
 
+import baykit.bayserver.BayLog;
 import baykit.bayserver.BayMessage;
 import baykit.bayserver.BayServer;
 import baykit.bayserver.Symbol;
@@ -54,7 +55,8 @@ public class BcfParser {
             throw e;
         }
         catch(IOException e) {
-            throw new ParseException(file, lineNo, e);
+            BayLog.error(e);
+            throw new ParseException(file, lineNo, e.toString());
         }
         finally {
             if(br != null)
