@@ -85,7 +85,7 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
 
         } catch (IOException e) {
             BayLog.error(e);
-            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e);
+            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e.toString());
         }
     }
 
