@@ -7,7 +7,7 @@ import java.security.NoSuchAlgorithmException;
 
 public class MD5Password {
 
-    public String encode(String password) {
+    public static String encode(String password) {
 		MessageDigest md = null;
 		try {
 			md = MessageDigest.getInstance("MD5");

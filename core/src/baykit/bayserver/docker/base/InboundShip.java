@@ -191,7 +191,8 @@ public class InboundShip extends Ship {
             // Don't send peer any data. Do nothing
             BayLog.debug("%s Aborted or zombie tour. do nothing: %s state=%s", this, tur, tur.state);
             tur.changeState(chkId, Tour.TourState.ENDED);
-            lis.dataConsumed();
+            if(lis != null)
+                lis.dataConsumed();
             return;
         }
 
@@ -302,7 +303,7 @@ public class InboundShip extends Ship {
     // Custom methods
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
-    protected void sendErrorContent(int shipId, Tour tur, String content)
+    protected void sendErrorContent(int chkId, Tour tur, String content)
             throws IOException {
 
         // Get charset
@@ -325,10 +326,10 @@ public class InboundShip extends Ship {
             }
             tur.res.headers.setContentLength(bytes.length);
         }
-        sendHeaders(shipId, tur);
+        sendHeaders(chkId, tur);
 
         if (bytes != null)
-            sendResContent(shipId, tur, bytes, 0, bytes.length, null);
+            sendResContent(chkId, tur, bytes, 0, bytes.length, null);
 
         //ship.tourEnded();
     }

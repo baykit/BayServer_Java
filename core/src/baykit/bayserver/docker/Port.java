@@ -11,6 +11,8 @@ import java.net.SocketAddress;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
 
 public interface Port {
 
@@ -34,6 +36,8 @@ public interface Port {
 
     ArrayList<String[]> additionalHeaders();
 
+    Collection<City> cities();
+
     City findCity(String name);
 
     Transporter newTransporter(GrandAgent agent, SelectableChannel ch) throws IOException;
@@ -41,4 +45,5 @@ public interface Port {
     void returnProtocolHandler(GrandAgent agent, ProtocolHandler protoHnd);
 
     void returnShip(InboundShip ship);
+
 }
