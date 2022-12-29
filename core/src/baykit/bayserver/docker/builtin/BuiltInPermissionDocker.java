@@ -22,7 +22,7 @@ public class BuiltInPermissionDocker extends DockerBase implements Permission {
     
     ArrayList<Groups.Group> groups = new ArrayList<>();
 
-    private class CheckItem {
+    private static class CheckItem {
         PermissionMatcher matcher;
         boolean admit;
 

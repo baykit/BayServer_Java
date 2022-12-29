@@ -46,7 +46,7 @@ public class MemUsage {
         TourStore.getStore(agentId).printUsage(indent+1);
         BayServer.cities.cities().forEach(city -> printCityUsage(null, city, indent));
         BayServer.ports.forEach(port -> {
-            ((PortBase)port).cities.cities().forEach(city -> printCityUsage(port, city, indent));
+            port.cities().forEach(city -> printCityUsage(port, city, indent));
         });
     }
 

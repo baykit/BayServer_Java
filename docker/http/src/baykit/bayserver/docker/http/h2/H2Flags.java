@@ -1,8 +1,5 @@
 package baykit.bayserver.docker.http.h2;
 
-import java.util.EnumSet;
-import java.util.Set;
-
 public class H2Flags {
 
     public static final int FLAGS_NONE = 0x0;
@@ -24,7 +21,7 @@ public class H2Flags {
 
 
 
-    public boolean getFlag(int flag) {
+    public boolean hasFlag(int flag) {
         return (flags & flag) != 0;
     }
 
@@ -36,7 +33,7 @@ public class H2Flags {
     }
 
     public boolean ack() {
-        return getFlag(FLAGS_ACK);
+        return hasFlag(FLAGS_ACK);
     }
 
     public void setAck(boolean isAck) {
@@ -44,7 +41,7 @@ public class H2Flags {
     }
 
     public boolean endStream() {
-        return getFlag(FLAGS_END_STREAM);
+        return hasFlag(FLAGS_END_STREAM);
     }
 
     public void setEndStream(boolean isEndStream) {
@@ -52,7 +49,7 @@ public class H2Flags {
     }
 
     public boolean endHeaders() {
-        return getFlag(FLAGS_END_HEADERS);
+        return hasFlag(FLAGS_END_HEADERS);
     }
 
     public void setEndHeaders(boolean isEndHeaders) {
@@ -60,7 +57,7 @@ public class H2Flags {
     }
 
     public boolean padded() {
-        return getFlag(FLAGS_PADDED);
+        return hasFlag(FLAGS_PADDED);
     }
 
     public void setPadded(boolean isPadded) {
@@ -68,11 +65,11 @@ public class H2Flags {
     }
 
     public boolean priority() {
-        return getFlag(FLAGS_PRIORITY);
+        return hasFlag(FLAGS_PRIORITY);
     }
 
-    public void setPriority(boolean flag) {
-        setFlag(FLAGS_PRIORITY, flag);
+    public void setPriority(boolean isPriority) {
+        setFlag(FLAGS_PRIORITY, isPriority);
     }
 
     @Override
