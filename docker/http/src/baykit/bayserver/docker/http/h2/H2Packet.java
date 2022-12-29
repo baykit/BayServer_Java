@@ -167,6 +167,11 @@ public class H2Packet extends baykit.bayserver.protocol.Packet<H2Type> {
         super.reset();
     }
 
+    @Override
+    public String toString() {
+        return "H2Packet(" + type.name() + ") hlen=" + headerLen + " dlen=" + dataLen() + " stm=" + streamId + " flg=" + flags;
+    }
+
     public void packHeader() throws IOException {
         H2HeaderAccessor acc = newH2HeaderAccessor();
         acc.putInt24(dataLen());
@@ -199,8 +204,4 @@ public class H2Packet extends baykit.bayserver.protocol.Packet<H2Type> {
         return (excluded ? 1 : 0) << 31 | extractInt31(dep);
     }
 
-    @Override
-    public String toString() {
-        return "H2Packet(" + type.name() + ") hlen=" + headerLen + " dlen=" + dataLen() + " stm=" + streamId + " flg=" + flags;
-    }
 }
