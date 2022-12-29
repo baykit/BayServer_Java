@@ -37,9 +37,9 @@ public class BuiltInSecureDocker extends DockerBase implements Secure {
     public SSLContext sslctx;
     String appProtocols[];
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    // Implements DockerBase
-    ///////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////
+    // Implements Docker
+    //////////////////////////////////////////////////////
 
     @Override
     public void init(BcfElement elm, Docker parent) throws ConfigException {
@@ -60,6 +60,10 @@ public class BuiltInSecureDocker extends DockerBase implements Secure {
                     e);
         }
     }
+
+    //////////////////////////////////////////////////////
+    // Implements DockerBase
+    //////////////////////////////////////////////////////
 
     @Override
     public boolean initKeyVal(BcfKeyVal kv) throws ConfigException {
@@ -117,9 +121,9 @@ public class BuiltInSecureDocker extends DockerBase implements Secure {
         }
     }
 
-    /////////////////////////////////////////////////////////////////////////////
-    // Implements Secure                                                       //
-    /////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////
+    // Implements Secure
+    //////////////////////////////////////////////////////
 
     @Override
     public void setAppProtocols(String[] protocols) {
@@ -139,11 +143,9 @@ public class BuiltInSecureDocker extends DockerBase implements Secure {
     }
 
 
-    /////////////////////////////////////////////////////////////////////////////
-    // custom methods                                                         //
-    /////////////////////////////////////////////////////////////////////////////
-
-
+    //////////////////////////////////////////////////////
+    // Custom methods
+    //////////////////////////////////////////////////////
 
     public void initSSL() throws GeneralSecurityException, IOException {
         if(traceSSL)
@@ -205,13 +207,13 @@ public class BuiltInSecureDocker extends DockerBase implements Secure {
     /////////////////////////////////////////////////////////////////////////////
     // private methods                                                         //
     /////////////////////////////////////////////////////////////////////////////
-    private File getFilePath(String file_name) throws FileNotFoundException {
-        File file = new File(file_name);
+    private File getFilePath(String fileName) throws FileNotFoundException {
+        File file = new File(fileName);
         if (!file.isAbsolute())
-            file = new File(new File(BayServer.bservHome), file_name);
+            file = new File(new File(BayServer.bservHome), fileName);
 
         if (!file.isFile()) {
-            throw new FileNotFoundException(file_name);
+            throw new FileNotFoundException(fileName);
         }
         else
             return file;

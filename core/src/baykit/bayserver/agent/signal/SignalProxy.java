@@ -30,21 +30,6 @@ public class SignalProxy {
         return null;
     }
 
-    public Object createSignal(String sig) throws Exception {
-        Constructor m = signalClass.getDeclaredConstructor(String.class);
-        return m.newInstance(sig);
-    }
-
-    public Object createSignalHandler(SignalHandler handler) {
-        return Proxy.newProxyInstance(
-                signalHandlerClass.getClassLoader(),
-                new Class[]{signalHandlerClass},
-                (proxy, method, args) -> {
-                    handler.handle();
-                    return null;
-                });
-    }
-
 
     void register(String sig, SignalHandler handler) {
         try {
@@ -57,5 +42,21 @@ public class SignalProxy {
             BayLog.error(e);
         }
     }
+
+    private Object createSignal(String sig) throws Exception {
+        Constructor m = signalClass.getDeclaredConstructor(String.class);
+        return m.newInstance(sig);
+    }
+
+    private Object createSignalHandler(SignalHandler handler) {
+        return Proxy.newProxyInstance(
+                signalHandlerClass.getClassLoader(),
+                new Class[]{signalHandlerClass},
+                (proxy, method, args) -> {
+                    handler.handle();
+                    return null;
+                });
+    }
+
 
 }
