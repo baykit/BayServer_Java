@@ -28,10 +28,12 @@ public abstract class DockerBase implements Docker {
                 }
                 catch(NumberFormatException e) {
                     // Number property failed
-                    throw new ConfigException(kv.fileName, kv.lineNo, e, BayMessage.CFG_PARAMETER_IS_NOT_A_NUMBER(kv.key, kv.value));
+                    BayLog.error(e);
+                    throw new ConfigException(kv.fileName, kv.lineNo, BayMessage.CFG_PARAMETER_IS_NOT_A_NUMBER(kv.key, kv.value));
                 }
                 catch(Exception e) {
-                    throw new ConfigException(kv.fileName, kv.lineNo, e);
+                    BayLog.error(e);
+                    throw new ConfigException(kv.fileName, kv.lineNo, e.getMessage());
                 }
             } else {
                 BcfElement element = (BcfElement) o;
