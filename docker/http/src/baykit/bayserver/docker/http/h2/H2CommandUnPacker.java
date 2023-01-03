@@ -21,6 +21,11 @@ public class H2CommandUnPacker extends CommandUnPacker<H2Packet> {
     }
 
     @Override
+    public void reset() {
+
+    }
+
+    @Override
     public NextSocketAction packetReceived(H2Packet pkt) throws IOException {
 
         if(BayLog.isDebugMode())
@@ -72,9 +77,5 @@ public class H2CommandUnPacker extends CommandUnPacker<H2Packet> {
         return cmd.handle(cmdHandler);
     }
 
-    @Override
-    public void reset() {
-
-    }
     
 }
