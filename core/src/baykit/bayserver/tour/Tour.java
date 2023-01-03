@@ -118,7 +118,8 @@ public class Tour implements Reusable {
                 throw e;
             }
             catch(Exception e) {
-                throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage());
+                BayLog.error(e);
+                throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e.toString());
             }
         }
     }

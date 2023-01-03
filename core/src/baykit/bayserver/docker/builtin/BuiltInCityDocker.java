@@ -53,7 +53,7 @@ public class BuiltInCityDocker extends DockerBase implements City {
 
 
     /////////////////////////////////////////////////////////////////
-    // Implements DockerBase
+    // Implements Docker
     /////////////////////////////////////////////////////////////////
     @Override
     public void init(BcfElement elm, Docker parent) throws ConfigException {
@@ -70,6 +70,9 @@ public class BuiltInCityDocker extends DockerBase implements City {
         defaultClub = new FileDocker();
     }
 
+    /////////////////////////////////////////////////////////////////
+    // Implements DockerBase
+    /////////////////////////////////////////////////////////////////
     @Override
     public boolean initDocker(Docker dkr) throws ConfigException {
         if (dkr instanceof Town)

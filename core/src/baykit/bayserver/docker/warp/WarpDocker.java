@@ -175,7 +175,7 @@ public abstract class WarpDocker extends ClubBase {
         }
         catch(IOException e) {
             BayLog.error(e);
-            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e);
+            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e.toString());
         }
     }
 

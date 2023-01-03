@@ -36,7 +36,8 @@ public class CgiTrain extends Train implements ReqContentHandler {
         try {
             process = cgiDocker.createProcess(env);
         } catch (IOException e) {
-            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e, "Cannot create process");
+            BayLog.error(e);
+            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Cannot create process");
         }
         tour.req.setContentHandler(this);
     }
@@ -112,7 +113,7 @@ public class CgiTrain extends Train implements ReqContentHandler {
 
         } catch (IOException e) {
             BayLog.error(e);
-            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e);
+            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e.toString());
         } finally {
             try {
                 process.waitFor();

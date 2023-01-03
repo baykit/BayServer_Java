@@ -65,7 +65,8 @@ public class HtpWarpDocker extends WarpDocker implements HtpDocker {
                 sslCtx = SSLContext.getInstance(DEFAULT_SSL_PROTOCOL);
                 sslCtx.init(null, new TrustManager[] {new DummyTrustManager()}, null);
             } catch (Exception e) {
-                throw new ConfigException(elm.fileName, elm.lineNo, e, BayMessage.get(Symbol.CFG_SSL_INIT_ERROR), e);
+                BayLog.error(e);
+                throw new ConfigException(elm.fileName, elm.lineNo, BayMessage.get(Symbol.CFG_SSL_INIT_ERROR), e);
             }
         }
     }
