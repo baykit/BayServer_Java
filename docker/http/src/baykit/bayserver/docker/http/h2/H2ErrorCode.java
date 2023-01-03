@@ -24,7 +24,7 @@ public class H2ErrorCode extends Message {
     public static int HTTP_1_1_REQUIRED = 0xd;
 
     static HashMap<Integer, String> desc = new HashMap<>();
-    public static H2ErrorCode msg;
+    public static Message msg;
 
     private H2ErrorCode() {
     }
