@@ -41,7 +41,7 @@ public abstract class WarpDocker extends ClubBase {
 
     public String scheme;
     public String host;
-    public int port = 80;
+    public int port;
     public String warpBase;
     protected int maxShips = -1;
     SocketAddress hostAddr;
@@ -55,13 +55,13 @@ public abstract class WarpDocker extends ClubBase {
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // Abstract methods
     ///////////////////////////////////////////////////////////////////////////////////////////////
-        public abstract boolean secure();
-        protected abstract String protocol();
-        protected abstract Transporter newTransporter(GrandAgent agent, SocketChannel ch) throws IOException;
+    public abstract boolean secure();
+    protected abstract String protocol();
+    protected abstract Transporter newTransporter(GrandAgent agent, SocketChannel ch) throws IOException;
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    // Implements DockerBase
-    ///////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////
+    // Implements Docker
+    //////////////////////////////////////////////////////
 
     @Override
     public void init(BcfElement elm, Docker parent) throws ConfigException {
@@ -70,15 +70,15 @@ public abstract class WarpDocker extends ClubBase {
         if(StringUtil.empty(warpBase))
             warpBase = "/";
 
-        if(port == -1)
-            port = 80;
-
         try {
             if(StringUtil.isSet(host) && host.startsWith(":unix:")) {
                 String sktPath = host.substring(6);
                 hostAddr = SysUtil.getUnixDomainSocketAddress(sktPath);
+                port = -1;
             }
             else {
+                if(port <= 0)
+                    port = 80;
                 hostAddr = new InetSocketAddress(InetAddress.getByName(host), port);
             }
         }
@@ -89,6 +89,9 @@ public abstract class WarpDocker extends ClubBase {
         GrandAgent.addLifecycleListener(new AgentListener());
     }
 
+    //////////////////////////////////////////////////////
+    // Implements DockerBase
+    //////////////////////////////////////////////////////
 
     @Override
     public boolean initKeyVal(BcfKeyVal kv) throws ConfigException {
@@ -122,9 +125,10 @@ public abstract class WarpDocker extends ClubBase {
         return true;
     }
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////
     // Implements Club
-    ///////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////
+
 
     @Override
     public void arrive(Tour tour) throws HttpException {
@@ -140,6 +144,7 @@ public abstract class WarpDocker extends ClubBase {
         try {
             BayLog.trace("%s got from store", wsip);
             boolean needConnect = false;
+            Transporter tp = null;
             if (!wsip.initialized) {
                 SocketChannel ch;
                 if(hostAddr instanceof InetSocketAddress)
@@ -148,7 +153,7 @@ public abstract class WarpDocker extends ClubBase {
                     ch = SysUtil.openUnixDomainSocketChannel();
 
                 ch.configureBlocking(false);
-                Transporter tp = newTransporter(agt, ch);
+                tp = newTransporter(agt, ch);
                 ProtocolHandler protoHnd = ProtocolHandlerStore.getStore(protocol(), false, agt.agentId).rent();
                 wsip.initWarp(ch, agt, tp, this, protoHnd);
                 tp.init(agt.nonBlockingHandler, ch, new WarpDataListener(wsip));
@@ -163,7 +168,7 @@ public abstract class WarpDocker extends ClubBase {
             wsip.startWarpTour(tour);
 
             if(needConnect) {
-                agt.nonBlockingHandler.addChannelListener(wsip.ch, (ChannelListener) wsip.postman);
+                agt.nonBlockingHandler.addChannelListener(wsip.ch, tp);
                 agt.nonBlockingHandler.askToConnect((SocketChannel)wsip.ch, hostAddr);
             }
 
@@ -175,9 +180,10 @@ public abstract class WarpDocker extends ClubBase {
     }
 
 
-    //////////////////////////////////////////////////////////////////////////////////////////
-    // Other methods                                                                        //
-    //////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////
+    // Other methods
+    //////////////////////////////////////////////////////
+
     public void keepShip(WarpShip wsip) {
         BayLog.debug("%s keep warp ship: %s", this, wsip);
         getShipStore(wsip.agent.agentId).keep(wsip);
@@ -197,9 +203,10 @@ public abstract class WarpDocker extends ClubBase {
         return stores.get(agtId);
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////
-    // private methods                                                                      //
-    //////////////////////////////////////////////////////////////////////////////////////////
+
+    //////////////////////////////////////////////////////
+    // Private methods
+    //////////////////////////////////////////////////////
 
     private ProtocolHandlerStore getProtocolHandlerStore(int agtId) {
         return ProtocolHandlerStore.getStore(protocol(), false, agtId);
