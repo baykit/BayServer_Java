@@ -24,9 +24,15 @@ public class WarpData implements ReqContentHandler {
         //BayLog.debug("New WarpTour " + warpShip + " warpId#" + warpId + " fromTour " + tour);
     }
 
-    /////////////////////////////////////////////////////////////////////////////////
-    // Implements ContentHandler
-    /////////////////////////////////////////////////////////////////////////////////
+    @Override
+    public String toString() {
+        return warpShip + " wtur#" + warpId;
+    }
+
+    //////////////////////////////////////////////////////
+    // Implements ReqContentHandler
+    //////////////////////////////////////////////////////
+
     @Override
     public synchronized final void onReadContent(Tour tur, byte[] buf, int start, int len) throws IOException {
         BayLog.debug("%s onReadReqContent tur=%s len=%d", warpShip, tur, len);
@@ -62,11 +68,9 @@ public class WarpData implements ReqContentHandler {
         return false; // not aborted immediately
     }
 
-
-    @Override
-    public String toString() {
-        return warpShip + " wtur#" + warpId;
-    }
+    //////////////////////////////////////////////////////
+    // Other methods
+    //////////////////////////////////////////////////////
 
     public final void start() throws IOException {
         if(!started) {

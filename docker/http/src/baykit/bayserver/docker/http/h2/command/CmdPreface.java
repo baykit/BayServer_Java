@@ -14,11 +14,11 @@ import java.io.IOException;
 public class CmdPreface extends H2Command {
 
     public static final byte[] prefaceBytes = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes();
+    public String protocol;
 
     public CmdPreface(int streamId, H2Flags flags) {
         super(H2Type.Preface, streamId, flags);
     }
-    public String protocol;
 
     @Override
     public void unpack(H2Packet pkt) throws IOException {

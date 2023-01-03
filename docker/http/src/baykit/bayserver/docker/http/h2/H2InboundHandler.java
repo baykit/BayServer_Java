@@ -377,8 +377,7 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
         BayLog.debug("%s handle_ping: stm=%d", sip, cmd.streamId);
 
         CmdPing res = new CmdPing(cmd.streamId, new H2Flags(H2Flags.FLAGS_ACK), cmd.opaqueData);
-        CommandPacker cmdPacker = commandPacker;
-        cmdPacker.post(sip, res);
+        commandPacker.post(sip, res);
         return Continue;
     }
 
