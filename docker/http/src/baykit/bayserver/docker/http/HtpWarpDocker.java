@@ -47,14 +47,14 @@ public class HtpWarpDocker extends WarpDocker implements HtpDocker {
 
     public static final String DEFAULT_SSL_PROTOCOL = "TLS";
 
-    public boolean secure;
-    public boolean supportH2 = true;
+    boolean secure;
+    boolean supportH2 = true;
+    boolean traceSSL = false;
     SSLContext sslCtx;
 
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    // Implements DockerBase
-    ///////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////
+    // Implements Docker
+    //////////////////////////////////////////////////////
 
     @Override
     public void init(BcfElement elm, Docker parent) throws ConfigException {
@@ -70,6 +70,10 @@ public class HtpWarpDocker extends WarpDocker implements HtpDocker {
         }
     }
 
+    //////////////////////////////////////////////////////
+    // Implements DockerBase
+    //////////////////////////////////////////////////////
+
     @Override
     public boolean initKeyVal(BcfKeyVal kv) throws ConfigException {
         switch (kv.key.toLowerCase()) {
@@ -80,6 +84,10 @@ public class HtpWarpDocker extends WarpDocker implements HtpDocker {
                 supportH2 = StringUtil.parseBool(kv.value);
                 break;
 
+            case "tracessl":
+                traceSSL = StringUtil.parseBool(kv.value);
+                break;
+
             case "secure":
                 secure = StringUtil.parseBool(kv.value);
                 break;
@@ -87,10 +95,10 @@ public class HtpWarpDocker extends WarpDocker implements HtpDocker {
         return true;
     }
 
-
-    //////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////
     // Implements WarpDocker
-    //////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////
+
     @Override
     public boolean secure() {
         return secure;
@@ -108,7 +116,7 @@ public class HtpWarpDocker extends WarpDocker implements HtpDocker {
     protected Transporter newTransporter(GrandAgent agent, SocketChannel ch) throws IOException {
         if(secure) {
             String[] appProtocols = supportH2 ? new String[]{"h2"} : null;
-            return new SecureTransporter(sslCtx, appProtocols, false, true);
+            return new SecureTransporter(sslCtx, appProtocols, false, traceSSL);
         }
         else
             return new PlainTransporter(false, IOUtil.getSockRecvBufSize(ch));
