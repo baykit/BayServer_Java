@@ -109,7 +109,7 @@ public class BuiltInPermissionDocker extends DockerBase implements Permission {
 
         if (!isOk) {
             BayLog.error("Permission error: socket not admitted: %s", ch);
-            throw new HttpException(HttpStatus.FORBIDDEN);
+            throw new HttpException(HttpStatus.FORBIDDEN, "");
         }
     }
 
@@ -151,7 +151,7 @@ public class BuiltInPermissionDocker extends DockerBase implements Permission {
 
         if(!isOk) {
             tour.res.headers.set(Headers.WWW_AUTHENTICATE, "Basic realm=\"Auth\"");
-            throw new HttpException(HttpStatus.UNAUTHORIZED);
+            throw new HttpException(HttpStatus.UNAUTHORIZED, "");
         }
     }
 

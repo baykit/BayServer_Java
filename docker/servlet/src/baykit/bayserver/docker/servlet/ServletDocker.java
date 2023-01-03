@@ -374,7 +374,7 @@ public class ServletDocker extends ClubBase {
         }
         catch (Throwable e) {
             BayLog.error(e);
-            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e);
+            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e.toString());
         } finally {
             restoreContextLoader();
         }

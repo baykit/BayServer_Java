@@ -60,7 +60,7 @@ cp -r legal $stage/legal
 cp test/simple/cert/ore* $stage_cert
 cp test/simple/plan/groups.plan $stage_plan
 cp test/simple/plan/bayserver.plan $stage_plan
-cp LICENSE.* $stage
+cp LICENSE.* README.md NEWS.md $stage
 
 quiche_jar=${PWD}/../quiche4j/quiche4j-jni/target/quiche4j-jni-0.2.5-linux-x86_64.jar:${PWD}/../quiche4j/quiche4j-core/target/quiche4j-core-0.2.5.jar
  
