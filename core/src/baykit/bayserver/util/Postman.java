@@ -14,6 +14,4 @@ public interface Postman extends Reusable, Valve {
     boolean isZombie();
 
     void abort();
-
-    void openValve();
 }

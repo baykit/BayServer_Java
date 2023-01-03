@@ -52,10 +52,10 @@ public class BuiltInSecureDocker extends DockerBase implements Secure {
         try {
             initSSL();
         } catch (GeneralSecurityException | IOException e) {
+            BayLog.error(e);
             throw new ConfigException(
                     elm.fileName,
                     elm.lineNo,
-                    e,
                     BayMessage.get(Symbol.CFG_SSL_INIT_ERROR, e.getMessage()),
                     e);
         }
