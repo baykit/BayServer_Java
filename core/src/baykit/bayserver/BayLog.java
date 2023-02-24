@@ -54,6 +54,10 @@ public class BayLog {
         log(LOG_LEVEL_DEBUG, 4, e, fmt, args);
     }
 
+    public static void debug(Throwable e) {
+        log(LOG_LEVEL_DEBUG, 4, e, null);
+    }
+
     public static void warn(String fmt, Object... args) {
         log(LOG_LEVEL_WARN, 3, fmt, args);
     }
@@ -75,7 +79,7 @@ public class BayLog {
     }
 
     public static void fatal(Throwable e) {
-        fatal(4, e, null);
+        log(LOG_LEVEL_FATAL, 4, e, null);
     }
 
     public static void fatal(String fmt, Object... args) {
