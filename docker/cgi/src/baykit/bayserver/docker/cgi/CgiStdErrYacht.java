@@ -61,7 +61,7 @@ public class CgiStdErrYacht extends Yacht {
 
     @Override
     public final boolean checkTimeout(int durationSec) {
-        throw new Sink();
+        throw new Sink("%s invalid timeout check", this);
     }
 
 
