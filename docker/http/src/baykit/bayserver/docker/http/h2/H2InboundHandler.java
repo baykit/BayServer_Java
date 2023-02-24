@@ -183,10 +183,15 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
                 reqHeaderTbl.setSize(blk.size);
                 continue;
             }
+
             analyzer.analyzeHeaderBlock(blk, reqHeaderTbl);
             if(BayServer.harbor.traceHeader())
                 BayLog.info("%s req header: %s=%s :%s", tur, analyzer.name, analyzer.value, blk);
-            if(analyzer.name.charAt(0) != ':') {
+
+            if(analyzer.name == null) {
+                continue;
+            }
+            else if(analyzer.name.charAt(0) != ':') {
                 tur.req.headers.add(analyzer.name, analyzer.value);
             }
             else if(analyzer.method != null) {
