@@ -90,7 +90,8 @@ public class PacketPartAccessor {
     }
 
     public void checkRead(int len) {
-        if (maxLen > 0 && pos + len > maxLen)
+        int max = (maxLen >= 0) ? maxLen : (packet.bufLen - start);
+        if (pos + len > max)
             throw new ArrayIndexOutOfBoundsException();
     }
 
