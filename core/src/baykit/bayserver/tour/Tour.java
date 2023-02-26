@@ -105,7 +105,7 @@ public class Tour implements Reusable {
 
         changeState(Tour.TOUR_ID_NOCHECK, TourState.RUNNING);
 
-        BayLog.debug("%s GO TOUR! ...( ^_^)/: url=%s", this, req.uri);
+        BayLog.debug("%s GO TOUR! ...( ^_^)/: city=%s url=%s", this, req.reqHost, req.uri);
 
         if (city == null) {
             throw new HttpException(HttpStatus.NOT_FOUND, req.uri);

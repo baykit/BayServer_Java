@@ -15,12 +15,16 @@ public class PlainTransporter extends Transporter {
 
     final ByteBuffer readBuf;
 
-    public PlainTransporter(boolean serverMode, int bufsiz) {
-        super(serverMode, false);
+    public PlainTransporter(boolean serverMode, int bufsiz, boolean writeOnly) {
+        super(serverMode, false, writeOnly);
         readBuf = ByteBuffer.allocate(bufsiz);
     }
 
-    @Override
+    public PlainTransporter(boolean serverMode, int bufsiz) {
+        this(serverMode, bufsiz, false);
+    }
+
+        @Override
     public void init(NonBlockingHandler nbHnd, SelectableChannel ch, DataListener lis) {
         super.init(nbHnd, ch, lis);
         needHandshake = false;

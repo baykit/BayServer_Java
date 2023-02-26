@@ -123,9 +123,12 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
 
         // Send end request command
         CmdEndContent cmd = new CmdEndContent();
+        int sid = ship.shipId;
         Runnable ensureFunc = () -> {
-            if(keepAlive && !ship.postman.isZombie())
+            if(keepAlive && !ship.postman.isZombie()) {
                 ship.keeping = true;
+                ship.resume(sid);
+            }
             else
                 commandPacker.end(ship);
         };
@@ -250,7 +253,7 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
 
             if (reqContLen <= 0) {
                 endReqContent(curTourId, tur);
-                return Continue;
+                return Suspend; // end reading
             } else {
                 changeState(ReadContent);
                 return Continue;
@@ -310,7 +313,7 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
         }
 
         if(!success)
-            return Suspend;
+            return Suspend; // end reading
         else
             return Continue;
     }
