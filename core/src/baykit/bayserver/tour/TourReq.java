@@ -243,6 +243,11 @@ public class TourReq implements Reusable {
     }
 
     public synchronized boolean abort() {
+        if (!tour.isPreparing()) {
+            BayLog.debug("%s cannot abort non-preparing tour", tour);
+            return false;
+        }
+
         BayLog.debug("%s req abort", tour);
         if (tour.isAborted())
             throw new Sink("tour is already aborted");

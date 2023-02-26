@@ -129,7 +129,7 @@ public class NonBlockingHandler {
         //BayLog.debug("askToWrite");
         ChannelState st = findChannelState(ch);
         BayLog.trace("%s askToWrite chState=%s", agent, st);
-        addOperation(ch, OP_READ | OP_WRITE);
+        addOperation(ch, OP_WRITE);
 
         if(st == null)
             return;
@@ -211,22 +211,41 @@ public class NonBlockingHandler {
                     BayLog.trace("%s chState=%s socket readable", agent, chStt);
                     nextSocketAction = chStt.listener.onReadable(ch);
                     //BayLog.debug("%s chState=%s readable result=%s", agent, chStt, nextSocketAction);
-                    if(nextSocketAction == Write)
-                        askToWrite(ch);
+                    if(nextSocketAction == Write) {
+                        key.interestOps(key.interestOps() | OP_WRITE);
+                    }
                 }
 
                 if (nextSocketAction != Close && key.isWritable()) {
                     BayLog.trace("%s chState=%s socket writable", agent, chStt);
                     nextSocketAction = chStt.listener.onWritable(ch);
-                    if(nextSocketAction == Read)
-                        askToRead(ch);
+                    if(nextSocketAction == Read) {
+                        // Handle as "Write Off"
+                        int op = key.interestOps() & ~OP_WRITE;
+                        if(op != OP_READ)
+                            key.cancel();
+                        else
+                            key.interestOps(op);
+                    }
                 }
 
                 if(nextSocketAction == null)
                     throw new Sink("Unknown next action");
 
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            if(e instanceof IOException) {
+                BayLog.info("%s Socket closed by peer: skt=%s", agent, ch);
+            }
+            else if(e instanceof Sink){
+                BayLog.info("%s Unhandled error error: %s (skt=%s)", agent, e, ch);
+                throw (Sink)e;
+            }
+            else {
+                BayLog.info("%s Unhandled error error: %s (skt=%s)", agent, e, ch);
+                throw new Sink("Unhandled error: %s", e);
+            }
+
             // Cannot handle Exception any more
             chStt.listener.onError(ch, e);
             nextSocketAction = Close;
@@ -242,11 +261,10 @@ public class NonBlockingHandler {
                 break;
 
             case Suspend:
+                keyCancel = true;
+
             case Read:
             case Write:
-                keyCancel = true;
-                break;
-
             case Continue:
                 break; // do nothing
         }
@@ -267,29 +285,31 @@ public class NonBlockingHandler {
             int nch = operations.size();
             for (ChannelOperation cop : operations) {
                 ChannelState st = findChannelState(cop.ch);
-                try {
-                    BayLog.trace("%s chState=%s register op=%s ch=%s", agent, st, opMode(cop.op), cop.ch);
-                    SelectionKey key = cop.ch.keyFor(agent.selector);
-                    if(key != null) {
-                        int op = key.interestOps();
-                        int newOp = op | cop.op;
-                        BayLog.debug("Already registered op=%s update to %s", opMode(op), opMode(newOp));
-                        key.interestOps(newOp);
+                BayLog.trace("%s chState=%s register op=%s ch=%s", agent, st, opMode(cop.op), cop.ch);
+                SelectionKey key = cop.ch.keyFor(agent.selector);
+                if(key != null) {
+                    int op = key.interestOps();
+                    int newOp = op | cop.op;
+                    BayLog.debug("Already registered op=%s update to %s", opMode(op), opMode(newOp));
+                    key.interestOps(newOp);
+                }
+                else {
+                    try {
+                        cop.ch.register(agent.selector, cop.op);
+                    } catch (ClosedChannelException e) {
+                        ChannelState cst = findChannelState(cop.ch);
+                        BayLog.debug(e, "%s Cannot register operation (Channel is closed): %s ch=%s op=%s close=%b",
+                                agent, cst != null ? cst.listener : null, cop.ch, opMode(cop.op), cop.close);
+                    }
+                }
+
+                if(cop.close) {
+                    if(st == null) {
+                        BayLog.warn("%s chState=%s register close but ChannelState is null", agent, st);
                     }
                     else {
-                        cop.ch.register(agent.selector, cop.op);
+                        st.closing = true;
                     }
-                    if(cop.close) {
-                        if(st == null) {
-                            BayLog.warn("%s chState=%s register close but ChannelState is null", agent, st);
-                        }
-                        else {
-                            st.closing = true;
-                        }
-                    }
-                } catch (ClosedChannelException e) {
-                    ChannelState cst = findChannelState(cop.ch);
-                    BayLog.debug(e, "%s Cannot register operation (Channel is closed): %s", agent, cst != null ? cst.listener : null);
                 }
             }
             operations.clear();
