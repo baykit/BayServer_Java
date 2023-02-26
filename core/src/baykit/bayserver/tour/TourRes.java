@@ -222,8 +222,8 @@ public class TourRes implements Reusable {
             return;
 
         if(headerSent) {
-            BayLog.error("Try to send error after response header is sent (Ignore)");
-            BayLog.error("%s: status=%d, message=%s", this, status, message);
+            BayLog.warn("Try to send error after response header is sent (Ignore)");
+            BayLog.warn("%s: status=%d, message=%s", this, status, message);
             if (e != null)
                 BayLog.error(e);
         }
@@ -350,7 +350,7 @@ public class TourRes implements Reusable {
             resume = true;
         }
 
-        if(!tour.isZombie()) {
+        if(!tour.isRunning()) {
             resConsumeListener.contentConsumed(length, resume);
         }
     }

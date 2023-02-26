@@ -225,10 +225,8 @@ public class GrandAgent extends Thread {
                         spinHandler.stopTimeoutSpins();
                     }
 
-                } catch (Error e) {
-                    throw e;    // If error occur, grand agent ends
                 } catch (Throwable e) {
-                    BayLog.error(e);
+                    throw e;    // If error occur, grand agent ends
                 }
             }
 

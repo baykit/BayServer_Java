@@ -72,6 +72,8 @@ public class H1PacketUnpacker extends PacketUnpacker<H1Packet> {
 
         int bufStart = buf.position();
         int lineLen = 0;
+        boolean suspend = false;
+
         if(state == State.ReadHeaders) {
             loop:
             while (buf.hasRemaining()) {
@@ -93,16 +95,20 @@ public class H1PacketUnpacker extends PacketUnpacker<H1Packet> {
 
                         switch(nextAct) {
                             case Continue:
+                            case Suspend:
                                 if(cmdUnpacker.reqFinished())
                                     changeState(State.End);
                                 else
                                     changeState(State.ReadContent);
                                 break loop;
+
                             case Close:
                                 // Maybe error
                                 resetState();
                                 return nextAct;
                         }
+
+                        suspend = (nextAct == Suspend);
                     }
                     lineLen = 0;
                 }
@@ -116,7 +122,6 @@ public class H1PacketUnpacker extends PacketUnpacker<H1Packet> {
             }
         }
 
-        boolean suspend = false;
         if(state == State.ReadContent) {
             while(buf.hasRemaining()) {
                 H1Packet pkt = pktStore.rent(H1Type.Content);

@@ -246,17 +246,17 @@ public class InboundShip extends Ship {
         }
     }
 
-    public void sendError(int chekId, Tour tour, int status, String message, Throwable e)
+    public void sendError(int chkId, Tour tour, int status, String message, Throwable e)
             throws IOException {
 
-        checkShipId(chekId);
+        checkShipId(chkId);
 
         if(tour == null)
             throw new NullPointerException();
 
         BayLog.debug("%s send error: status=%d, message=%s ex=%s", this, status, message, e == null ? "" : e.getMessage(), e);
         if (e != null)
-            BayLog.error(e);
+            BayLog.debug(e);
 
         StringBuilder body = new StringBuilder();
 
@@ -293,7 +293,7 @@ public class InboundShip extends Ship {
 	*/
 
         tour.res.headers.setStatus(status);
-        sendErrorContent(chekId, tour, body.toString());
+        sendErrorContent(chkId, tour, body.toString());
     }
 
 
