@@ -140,7 +140,7 @@ loop:
         }
 
         if(state == State.ReadFirstLine) {
-            throw new IOException("Invalid HTTP header format: " + new String(pkt.buf, 0, dataLen));
+            throw new ProtocolException("Invalid HTTP header format: " + new String(pkt.buf, 0, dataLen));
         }
     }
 
