@@ -201,7 +201,12 @@ public class NonBlockingHandler {
             }
             else if (key.isConnectable()) {
                 BayLog.debug("%s chState=%s socket connectable", agent, chStt);
-                nextSocketAction = chStt.listener.onConnectable((SocketChannel)ch);
+
+                // Cancel connect operation
+                int op = key.interestOps() & ~OP_CONNECT;
+                key.interestOps(op);
+
+                nextSocketAction = chStt.listener.onConnectable(ch);
                 if(nextSocketAction == Continue)
                     askToRead(ch);
             }
@@ -235,7 +240,7 @@ public class NonBlockingHandler {
             }
         } catch (Throwable e) {
             if(e instanceof IOException) {
-                BayLog.info("%s Socket closed by peer: skt=%s", agent, ch);
+                BayLog.info("%s I/O Error: skt=%s", agent, ch);
             }
             else if(e instanceof Sink){
                 BayLog.info("%s Unhandled error error: %s (skt=%s)", agent, e, ch);
