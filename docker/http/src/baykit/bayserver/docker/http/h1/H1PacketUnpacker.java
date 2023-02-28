@@ -143,6 +143,7 @@ public class H1PacketUnpacker extends PacketUnpacker<H1Packet> {
 
                 switch(nextAct) {
                     case Continue:
+                    case Write:
                         if(cmdUnpacker.reqFinished())
                             changeState(State.End);
                         break;
