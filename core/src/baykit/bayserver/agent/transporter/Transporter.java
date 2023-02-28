@@ -221,6 +221,11 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
                 return Continue;
             else
                 return Close;
+        } catch (IOException e) {
+            // IOException which occur in notifyXXX must be distinguished from
+            // IOException which occur in handshake or readNonBlock.
+            onError(ch, e);
+            return Close;
         }
     }
 
