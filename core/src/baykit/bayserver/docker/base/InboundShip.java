@@ -218,8 +218,8 @@ public class InboundShip extends Ship {
         BayLog.debug("%s sendEndTour: %s state=%s", this, tur, tur.state);
 
         if(tur.isZombie() || tur.isAborted()) {
-            // Don't send peer any data. Only return tour
-            returnTour(tur);
+            // Don't send peer any data. Do nothing
+            tur.changeState(chkTourId, Tour.TourState.ENDED);
             lis.dataConsumed();
         }
         else {
