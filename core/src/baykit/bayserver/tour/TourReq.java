@@ -1,9 +1,6 @@
 package baykit.bayserver.tour;
 
-import baykit.bayserver.BayLog;
-import baykit.bayserver.BayServer;
-import baykit.bayserver.Sink;
-import baykit.bayserver.HttpException;
+import baykit.bayserver.*;
 import baykit.bayserver.protocol.ProtocolException;
 import baykit.bayserver.util.Headers;
 import baykit.bayserver.util.HttpUtil;
@@ -182,7 +179,7 @@ public class TourReq implements Reusable {
         }
 
         if (bytesPosted + len > bytesLimit) {
-            throw new ProtocolException("Read data exceed content-length: " + (bytesPosted + len) + "/" + bytesLimit);
+            throw new ProtocolException(BayMessage.get(Symbol.HTP_READ_DATA_EXCEEDED, bytesPosted + len,  bytesLimit));
         }
 
         // If has error, only read content. (Do not call content handler)

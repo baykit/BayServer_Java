@@ -228,9 +228,7 @@ loop:
         }
 
         if (name == null) {
-            BayLog.debug("header bytes=" + new String(bytes));
-
-
+            BayLog.debug("Invalid message header: %s", new String(bytes, start, len));
             throw new ProtocolException(
                     BayMessage.get(Symbol.HTP_INVALID_HEADER_FORMAT, ""));
         }
