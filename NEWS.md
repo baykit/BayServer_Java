@@ -1,6 +1,16 @@
 # BayServer for Java
 
 
+# 2.0.2
+
+- Translates some messages to Japanese
+- Fixes HTTP/2 bugs
+- Fixes Problem of POST request which causes 404
+- Fixes problem on handling wp-cron.php of WordPress
+- Fixes problem on handling admin-ajax.php of WordPress
+- Fixes potential bugs
+
+
 # 2.0.1
 
 - Modifies bayserver.plan to avoid resolving host name
