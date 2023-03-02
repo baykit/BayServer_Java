@@ -119,7 +119,7 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
     // implements Postman
     /////////////////////////////////////////////////////////////////////////////////
 
-    public final synchronized void post(ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) throws IOException {
+    public final void post(ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) throws IOException {
         checkInitialized();
 
         BayLog.debug("%s post: %s len=%d", this, tag, buf.limit());
@@ -129,7 +129,9 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
         }
         else {
             WriteUnit unt = new WriteUnit(buf, adr, tag, listener);
-            writeQueue.add(unt);
+            synchronized (this) {
+                writeQueue.add(unt);
+            }
             BayLog.trace("%s sendBytes->askToWrite", this);
             nonBlockingHandler.askToWrite(ch);
         }
@@ -140,7 +142,7 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
     /////////////////////////////////////////////////////////////////////////////////
 
     public void openValve() {
-        BayLog.debug("%s resume", this);
+        BayLog.debug("%s open valve", this);
         nonBlockingHandler.askToRead(ch);
     }
 
@@ -198,7 +200,7 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
             buf = readNonBlock(tmpAddress);
         }
         catch(EOFException e) {
-            BayLog.debug(e, "%s EOF (ignore): %s", this, e);
+            BayLog.debug("%s EOF (ignore): %s", this, e);
         }
 
         try {
@@ -311,7 +313,7 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
     }
 
     @Override
-    public synchronized void onClosed(Channel chkCh) {
+    public void onClosed(Channel chkCh) {
         try {
             checkChannel(chkCh);
         }
@@ -322,11 +324,13 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
 
         setValid(false);
 
-        // Clear queue
-        for (WriteUnit wu : writeQueue) {
-            wu.done();
+        synchronized (this) {
+            // Clear queue
+            for (WriteUnit wu : writeQueue) {
+                wu.done();
+            }
+            writeQueue.clear();
         }
-        writeQueue.clear();
 
         dataListener.notifyClose();
     }
@@ -342,12 +346,7 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
         BayLog.debug("%s flush", this);
 
         if(chValid) {
-            boolean empty;
-            synchronized (this) {
-                empty = writeQueue.isEmpty();
-            }
-
-            if (!empty) {
+            if (!writeQueue.isEmpty()) {
                 BayLog.debug("%s flush->askToWrite", this);
                 nonBlockingHandler.askToWrite(ch);
             }
@@ -363,12 +362,7 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
         this.finale = true;
 
         if(chValid) {
-            boolean empty;
-            synchronized (this) {
-                empty = writeQueue.isEmpty();
-            }
-
-            if (!empty) {
+            if (!writeQueue.isEmpty()) {
                 BayLog.debug("%s postEnd->askToWrite len=%d", this, writeQueue.size());
                 nonBlockingHandler.askToWrite(ch);
             }
