@@ -78,7 +78,12 @@ public class WarpDataListener implements DataListener {
             } else {
                 // NOT treat EOF as Error
                 BayLog.debug("%s EOF is not an error: tur=%s", this, tur);
-                tur.res.endContent(Tour.TOUR_ID_NOCHECK);
+                try {
+                    tur.res.endContent(Tour.TOUR_ID_NOCHECK);
+                }
+                catch(IOException e) {
+                    BayLog.debug(e, "%s end content error: tur=%s", this, tur);
+                }
             }
         }
         ship.tourMap.clear();
