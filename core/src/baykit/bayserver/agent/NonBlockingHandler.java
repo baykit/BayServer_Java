@@ -113,7 +113,7 @@ public class NonBlockingHandler {
 
         //BayLog.debug("askToRead");
         ChannelState st = findChannelState(ch);
-        BayLog.trace("%s askToRead chState=%s", agent, st);
+        BayLog.debug("%s askToRead chState=%s", agent, st);
         addOperation(ch, OP_READ);
 
         if(st == null)
@@ -128,7 +128,7 @@ public class NonBlockingHandler {
 
         //BayLog.debug("askToWrite");
         ChannelState st = findChannelState(ch);
-        BayLog.trace("%s askToWrite chState=%s", agent, st);
+        BayLog.debug("%s askToWrite chState=%s", agent, st);
         addOperation(ch, OP_WRITE);
 
         if(st == null)
@@ -232,6 +232,7 @@ public class NonBlockingHandler {
                         else
                             key.interestOps(op);
                     }
+                    BayLog.debug("%s write next state=%s", agent, nextSocketAction);
                 }
 
                 if(nextSocketAction == null)
