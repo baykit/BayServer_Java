@@ -67,7 +67,7 @@ quiche_jar=${PWD}/../quiche4j/quiche4j-jni/target/quiche4j-jni-0.2.5-linux-x86_6
 export CLASSPATH=$stage_lib/bayserver.jar:${quiche_jar}
 
 for f in lib/*; do
-  f=$(realpath $f)
+  f=${PWD}/$f
   export CLASSPATH=$f:$CLASSPATH
 done
 echo $CLASSPATH
