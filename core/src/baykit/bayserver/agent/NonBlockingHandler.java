@@ -332,13 +332,8 @@ public class NonBlockingHandler {
             long now = System.currentTimeMillis();
             for (SelectableChannel ch : channels.keySet()) {
                 ChannelState st = findChannelState(ch);
-                try {
-                    if(st.listener.checkTimeout(ch, (int)(now - st.lastAccessTime) / 1000)) {
-                        closeList.add(new Object[]{ch, st});
-                    }
-                }
-                catch(Throwable e) {
-                    BayLog.error(e);
+                if(st.listener.checkTimeout(ch, (int)(now - st.lastAccessTime) / 1000)) {
+                    closeList.add(new Object[]{ch, st});
                 }
             }
         }
