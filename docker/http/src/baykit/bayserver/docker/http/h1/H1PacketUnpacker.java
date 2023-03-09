@@ -1,6 +1,7 @@
 package baykit.bayserver.docker.http.h1;
 
 import baykit.bayserver.BayLog;
+import baykit.bayserver.Sink;
 import baykit.bayserver.protocol.PacketStore;
 import baykit.bayserver.agent.NextSocketAction;
 import baykit.bayserver.protocol.PacketUnpacker;
@@ -75,7 +76,6 @@ public class H1PacketUnpacker extends PacketUnpacker<H1Packet> {
         boolean suspend = false;
 
         if(state == State.ReadHeaders) {
-            loop:
             while (buf.hasRemaining()) {
                 byte b = buf.get();
                 tmpBuf.put(b);
@@ -100,15 +100,19 @@ public class H1PacketUnpacker extends PacketUnpacker<H1Packet> {
                                     changeState(State.End);
                                 else
                                     changeState(State.ReadContent);
-                                break loop;
+                                break;
 
                             case Close:
                                 // Maybe error
                                 resetState();
                                 return nextAct;
+
+                            default:
+                                throw new Sink("Invalid next action: %s", nextAct);
                         }
 
                         suspend = (nextAct == Suspend);
+                        break;
                     }
                     lineLen = 0;
                 }
