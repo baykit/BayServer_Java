@@ -359,7 +359,7 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
 
     @Override
     public NextSocketAction handleGoAway(CmdGoAway cmd) throws IOException {
-        BayLog.error("%s received GoAway: lastStm=%d code=%d desc=%s debug=%s",
+        BayLog.debug("%s received GoAway: lastStm=%d code=%d desc=%s debug=%s",
                 ship(), cmd.lastStreamId, cmd.errorCode, H2ErrorCode.msg.getMessage(Integer.toString(cmd.errorCode)), new String(cmd.debugData));
         return Close;
 
@@ -388,7 +388,7 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
 
     @Override
     public NextSocketAction handleRstStream(CmdRstStream cmd) throws IOException {
-        BayLog.error("%s received RstStream: stmid=%d code=%d desc=%s",
+        BayLog.debug("%s received RstStream: stmid=%d code=%d desc=%s",
                 ship(), cmd.streamId, cmd.errorCode, H2ErrorCode.msg.getMessage(Integer.toString(cmd.errorCode)));
         return Continue;
     }
