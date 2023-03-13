@@ -1,10 +1,9 @@
 package baykit.bayserver.docker.warp;
 
 import baykit.bayserver.*;
-import baykit.bayserver.agent.ChannelListener;
 import baykit.bayserver.agent.GrandAgent;
+import baykit.bayserver.agent.LifecycleListener;
 import baykit.bayserver.agent.transporter.Transporter;
-import baykit.bayserver.docker.base.InboundDataListener;
 import baykit.bayserver.protocol.ProtocolHandler;
 import baykit.bayserver.protocol.ProtocolHandlerStore;
 import baykit.bayserver.tour.Tour;
@@ -26,7 +25,7 @@ import java.util.Map;
 
 public abstract class WarpDocker extends ClubBase {
 
-    class AgentListener implements GrandAgent.GrandAgentLifecycleListener {
+    class AgentListener implements LifecycleListener {
 
         @Override
         public void add(int agentId) {

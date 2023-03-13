@@ -333,12 +333,21 @@ public class NonBlockingHandler {
             for (SelectableChannel ch : channels.keySet()) {
                 ChannelState st = findChannelState(ch);
                 if(st.listener.checkTimeout(ch, (int)(now - st.lastAccessTime) / 1000)) {
+                    BayLog.debug("%s timeout: skt=%s", agent, ch);
                     closeList.add(new Object[]{ch, st});
                 }
             }
         }
         for (Object[] c : closeList) {
             closeChannel((SelectableChannel) c[0], (ChannelState) c[1]);
+        }
+    }
+
+    public void closeAll() {
+
+        for (SelectableChannel ch : channels.keySet()) {
+            ChannelState st = findChannelState(ch);
+            closeChannel(ch, st);
         }
     }
 

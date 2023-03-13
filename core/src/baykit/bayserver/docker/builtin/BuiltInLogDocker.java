@@ -2,6 +2,7 @@ package baykit.bayserver.docker.builtin;
 
 import baykit.bayserver.*;
 import baykit.bayserver.agent.GrandAgent;
+import baykit.bayserver.agent.LifecycleListener;
 import baykit.bayserver.bcf.BcfElement;
 import baykit.bayserver.bcf.BcfKeyVal;
 import baykit.bayserver.docker.Docker;
@@ -18,7 +19,7 @@ import java.util.Map;
 
 public class BuiltInLogDocker extends DockerBase implements Log {
 
-    class AgentListener implements GrandAgent.GrandAgentLifecycleListener {
+    class AgentListener implements LifecycleListener {
 
         @Override
         public void add(int agentId) {

@@ -1,9 +1,9 @@
 package baykit.bayserver;
 
 import baykit.bayserver.agent.GrandAgent;
+import baykit.bayserver.agent.LifecycleListener;
 import baykit.bayserver.docker.City;
 import baykit.bayserver.docker.Port;
-import baykit.bayserver.docker.base.PortBase;
 import baykit.bayserver.protocol.PacketStore;
 import baykit.bayserver.protocol.ProtocolHandlerStore;
 import baykit.bayserver.docker.base.InboundShipStore;
@@ -17,7 +17,7 @@ import java.util.Map;
 
 public class MemUsage {
 
-    static class AgentListener implements GrandAgent.GrandAgentLifecycleListener {
+    static class AgentListener implements LifecycleListener {
 
         @Override
         public void add(int agentId) {
