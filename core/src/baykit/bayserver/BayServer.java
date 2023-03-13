@@ -20,6 +20,7 @@ import java.net.*;
 import java.nio.channels.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.IntStream;
 
 public class BayServer {
 
@@ -228,68 +229,36 @@ public class BayServer {
             BayLog.debug("Host name    : " + myHostName);
             BayLog.debug("Host address : " + myHostAddr);
 
-            Map<ServerSocketChannel, Port> anchoredPortMap = new HashMap<>();   // TCP server port map
-            Map<DatagramChannel, Port> unanchoredPortMap = new HashMap<>();    // UDB server port map
-            for (Port portDkr : ports) {
-                // Open TCP port
-                SocketAddress adr = portDkr.address();
-
-                if(portDkr.anchored()) {
-                    BayLog.info(BayMessage.get(Symbol.MSG_OPENING_TCP_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), portDkr.protocol()));
-                    ServerSocketChannel ch;
-                    if(adr instanceof InetSocketAddress)
-                        ch = ServerSocketChannel.open();
-                    else {
-                        File f = new File(portDkr.socketPath());
-                        if(f.exists())
-                            f.delete();
-                        ch = SysUtil.openUnixDomainServerSocketChannel();
-                    }
-
-                    ch.configureBlocking(false);
-                    try {
-                        ch.bind(adr);
-                    } catch (SocketException e) {
-                        BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
-                        return;
-                    }
-                    anchoredPortMap.put(ch, portDkr);
-                }
-                else {
-                    BayLog.info(BayMessage.get(Symbol.MSG_OPENING_UDP_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), portDkr.protocol()));
-                    DatagramChannel ch = DatagramChannel.open();
-                    ch.configureBlocking(false);
-                    try {
-                        ch.bind(adr);
-                    } catch (SocketException e) {
-                        BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
-                        return;
-                    }
-                    unanchoredPortMap.put(ch, portDkr);
-                }
-            }
-
             /** Init stores, memory usage managers */
             PacketStore.init();
             InboundShipStore.init();
             ProtocolHandlerStore.init();
             TourStore.init(TourStore.MAX_TOURS);
-            TrainRunner.init(harbor.trainRunners());
-            TaxiRunner.init(harbor.taxiRunners());
             MemUsage.init();
-            SignalAgent.init(harbor.controlPort());
-            GrandAgent.init(harbor.grandAgents(), anchoredPortMap, unanchoredPortMap, harbor.maxShips());
 
+
+            Map<ServerSocketChannel, Port> anchoredPortMap = new HashMap<>();   // TCP server port map
+            Map<DatagramChannel, Port> unanchoredPortMap = new HashMap<>();    // UDB server port map
+            openPorts(anchoredPortMap, unanchoredPortMap);
+
+            GrandAgent.init(
+                    IntStream.rangeClosed(1, harbor.grandAgents()).toArray(),
+                    harbor.maxShips());
+
+            invokeRunners();
+
+            GrandAgentMonitor.init(harbor.grandAgents(), anchoredPortMap, unanchoredPortMap);
+            SignalAgent.init(harbor.controlPort());
             createPidFile(SysUtil.pid());
 
-            while(!GrandAgent.monitors.isEmpty()) {
+            while(!GrandAgentMonitor.monitors.isEmpty()) {
                 Selector sel = Selector.open();
                 HashMap<SelectableChannel, GrandAgentMonitor> pipToMonMap = new HashMap<>();
-                for(GrandAgentMonitor mon : GrandAgent.monitors) {
+                for(GrandAgentMonitor mon : GrandAgentMonitor.monitors.values()) {
                     BayLog.debug("Monitoring pipe of %s", mon);
-                    mon.recvPipe.source().configureBlocking(false);
-                    mon.recvPipe.source().register(sel, SelectionKey.OP_READ);
-                    pipToMonMap.put(mon.recvPipe.source(), mon);
+                    mon.comRecvChannel.configureBlocking(false);
+                    mon.comRecvChannel.register(sel, SelectionKey.OP_READ);
+                    pipToMonMap.put(mon.comRecvChannel, mon);
                 }
 
                 ServerSocketChannel serverSkt = null;
@@ -316,9 +285,54 @@ public class BayServer {
             SignalAgent.term();
             System.exit(0);
         } catch (Throwable e) {
-            BayLog.error(e);
+            BayLog.fatal(e);
             System.exit(1);
         }
+    }
+
+    public static void openPorts(
+            Map<ServerSocketChannel, Port> anchoredPortMap,
+            Map<DatagramChannel, Port> unanchoredPortMap) throws IOException {
+
+        for (Port portDkr : ports) {
+            // Open TCP port
+            SocketAddress adr = portDkr.address();
+
+            if(portDkr.anchored()) {
+                BayLog.info(BayMessage.get(Symbol.MSG_OPENING_TCP_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), portDkr.protocol()));
+                ServerSocketChannel ch;
+                if(adr instanceof InetSocketAddress)
+                    ch = ServerSocketChannel.open();
+                else {
+                    File f = new File(portDkr.socketPath());
+                    if(f.exists())
+                        f.delete();
+                    ch = SysUtil.openUnixDomainServerSocketChannel();
+                }
+
+                ch.configureBlocking(false);
+                try {
+                    ch.bind(adr);
+                } catch (SocketException e) {
+                    BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
+                    return;
+                }
+                anchoredPortMap.put(ch, portDkr);
+            }
+            else {
+                BayLog.info(BayMessage.get(Symbol.MSG_OPENING_UDP_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), portDkr.protocol()));
+                DatagramChannel ch = DatagramChannel.open();
+                ch.configureBlocking(false);
+                try {
+                    ch.bind(adr);
+                } catch (SocketException e) {
+                    BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
+                    return;
+                }
+                unanchoredPortMap.put(ch, portDkr);
+            }
+        }
+
     }
 
     /**
@@ -414,4 +428,11 @@ public class BayServer {
         }
     }
 
+    //
+    // Run train runners and taxi runners
+    //
+    private static void invokeRunners() {
+        TrainRunner.init(harbor.trainRunners());
+        TaxiRunner.init(harbor.taxiRunners());
+    }
 }

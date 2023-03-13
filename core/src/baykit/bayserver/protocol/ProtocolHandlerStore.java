@@ -2,6 +2,7 @@ package baykit.bayserver.protocol;
 
 import baykit.bayserver.BayLog;
 import baykit.bayserver.agent.GrandAgent;
+import baykit.bayserver.agent.LifecycleListener;
 import baykit.bayserver.util.StringUtil;
 import baykit.bayserver.util.ObjectStore;
 
@@ -15,7 +16,7 @@ import java.util.Map;
  */
 public class ProtocolHandlerStore extends ObjectStore<ProtocolHandler> {
 
-    static class AgentListener implements GrandAgent.GrandAgentLifecycleListener {
+    static class AgentListener implements LifecycleListener {
 
         @Override
         public void add(int agentId) {

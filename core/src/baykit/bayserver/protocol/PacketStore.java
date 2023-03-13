@@ -2,6 +2,7 @@ package baykit.bayserver.protocol;
 
 import baykit.bayserver.BayLog;
 import baykit.bayserver.agent.GrandAgent;
+import baykit.bayserver.agent.LifecycleListener;
 import baykit.bayserver.util.Reusable;
 import baykit.bayserver.util.StringUtil;
 import baykit.bayserver.util.ObjectStore;
@@ -19,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class PacketStore<P extends Packet<T>, T> implements Reusable {
 
-    static class AgentListener implements GrandAgent.GrandAgentLifecycleListener {
+    static class AgentListener implements LifecycleListener {
 
         @Override
         public void add(int agentId) {

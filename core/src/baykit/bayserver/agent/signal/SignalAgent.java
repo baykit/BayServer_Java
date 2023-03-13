@@ -1,13 +1,13 @@
 package baykit.bayserver.agent.signal;
 
-import baykit.bayserver.*;
-import baykit.bayserver.agent.GrandAgent;
+import baykit.bayserver.BayLog;
+import baykit.bayserver.BayMessage;
+import baykit.bayserver.Symbol;
+import baykit.bayserver.agent.GrandAgentMonitor;
 import baykit.bayserver.util.SysUtil;
 
 import java.io.*;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
@@ -31,7 +31,6 @@ public class SignalAgent{
     
     public static SignalAgent signalAgent;
     static Map<String, String> signalMap = new HashMap<>();
-
 
     int port;
     public ServerSocketChannel serverSocket;
@@ -91,20 +90,20 @@ public class SignalAgent{
         try {
             switch (cmd.toLowerCase()) {
                 case COMMAND_RELOAD_CERT:
-                    GrandAgent.reloadCertAll();
+                    GrandAgentMonitor.reloadCertAll();
                     break;
                 case COMMAND_MEM_USAGE:
-                    GrandAgent.printUsageAll();
+                    GrandAgentMonitor.printUsageAll();
                     break;
                 case COMMAND_RESTART_AGENTS:
                     try {
-                        GrandAgent.restartAll();
+                        GrandAgentMonitor.restartAll();
                     } catch (IOException e) {
                         BayLog.error(e);
                     }
                     break;
                 case COMMAND_SHUTDOWN:
-                    GrandAgent.shutdownAll();
+                    GrandAgentMonitor.shutdownAll();
                     break;
                 case COMMAND_ABORT:
                     System.exit(1);
