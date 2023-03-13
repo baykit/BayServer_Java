@@ -2,6 +2,7 @@ package baykit.bayserver.docker.ajp;
 
 import baykit.bayserver.*;
 import baykit.bayserver.agent.GrandAgent;
+import baykit.bayserver.agent.GrandAgentMonitor;
 import baykit.bayserver.agent.NextSocketAction;
 import baykit.bayserver.docker.base.InboundHandler;
 import baykit.bayserver.protocol.*;
@@ -273,7 +274,7 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
     @Override
     public NextSocketAction handleShutdown(CmdShutdown cmd) throws IOException {
         BayLog.debug(ship() + " handleShutdown");
-        GrandAgent.shutdownAll();
+        GrandAgentMonitor.shutdownAll();
         return Close;
     }
 

@@ -63,7 +63,7 @@ public class BuiltInCityDocker extends DockerBase implements City {
         townList.sort((d1, d2) -> Integer.compare(d2.name().length(), d1.name().length()));
 
         for(Town t : townList) {
-            BayLog.info(BayMessage.get(Symbol.MSG_SETTING_UP_TOWN, t.name(), t.location()));
+            BayLog.debug(BayMessage.get(Symbol.MSG_SETTING_UP_TOWN, t.name(), t.location()));
         }
 
         defaultTown = new BuiltInTownDocker();
