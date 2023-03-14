@@ -24,8 +24,6 @@ public class GrandAgent extends Thread {
     public static final int SELECT_TIMEOUT_SEC = 10;
 
     static int agentCount;
-    static Map<ServerSocketChannel, Port> anchorablePortMap;
-    static Map<DatagramChannel, Port> unanchorablePortMap;
     static int maxShips;
     static int maxAgentId;
     public static Map<Integer, GrandAgent> agents = new HashMap<>();
@@ -33,27 +31,36 @@ public class GrandAgent extends Thread {
 
     int selectTimeoutSec = SELECT_TIMEOUT_SEC;
     public final int agentId;
+    Map<ServerSocketChannel, Port> anchorablePortMap;
+    Map<DatagramChannel, Port> unanchorablePortMap;
+    public boolean anchorable;
     final Selector selector;
     public SpinHandler spinHandler;
     public NonBlockingHandler nonBlockingHandler;
     public AcceptHandler acceptHandler;
     public final int maxInboundShips;
     boolean aborted;
-    public boolean anchorable;
     public Map<DatagramChannel, Transporter> unanchorableTransporters = new HashMap<>();
     public CommandReceiver commandReceiver;
 
     public GrandAgent(
             int agentId,
             int maxShips,
+            Map<ServerSocketChannel, Port> anchorablePortMap,
+            Map<DatagramChannel, Port> unanchorablePortMap,
             boolean anchorable) throws IOException {
         super("GrandAgent#" + agentId);
         this.agentId = agentId;
         this.anchorable = anchorable;
 
         if(anchorable) {
+            this.anchorablePortMap = anchorablePortMap;
             this.acceptHandler = new AcceptHandler(this, anchorablePortMap);
         }
+        else {
+            this.unanchorablePortMap = unanchorablePortMap != null ? unanchorablePortMap : new HashMap<>();
+        }
+
         this.spinHandler = new SpinHandler(this);
         this.nonBlockingHandler = new NonBlockingHandler(this);
         this.selector = Selector.open();
@@ -77,13 +84,13 @@ public class GrandAgent extends Thread {
             commandReceiver.comRecvChannel.register(selector, SelectionKey.OP_READ);
 
             // Set up unanchorable channel
-            for(DatagramChannel ch : unanchorablePortMap.keySet()) {
-                Port p = unanchorablePortMap.get(ch);
-                Transporter tp = p.newTransporter(this, ch);
-                unanchorableTransporters.put(ch, tp);
-                nonBlockingHandler.addChannelListener(ch, tp);
-                nonBlockingHandler.askToStart(ch);
-                if(!anchorable) {
+            if(!anchorable) {
+                for (DatagramChannel ch : unanchorablePortMap.keySet()) {
+                    Port p = unanchorablePortMap.get(ch);
+                    Transporter tp = p.newTransporter(this, ch);
+                    unanchorableTransporters.put(ch, tp);
+                    nonBlockingHandler.addChannelListener(ch, tp);
+                    nonBlockingHandler.askToStart(ch);
                     nonBlockingHandler.askToRead(ch);
                 }
             }
@@ -134,6 +141,7 @@ public class GrandAgent extends Thread {
                 for(Iterator<SelectionKey> it = selKeys.iterator(); it.hasNext(); ) {
                     SelectionKey key = it.next();
                     it.remove();
+                    //BayLog.debug(this + " selected key=" + key);
                     if(key.channel() == commandReceiver.comRecvChannel)
                         commandReceiver.onPipeReadable();
                     else if(key.isAcceptable())
@@ -217,12 +225,8 @@ public class GrandAgent extends Thread {
     /////////////////////////////////////////////////////////////////////////////
     public static void init(
             int agentIds[],
-            Map<ServerSocketChannel, Port> anchorablePortMap,
-            Map<DatagramChannel, Port> unanchorablePortMap,
             int maxShips) throws IOException {
         GrandAgent.agentCount = agentIds.length;
-        GrandAgent.anchorablePortMap = anchorablePortMap;
-        GrandAgent.unanchorablePortMap = unanchorablePortMap != null ? unanchorablePortMap : new HashMap<>();
         GrandAgent.maxShips = maxShips;
     }
 
@@ -230,7 +234,11 @@ public class GrandAgent extends Thread {
         return agents.get(id);
     }
 
-    public static void add(int agtId, boolean anchorable) throws IOException {
+    public static void add(
+            int agtId,
+            Map<ServerSocketChannel, Port> anchorablePortMap,
+            Map<DatagramChannel, Port> unanchorablePortMap,
+            boolean anchorable) throws IOException {
         if(agtId == -1)
             agtId = ++maxAgentId;
         BayLog.debug("Add agent: id=%d", agtId);
@@ -238,7 +246,7 @@ public class GrandAgent extends Thread {
         if(agtId > maxAgentId)
             maxAgentId = agtId;
 
-        GrandAgent agt = new GrandAgent(agtId, maxShips, anchorable);
+        GrandAgent agt = new GrandAgent(agtId, maxShips, anchorablePortMap, unanchorablePortMap, anchorable);
         agents.put(agtId, agt);
 
         listeners.forEach(lis -> lis.add(agt.agentId));
