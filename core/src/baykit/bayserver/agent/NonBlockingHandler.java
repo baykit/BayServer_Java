@@ -1,9 +1,11 @@
 package baykit.bayserver.agent;
 
 import baykit.bayserver.BayLog;
+import baykit.bayserver.BayServer;
 import baykit.bayserver.Sink;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.*;
 import java.util.ArrayList;
@@ -104,7 +106,16 @@ public class NonBlockingHandler {
 
         //ch.configureBlocking(false);
         ch.connect(addr);
-        addOperation(ch, OP_CONNECT);
+
+        if(!(addr instanceof InetSocketAddress)) {
+            // Unix domain socket does not support connect operation
+            NextSocketAction nextSocketAction = chState.listener.onConnectable(ch);
+            if(nextSocketAction == Continue)
+                askToRead(ch);
+        }
+        else {
+            addOperation(ch, OP_CONNECT);
+        }
     }
 
     public void askToRead(SelectableChannel ch) {
