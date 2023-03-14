@@ -159,11 +159,11 @@ public class NonBlockingHandler {
                     cop.op |= op;
                     cop.close = cop.close || close;
                     found = true;
-                    BayLog.trace("%s Update operation: %s ch=%s", agent, opMode(cop.op), cop.ch);
+                    BayLog.debug("%s Update operation: %d(%s) ch=%s", agent, cop.op, opMode(cop.op), cop.ch);
                 }
             }
             if(!found) {
-                BayLog.trace("%s Add operation: %s ch=%s", agent, opMode(op), ch);
+                BayLog.debug("%s Add operation: %d(%s) ch=%s", agent, op, opMode(op), ch);
                 operations.add(new ChannelOperation(ch, op, close));
             }
         }
@@ -188,7 +188,7 @@ public class NonBlockingHandler {
             return;
         }
 
-        BayLog.trace("%s chState=%s Waked up: readable=%b writable=%b connectable=%b",
+        BayLog.debug("%s chState=%s Waked up: readable=%b writable=%b connectable=%b",
                         agent, chStt, key.isReadable(), key.isWritable(), key.isConnectable());
         NextSocketAction nextSocketAction = null;
 
@@ -291,12 +291,12 @@ public class NonBlockingHandler {
             int nch = operations.size();
             for (ChannelOperation cop : operations) {
                 ChannelState st = findChannelState(cop.ch);
-                BayLog.trace("%s chState=%s register op=%s ch=%s", agent, st, opMode(cop.op), cop.ch);
+                BayLog.debug("%s register chState=%s register op=%d(%s) ch=%s", agent, st, cop.op, opMode(cop.op), cop.ch);
                 SelectionKey key = cop.ch.keyFor(agent.selector);
                 if(key != null) {
                     int op = key.interestOps();
                     int newOp = op | cop.op;
-                    BayLog.debug("Already registered op=%s update to %s", opMode(op), opMode(newOp));
+                    BayLog.debug("Already registered op=%d(%s) update to %s", op, opMode(op), opMode(newOp));
                     key.interestOps(newOp);
                 }
                 else {
@@ -304,8 +304,8 @@ public class NonBlockingHandler {
                         cop.ch.register(agent.selector, cop.op);
                     } catch (ClosedChannelException e) {
                         ChannelState cst = findChannelState(cop.ch);
-                        BayLog.debug(e, "%s Cannot register operation (Channel is closed): %s ch=%s op=%s close=%b",
-                                agent, cst != null ? cst.listener : null, cop.ch, opMode(cop.op), cop.close);
+                        BayLog.debug(e, "%s Cannot register operation (Channel is closed): %s ch=%s op=%d(%s) close=%b",
+                                agent, cst != null ? cst.listener : null, cop.ch, cop.op, opMode(cop.op), cop.close);
                     }
                 }
 

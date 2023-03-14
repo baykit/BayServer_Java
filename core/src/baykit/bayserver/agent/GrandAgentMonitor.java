@@ -141,7 +141,7 @@ public class GrandAgentMonitor {
         Pipe sendPipe = Pipe.open();
         Pipe recvPipe = Pipe.open();
 
-        GrandAgent.add(agtId, anchorable);
+        GrandAgent.add(agtId, anchorablePortMap, unanchorablePortMap, anchorable);
 
         GrandAgent agt = GrandAgent.get(agtId);
         Thread t = new Thread(agt);
@@ -166,7 +166,7 @@ public class GrandAgentMonitor {
         if(!finale) {
             if (monitors.size() < numAgents) {
                 try {
-                    GrandAgent.add(-1, anchorable);
+                    GrandAgent.add(-1, anchorablePortMap, unanchorablePortMap, anchorable);
                     add(anchorable);
                 }
                 catch (IOException e) {
