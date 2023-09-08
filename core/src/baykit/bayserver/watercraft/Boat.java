@@ -20,15 +20,15 @@ public abstract class Boat implements DataListener {
     static Counter idCounter = new Counter();
 
     public final int objectId;
-    public int boartId;
+    public int boatId;
 
     protected Boat() {
         this.objectId = oidCounter.next();
-        this.boartId = INVALID_BOAT_ID;
+        this.boatId = INVALID_BOAT_ID;
     }
 
     public void init() {
-        this.boartId = idCounter.next();
+        this.boatId = idCounter.next();
     }
 
     @Override

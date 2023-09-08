@@ -15,7 +15,7 @@ public class LogBoat extends Boat implements Reusable {
 
     @Override
     public String toString() {
-        return "lboat#" + boartId + "/" + objectId + " file=" + fileName;
+        return "lboat#" + boatId + "/" + objectId + " file=" + fileName;
     }
 
 
