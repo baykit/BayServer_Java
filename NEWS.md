@@ -1,6 +1,11 @@
 # BayServer for Java
 
 
+# 2.1.0
+
+- Refactors classes around GrandAgent and GrandAgentMonitor
+- Fixes some bugs
+
 # 2.0.2
 
 - Translates some messages to Japanese
