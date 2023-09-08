@@ -20,10 +20,6 @@ import static baykit.bayserver.agent.NextSocketAction.*;
 import static baykit.bayserver.docker.fcgi.FcgWarpHandler.CommandState.ReadContent;
 import static baykit.bayserver.docker.fcgi.FcgWarpHandler.CommandState.ReadHeader;
 
-/**
- * AJP Protocol
- * https://tomcat.apache.org/connectors-doc/ajp/ajpv13a.html
- */
 public class FcgWarpHandler extends FcgProtocolHandler implements WarpHandler {
 
     static class WarpProtocolHandlerFactory implements ProtocolHandlerFactory<FcgCommand, FcgPacket, FcgType> {
@@ -56,7 +52,7 @@ public class FcgWarpHandler extends FcgProtocolHandler implements WarpHandler {
     byte[] data;
 
     /////////////////////////////////////////////////////////////////////////////////
-    // Implements Ship
+    // Implements Reusable
     /////////////////////////////////////////////////////////////////////////////////
     @Override
     public void reset() {
@@ -70,7 +66,7 @@ public class FcgWarpHandler extends FcgProtocolHandler implements WarpHandler {
     }
 
     /////////////////////////////////////////////////////////////////////////////////
-    // Implements WarpShip
+    // Implements WarpHandler
     /////////////////////////////////////////////////////////////////////////////////
     @Override
     public synchronized int nextWarpId() {

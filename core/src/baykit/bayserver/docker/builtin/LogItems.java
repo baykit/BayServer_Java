@@ -253,7 +253,7 @@ abstract class LogItems {
     static class TimeItem extends LogItem {
         static LogItemFactory factory = TimeItem::new;
 
-        /** Header name */
+        /** Formatter */
         SimpleDateFormat formatter = new SimpleDateFormat(
                 "[dd/MMM/yyyy:HH:mm:ss Z]");
 
