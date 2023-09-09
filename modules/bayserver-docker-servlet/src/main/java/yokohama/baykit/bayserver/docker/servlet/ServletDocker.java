@@ -4,8 +4,6 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.ConfigException;
 import yokohama.baykit.bayserver.HttpException;
-import yokohama.baykit.bayserver.tour.Tour;
-import yokohama.baykit.bayserver.train.TrainRunner;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
@@ -14,15 +12,16 @@ import yokohama.baykit.bayserver.docker.base.ClubBase;
 import yokohama.baykit.bayserver.docker.servlet.duck.*;
 import yokohama.baykit.bayserver.docker.servlet.jakarta.*;
 import yokohama.baykit.bayserver.docker.servlet.javax.*;
-import yokohama.baykit.bayserver.util.*;
-import yokohama.baykit.bayserver.docker.servlet.duck.*;
-import yokohama.baykit.bayserver.docker.servlet.jakarta.*;
-import yokohama.baykit.bayserver.docker.servlet.javax.*;
+import yokohama.baykit.bayserver.tour.Tour;
+import yokohama.baykit.bayserver.train.TrainRunner;
 import yokohama.baykit.bayserver.util.*;
 
 import java.io.File;
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 public class ServletDocker extends ClubBase {
 
