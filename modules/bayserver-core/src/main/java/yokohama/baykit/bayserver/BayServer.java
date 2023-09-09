@@ -154,9 +154,11 @@ public class BayServer {
 
         BayLog.debug("Class libralies:");
         ClassLoader classLoader = BayServer.class.getClassLoader();
-        URL[] urls = ((URLClassLoader) classLoader).getURLs();
-        for (int i = 0; i < urls.length; i++) {
-            BayLog.debug(" Path[%d]: %s", i+1, urls[i].getFile());
+        if(classLoader instanceof URLClassLoader) {
+            URL[] urls = ((URLClassLoader) classLoader).getURLs();
+            for (int i = 0; i < urls.length; i++) {
+                BayLog.debug(" Path[%d]: %s", i + 1, urls[i].getFile());
+            }
         }
 
         BayServer.init(home, plan);

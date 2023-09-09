@@ -41,6 +41,8 @@ public class AnnotationScanner {
      * Scan annotations of classes
      */
     public void scanAnnotations() {
+        BayLog.debug("Scan annotations in all jar file");
+        BayLog.debug(" Create dummy class loader");
         URLClassLoader ldr = docker.ctx.newClassLoader();
 
         /**

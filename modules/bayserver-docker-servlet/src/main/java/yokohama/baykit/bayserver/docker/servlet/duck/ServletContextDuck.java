@@ -465,7 +465,7 @@ public abstract class ServletContextDuck {
                     classPath.add(lib.toURI().toURL());
                 }
             }
-            BayLog.debug("servet: class path: " + classPath);
+            BayLog.debug("servet: add class path: " + classPath);
 
         } catch (MalformedURLException e) {
             BayLog.error(e);
