@@ -1,0 +1,21 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>yokohama.baykit</groupId>
+  <artifactId>bayserver-project</artifactId>
+  <version>1.0.0</version>
+  <packaging>pom</packaging>
+
+  <modules>
+    <module>modules/bayserver</module>
+    <module>modules/bayserver-core</module>
+    <module>modules/bayserver-docker-ajp</module>
+    <module>modules/bayserver-docker-cgi</module>
+    <module>modules/bayserver-docker-fcgi</module>
+    <module>modules/bayserver-docker-http</module>
+    <module>modules/bayserver-docker-http3</module>
+    <module>modules/bayserver-docker-servlet</module>
+    <module>modules/bayserver-docker-wordpress</module>
+  </modules>
+</project>
+
