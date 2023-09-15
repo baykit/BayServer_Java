@@ -30,18 +30,18 @@ public class XmlHandler implements ErrorHandler, EntityResolver {
 
     @Override
     public InputSource resolveEntity(String publicId, String systemId) throws SAXException, IOException {
-        File file = null;
+        String path = null;
         switch (publicId) {
             case "-//Sun Microsystems, Inc.//DTD Web Application 2.2//EN":
-                file = new File(BayServer.bservHome, "lib/dtd/web_22.dtd");
+                path = "/dtd/web_22.dtd";
                 break;
             case "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN":
-                file = new File(BayServer.bservHome, "lib/dtd/web_23.dtd");
+                path = "/dtd/web_23.dtd";
                 break;
         }
-        if(file == null)
+        if(path == null)
             return null;
         else
-            return new InputSource(new FileInputStream(file));
+            return new InputSource(getClass().getResourceAsStream(path));
     }
 }
