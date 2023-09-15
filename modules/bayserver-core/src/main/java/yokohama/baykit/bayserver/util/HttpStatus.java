@@ -35,12 +35,12 @@ public class HttpStatus {
         return desc;
     }
 
-    public static void init(String conf) throws ParseException {
+    public static void init(String path) throws ParseException {
         if(initialized)
             return;
 
         BcfParser p = new BcfParser();
-        BcfDocument doc = p.parse(conf);
+        BcfDocument doc = p.parseResource(path);
         //if(BayServer.logLevel == BayServer.LOG_LEVEL_DEBUG)
         //    doc.print();
         for(BcfObject o : doc.contentList) {

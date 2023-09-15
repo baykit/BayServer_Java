@@ -15,9 +15,9 @@ public class BayDockers {
 
 
 
-    public static void init(String conf) throws ParseException {
+    public static void init(String path) throws ParseException {
         BcfParser p = new BcfParser();
-        BcfDocument doc = p.parse(conf);
+        BcfDocument doc = p.parseResource(path);
         //if(BayServer.logLevel == BayServer.LOG_LEVEL_DEBUG)
         //    doc.print();
         
