@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.util;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.bcf.BcfDocument;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.bcf.BcfParser;
@@ -19,20 +20,20 @@ public class Message {
     
     public HashMap<String, String> messages = new HashMap<>();
     
-    public void init(String conf, Locale locale) throws ParseException {
+    public void init(String path, Locale locale) throws ParseException {
         String lang = locale.getLanguage();
-        init(conf + ".bcf");
+        init(path + ".bcf");
         if(StringUtil.isSet(lang) && !lang.equals("en"))
-            init(conf + "_" + lang + ".bcf");
+            init(path + "_" + lang + ".bcf");
     }
 
-    private void init(String file) throws ParseException {
-        if(!new File(file).exists()) {
-            BayLog.warn("Cannot find message send_file: %s", file);
+    private void init(String path) throws ParseException {
+        if(Message.class.getResource(path) == null) {
+            BayLog.warn("Cannot find message file: %s", path);
             return;
         }
         BcfParser p = new BcfParser();
-        BcfDocument doc = p.parse(file);
+        BcfDocument doc = p.parseResource(path);
         //if(BayServer.logLevel == BayServer.LOG_LEVEL_DEBUG)
         //    doc.print();
 

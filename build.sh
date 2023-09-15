@@ -58,7 +58,16 @@ pushd .
 libdir=`pwd`/lib
 cd $stage_www/servlet-demo/WEB-INF/classes
 javac -classpath $libdir/servlet-api.jar --release 8 `find . -name "*.java"`
-popd 
+popd
+
+
+for dir in `ls -d modules/*/`; do
+  pushd .
+  cd ${dir}
+  sed "s/\\\${env.VERSION}/${version}/" pom.xml.template > pom.xml
+  popd
+done
+sed "s/\\\${env.VERSION}/${version}/" pom.xml.template > pom.xml
 
 rm -r ~/.m2/repository/yokohama/baykit/
 $mvn_cmd clean

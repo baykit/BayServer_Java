@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>yokohama.baykit</groupId>
   <artifactId>bayserver-project</artifactId>
-  <version>1.0.0</version>
+  <version>${env.VERSION}</version>
   <packaging>pom</packaging>
 
   <modules>

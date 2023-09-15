@@ -12,7 +12,7 @@ public class CgiMessage extends Message {
 
     public static void init() throws ParseException {
         msg = new CgiMessage();
-        msg.init(BayServer.bservHome + "/lib/conf/cgi_messages", Locale.getDefault());
+        msg.init("/conf/cgi_messages", Locale.getDefault());
     }
 
     public static String get(CgiSymbol key, Object... args) {
