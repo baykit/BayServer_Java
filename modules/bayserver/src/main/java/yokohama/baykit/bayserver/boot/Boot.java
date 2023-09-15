@@ -64,9 +64,10 @@ public class Boot {
         }
 
         // Invoke BayServer
-        //URLClassLoader loader = new URLClassLoader(urls.toArray(new URL[0]));
-
-        Class cls = Class.forName(BSERV_MAIN_CLASS);
+        ClassLoader loader = new URLClassLoader(urls.toArray(new URL[0]), Boot.class.getClassLoader());
+        Thread.currentThread().setContextClassLoader(loader);
+        
+        Class cls = loader.loadClass(BSERV_MAIN_CLASS);
         Method m = cls.getMethod("main",
                                  new Class[] { String[].class });
 

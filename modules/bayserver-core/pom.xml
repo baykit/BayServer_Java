@@ -6,7 +6,7 @@
 
   <groupId>yokohama.baykit</groupId>
   <artifactId>bayserver-core</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>${env.VERSION}</version>
 
   <name>bayserver-core</name>
   <url>http://baykit.yokohama</url>

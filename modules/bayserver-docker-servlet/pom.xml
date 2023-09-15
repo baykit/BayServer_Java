@@ -6,7 +6,7 @@
 
   <groupId>yokohama.baykit</groupId>
   <artifactId>bayserver-docker-servlet</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>${env.VERSION}</version>
 
   <name>bayserver-docker-servlet</name>
   <url>http://baykit.yokohama</url>
@@ -27,7 +27,7 @@
     <dependency>
       <groupId>yokohama.baykit</groupId>
       <artifactId>bayserver-core</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>${env.VERSION}</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
