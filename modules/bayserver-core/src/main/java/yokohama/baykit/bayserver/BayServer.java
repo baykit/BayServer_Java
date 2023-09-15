@@ -113,6 +113,7 @@ public class BayServer {
         String home = System.getenv(ENV_BAYSERVER_HOME);
         String plan = System.getenv(ENV_BAYSERVER_PLAN);
         String mkpass = null;
+        boolean init = false;
 
         for (String arg : args) {
             if (arg.equalsIgnoreCase("-start"))
@@ -132,6 +133,9 @@ public class BayServer {
 
             else if (arg.equalsIgnoreCase("-abort"))
                 cmd = SignalAgent.COMMAND_ABORT;
+
+            else if (arg.equalsIgnoreCase("-init"))
+                init = true;
 
             else if (arg.toLowerCase().startsWith("-home="))
                 home = arg.substring(6);
@@ -161,45 +165,23 @@ public class BayServer {
             }
         }
 
-        BayServer.init(home, plan);
-
-        if(cmd == null) {
-            BayServer.start();
-        }
-        else {
-            new SignalSender().sendCommand(cmd);
-        }
-    }
-
-    public static void init(String home, String plan) throws BayException, IOException {
-
         // Get debug mode
         BayLog.debug("Log level=" + BayLog.logLevel);
-        
-        // Get BayServer home
-        if(home == null)
-            home = ".";
-        bservHome = new File(home).getAbsoluteFile().getCanonicalPath();
-        if(!new File(bservHome).isDirectory())
-            throw new BayException("BayServer home is not a directory: " + bservHome);
-        if (bservHome.endsWith(File.separator))
-            bservHome = bservHome.substring(0, bservHome.length() - 1);
-        BayLog.info("BayServer home: " + bservHome);
 
+        getHome(home);
+        if(init) {
+            init();
+        }
+        else {
+            getPlan(plan);
 
-        // Get plan file
-        if(plan == null)
-            plan = "plan/bayserver.plan";
-        if(!new File(plan).isAbsolute())
-            plan = bservHome + "/" + plan;
-        bservPlan = new File(plan).getAbsoluteFile().getCanonicalPath();
-        BayLog.info("BayServer Plan: " + bservPlan);
-        if(!new File(bservPlan).isFile())
-            throw new BayException("Plan file is not a file: " + bservPlan);
-
-        planDir = new File(bservHome, "plan").getAbsolutePath();
+            if (cmd == null) {
+                BayServer.start();
+            } else {
+                new SignalSender().sendCommand(cmd);
+            }
+        }
     }
-
 
     /**
      * Start the system
@@ -382,20 +364,55 @@ public class BayServer {
             return location;
     }
 
-    /*
-    public static Class getBootClass() {
-        try {
-            return Class.forName("yokohama.baykit.bayserver.boot.Boot");
-        } catch (ClassNotFoundException e) {
-            BayLog.error(e);
-            throw new Error(e);
-        }
-    }
-     */
 
     ////////////////////////////////////////////////////////////////
     // private methods
     ////////////////////////////////////////////////////////////////
+    private static void getHome(String home) throws BayException, IOException {
+        // Get BayServer home
+        if(home == null)
+            home = ".";
+        bservHome = new File(home).getAbsoluteFile().getCanonicalPath();
+        if(!new File(bservHome).isDirectory())
+            throw new BayException("BayServer home is not a directory: " + bservHome);
+        if (bservHome.endsWith(File.separator))
+            bservHome = bservHome.substring(0, bservHome.length() - 1);
+        BayLog.debug("BayServer home: " + bservHome);
+    }
+
+    private static void getPlan(String plan) throws BayException, IOException {
+        // Get plan file
+        if(plan == null)
+            plan = "plan/bayserver.plan";
+        if(!new File(plan).isAbsolute())
+            plan = bservHome + "/" + plan;
+        bservPlan = new File(plan).getAbsoluteFile().getCanonicalPath();
+        BayLog.debug("BayServer Plan: " + bservPlan);
+        if(!new File(bservPlan).isFile())
+            throw new BayException("Plan file is not a file: " + bservPlan);
+
+        planDir = new File(bservHome, "plan").getAbsolutePath();
+    }
+
+    public static void init() throws BayException, IOException {
+        File f = new File(BayServer.bservHome + File.separator + "init.jar");
+
+        // Retrieve init.jar from bayserver.jar
+        try (InputStream in = BayServer.class.getResourceAsStream("/init.jar");
+             FileOutputStream out = new FileOutputStream(f)) {
+            byte buf[] = new byte[1024];
+            while(true) {
+                int c = in.read(buf);
+                if(c == -1)
+                    break;
+                out.write(buf, 0, c);
+            }
+        }
+
+        new JarExtractor().extract(f.getPath(), BayServer.bservHome);
+        f.delete();
+    }
+    
     private static void loadPlan(String bservConf) throws BayException {
         BcfParser p = new BcfParser();
         BcfDocument doc = p.parse(bservConf);

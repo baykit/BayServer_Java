@@ -41,7 +41,7 @@
             inipara
        </servlet-name>
        <servlet-class>
-            InitParams
+           InitParams
        </servlet-class>
        <init-param>
           <param-name>Are you BayServing?</param-name>
