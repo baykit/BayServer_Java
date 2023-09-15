@@ -206,10 +206,10 @@ public class BayServer {
      */
     public static void start() {
         try {
-            BayMessage.init(bservHome + "/lib/conf/messages", Locale.getDefault());
-            BayDockers.init(bservHome + "/lib/conf/dockers.bcf");
-            Mimes.init(bservHome + "/lib/conf/mimes.bcf");
-            HttpStatus.init(bservHome + "/lib/conf/httpstatus.bcf");
+            BayMessage.init("/conf/messages", Locale.getDefault());
+            BayDockers.init("/conf/dockers.bcf");
+            Mimes.init("/conf/mimes.bcf");
+            HttpStatus.init("/conf/httpstatus.bcf");
             loadPlan(bservPlan);
 
             String redirectFile = harbor.redirectFile();
@@ -382,6 +382,16 @@ public class BayServer {
             return location;
     }
 
+    /*
+    public static Class getBootClass() {
+        try {
+            return Class.forName("yokohama.baykit.bayserver.boot.Boot");
+        } catch (ClassNotFoundException e) {
+            BayLog.error(e);
+            throw new Error(e);
+        }
+    }
+     */
 
     ////////////////////////////////////////////////////////////////
     // private methods

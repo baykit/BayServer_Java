@@ -9,9 +9,9 @@ public class Mimes {
 
     static HashMap<String, String> mimeMap = new HashMap<>();
 
-    public static void init(String conf) throws ParseException {
+    public static void init(String path) throws ParseException {
         BcfParser p = new BcfParser();
-        BcfDocument doc = p.parse(conf);
+        BcfDocument doc = p.parseResource(path);
         //if(BayServer.logLevel == BayServer.LOG_LEVEL_DEBUG)
         //    doc.print();
         for(BcfObject o : doc.contentList) {

@@ -34,8 +34,7 @@ public class H2ErrorCode extends Message {
         if(msg != null)
             return;
 
-        String prefix = BayServer.bservHome + "/lib/conf/h2_messages";
         msg = new H2ErrorCode();
-        msg.init(prefix, Locale.getDefault());
+        msg.init("/conf/h2_messages", Locale.getDefault());
     }
 }

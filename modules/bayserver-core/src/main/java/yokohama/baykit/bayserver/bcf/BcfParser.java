@@ -6,6 +6,8 @@ import yokohama.baykit.bayserver.Symbol;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 
 public class BcfParser {
@@ -35,8 +37,21 @@ public class BcfParser {
             throw new ParseException(fileName, lineNo, BayMessage.get(Symbol.PAS_INVALID_INDENT));
         return indent;
     }
-    
+
+    public BcfDocument parseResource(String path) throws ParseException {
+        return parse(path, BcfParser.class.getResourceAsStream(path));
+    }
+
     public BcfDocument parse(String file) throws ParseException {
+        try {
+            return parse(file, Files.newInputStream(Paths.get(file)));
+        } catch (IOException e) {
+            BayLog.error(e);
+            throw new ParseException(file, 0, e.toString());
+        }
+    }
+
+    public BcfDocument parse(String file, InputStream in) throws ParseException {
         BcfDocument doc = new BcfDocument();
         ArrayList<BcfObject> currentContentList = doc.contentList;
         ArrayList<BcfObject> parentContentList = null;
@@ -46,7 +61,7 @@ public class BcfParser {
         try {
             br = new BufferedReader(
                     new InputStreamReader(
-                            new FileInputStream(file),
+                            in,
                             StandardCharsets.UTF_8));
             parseSameLevel(doc.contentList, 0);
         }
