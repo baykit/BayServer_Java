@@ -1,2 +1,2 @@
 BayServer 
-https://baykit.yokohama/bayserver-documents/
+https://baykit.yokohama/
