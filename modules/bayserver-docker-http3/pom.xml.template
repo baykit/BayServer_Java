@@ -39,6 +39,50 @@
     </dependency>
   </dependencies>
 
+  <scm>
+    <url>https://github.com/baykit/BayServer_Java</url>
+    <connection>scm:git:git@github.com:baykit/BayServer_Java.git</connection>
+    <developerConnection>scm:git:git@github.com:baykit/BayServer_Java.git</developerConnection>
+  </scm>
+
+  <developers>
+    <developer>
+      <id>michisukep</id>
+      <name>Michisuke-P</name>
+      <email>michisukep@gmail.com</email>
+      <url>https://michisukep.com</url>
+    </developer>
+  </developers>
+
+  <licenses>
+    <license>
+      <name>Baykit Public License, Version 1.1</name>
+      <url>https://baykit.yokohama/baykit-license/</url>
+    </license>
+  </licenses>
+
+  <distributionManagement>
+    <snapshotRepository>
+        <id>ossrh-snap</id>
+        <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
+    </snapshotRepository>
+    <repository>
+        <id>ossrh-rel</id>
+        <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+  </distributionManagement>
+
+  <repositories>
+    <repository>
+      <id>ossrh-snap</id>
+      <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+    </repository>
+    <repository>
+      <id>ossrh-rel</id>
+      <url>https://oss.sonatype.org/content/repositories/releases</url>
+    </repository>
+  </repositories>
+
   <build>
     <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
       <plugins>
