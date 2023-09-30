@@ -7,6 +7,7 @@
   <groupId>yokohama.baykit</groupId>
   <artifactId>bayserver</artifactId>
   <version>${env.VERSION}</version>
+  <description>BayServer is one of the high-speed web servers. It operates as a single-threaded, asynchronous server, which makes it exceptionally fast. It also supports multi-core processors, harnessing the full potential of the CPU's capabilities.</description>
 
   <name>bayserver</name>
   <url>http://baykit.yokohama</url>
