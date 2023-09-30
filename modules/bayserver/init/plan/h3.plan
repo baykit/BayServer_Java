@@ -1,0 +1,97 @@
+[harbor]
+    charset UTF-8
+    groups plan/groups.plan
+    grandAgents 4 
+    #logLevel debug
+
+    # for Windows machine
+    #controlPort 2222
+
+
+#
+#  Port settings
+#
+[port 2020]
+     docker http
+#     [permission]
+#          admit ip 127.0.0.1/255.0.0.0
+#          admit ip ::1/::ffff:ffff
+#          refuse ip *
+
+[port 2024]
+    docker http
+    [secure]
+        key       cert/oreore_key.p8
+        cert      cert/oreore.crt
+
+[port 2025]
+    docker ajp
+    [permission]
+          admit ip 127.0.0.1/255.0.0.0
+          admit ip ::1/::ffff:ffff
+          refuse ip *
+
+[port 2029]
+    docker fcgi
+
+[port :unix:/tmp/bayserver-www.sock]
+[port :udp:2024]
+    docker h3
+    [secure]
+        cert      cert/oreore.crt
+        key       cert/oreore_key.p8
+
+    [city *]
+        [town /]
+
+        [club *]
+            docker httpWarp
+            destCity :unix:/tmp/bayserver-www.sock
+            destTown /
+
+#
+#  Location settings
+#
+[city *]
+    [town /]
+        location www/root
+        welcome  index.html
+
+    [town /servlet-demo/]
+        location www/servlet-demo
+        [club *]
+            #apiType jakarta
+           # jasperVersion 10
+            docker servlet
+        #[permission]
+           #refuse ip 127.0.0.1/255.0.0.0 192.168.10.0/255.255.255.0
+           #admit host *
+           #group rocker
+
+    [town /cgi-demo/]
+        location www/cgi-demo
+        welcome  index.html
+        [club *.cgi]
+            docker cgi
+
+        [club *.bat]
+            docker cgi
+
+        [club *.php]
+            docker phpCgi
+
+    [log log/access.log]
+        format %a %l %u %t "%r" %>s %b
+
+    [log log/agent.log]
+        format %{User-Agent}i
+
+    [log log/referer.log]
+        format %{Referer}i -> %U
+
+
+   # [permission]
+    #       admit ip 127.0.0.1/255.255.255.255
+           #refuse ip 127.0.0.0/255.0.0.0
+
+ 
