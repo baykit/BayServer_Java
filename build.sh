@@ -42,6 +42,7 @@ cp LICENSE.* README.md NEWS.md $stage
 
 pushd .
 sapi=`pwd`/lib/servlet-api.jar
+cp LICENSE.* README.md modules/bayserver/init
 cd modules/bayserver/init/www/servlet-demo/WEB-INF/classes
 javac -classpath ${sapi} --release 8 `find . -name "*.java"`
 cd ../../../..
