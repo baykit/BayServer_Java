@@ -1,5 +1,9 @@
 # BayServer for Java
 
+# 2.2.1
+
+- Fixes some bugs
+
 # 2.2.0
 
 - Supports downloads from the Maven Central Repository
