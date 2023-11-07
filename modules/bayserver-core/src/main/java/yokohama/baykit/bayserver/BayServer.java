@@ -388,6 +388,8 @@ public class BayServer {
             plan = bservHome + "/" + plan;
         bservPlan = new File(plan).getAbsoluteFile().getCanonicalPath();
         BayLog.debug("BayServer Plan: " + bservPlan);
+        if(!new File(bservPlan).exists())
+            throw new BayException("Plan file not exists: " + bservPlan);
         if(!new File(bservPlan).isFile())
             throw new BayException("Plan file is not a file: " + bservPlan);
 

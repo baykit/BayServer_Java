@@ -79,10 +79,14 @@ public class InboundShip extends Ship {
     }
 
     public Tour getTour(int turKey, boolean force) {
+        return getTour(turKey, force, true);
+    }
+
+    public Tour getTour(int turKey, boolean force, boolean rent) {
         synchronized (tourStore) {
             long storeKey = uniqKey(shipId, turKey);
             Tour tur = tourStore.get(storeKey);
-            if (tur == null) {
+            if (tur == null && rent) {
                 tur = tourStore.rent(storeKey, force);
                 if(tur == null)
                     return null;
@@ -162,14 +166,7 @@ public class InboundShip extends Ship {
             for(String[] nv: portDkr.additionalHeaders()) {
                 tur.res.headers.add(nv[0], nv[1]);
             }
-            try {
-                ((InboundHandler) protocolHandler).sendResHeaders(tur);
-            }
-            catch(IOException e) {
-                BayLog.debug(e, "%s abort: %s", tur, e);
-                tur.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
-                throw e;
-            }
+            ((InboundHandler) protocolHandler).sendResHeaders(tur);
         }
     }
 
@@ -189,28 +186,13 @@ public class InboundShip extends Ship {
     public void sendResContent(int chkId, Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
         checkShipId(chkId);
 
-        if(tur.isZombie() || tur.isAborted()) {
-            // Don't send peer any data. Do nothing
-            BayLog.debug("%s Aborted or zombie tour. do nothing: %s state=%s", this, tur, tur.state);
-            tur.changeState(chkId, Tour.TourState.ENDED);
-            if(lis != null)
-                lis.dataConsumed();
-            return;
-        }
-
         int maxLen = protocolHandler.maxResPacketDataSize();
         if(len > maxLen) {
             sendResContent(Tour.TOUR_ID_NOCHECK, tur, bytes, ofs, maxLen, null);
             sendResContent(Tour.TOUR_ID_NOCHECK, tur, bytes, ofs + maxLen, len - maxLen, lis);
         }
         else {
-            try {
-                ((InboundHandler) protocolHandler).sendResContent(tur, bytes, ofs, len, lis);
-            }
-            catch(IOException e) {
-                tur.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
-                throw e;
-            }
+            ((InboundHandler) protocolHandler).sendResContent(tur, bytes, ofs, len, lis);
         }
     }
 
@@ -219,33 +201,23 @@ public class InboundShip extends Ship {
 
         BayLog.debug("%s sendEndTour: %s state=%s", this, tur, tur.state);
 
-        if(tur.isZombie() || tur.isAborted()) {
-            // Don't send peer any data. Do nothing
-            tur.changeState(chkTourId, Tour.TourState.ENDED);
-            lis.dataConsumed();
+        if(!tur.isValid()) {
+            throw new Sink("Tour is not valid");
         }
-        else {
-            if(!tur.isValid()) {
-                throw new Sink("Tour is not valid");
+        boolean keepAlive = false;
+        if (tur.req.headers.getConnection() == Headers.ConnectionType.KeepAlive)
+            keepAlive = true;
+        if(keepAlive) {
+            Headers.ConnectionType resConn = tur.res.headers.getConnection();
+            keepAlive = (resConn == Headers.ConnectionType.KeepAlive)
+                    || (resConn == Headers.ConnectionType.Unknown);
+            if (keepAlive) {
+                if (tur.res.headers.contentLength() < 0)
+                    keepAlive = false;
             }
-            boolean keepAlive = false;
-            if (tur.req.headers.getConnection() == Headers.ConnectionType.KeepAlive)
-                keepAlive = true;
-            if(keepAlive) {
-                Headers.ConnectionType resConn = tur.res.headers.getConnection();
-                keepAlive = (resConn == Headers.ConnectionType.KeepAlive)
-                        || (resConn == Headers.ConnectionType.Unknown);
-                if (keepAlive) {
-                    if (tur.res.headers.contentLength() < 0)
-                        keepAlive = false;
-                }
-            }
-
-            //BayLog.trace("%s sendEndTour: set running false: %s id=%d", this, tur, chkTourId);
-            tur.changeState(chkTourId, Tour.TourState.ENDED);
-
-            ((InboundHandler)protocolHandler).sendEndTour(tur, keepAlive, lis);
         }
+
+        ((InboundHandler)protocolHandler).sendEndTour(tur, keepAlive, lis);
     }
 
     public void sendError(int chkId, Tour tour, int status, String message, Throwable e)

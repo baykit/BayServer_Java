@@ -159,7 +159,7 @@ public class GrandAgentMonitor {
 
     static synchronized void agentAborted(int agtId, boolean anchorable) {
 
-        BayLog.info(BayMessage.get(Symbol.MSG_GRAND_AGENT_SHUTDOWN, agtId));
+        BayLog.error(BayMessage.get(Symbol.MSG_GRAND_AGENT_SHUTDOWN, agtId));
 
         monitors.remove(agtId);
 

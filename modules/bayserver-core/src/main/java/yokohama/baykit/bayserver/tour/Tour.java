@@ -117,10 +117,17 @@ public class Tour implements Reusable {
             try {
                 city.enter(this);
             }
+            catch(Sink e) {
+                changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
+                throw e;
+            }
             catch(HttpException e) {
+                changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
+                BayLog.error(e);
                 throw e;
             }
             catch(Exception e) {
+                changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
                 BayLog.error(e);
                 throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e.toString());
             }

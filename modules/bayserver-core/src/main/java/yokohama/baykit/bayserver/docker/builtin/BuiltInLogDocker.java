@@ -27,7 +27,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
             String fileName = filePrefix + "_" + agentId + "." + fileExt;
             LogBoat boat = new LogBoat();
             try {
-                boat.init(fileName, new WriteFileTaxi());
+                boat.init(agentId, fileName, new WriteFileTaxi());
             }
             catch(IOException e) {
                 BayLog.fatal(BayMessage.get(Symbol.INT_CANNOT_OPEN_LOG_FILE, fileName));

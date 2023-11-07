@@ -44,6 +44,11 @@ public class WarpData implements ReqContentHandler {
                 postLen = maxLen;
             }
             int turId = tur.id();
+
+            if(!started)
+                // The buffer will become corrupted due to reuse.
+                buf = buf.clone();
+
             warpShip.warpHandler().postWarpContents(
                     tur,
                     buf,
@@ -76,6 +81,7 @@ public class WarpData implements ReqContentHandler {
         if(!started) {
             warpShip.protocolHandler.commandPacker.flush(warpShip);
             BayLog.debug("%s Start Warp tour", this);
+            warpShip.flush();
             started = true;
         }
     }

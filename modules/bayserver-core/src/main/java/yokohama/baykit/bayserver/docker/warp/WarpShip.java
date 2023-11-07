@@ -5,14 +5,18 @@ import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
+import yokohama.baykit.bayserver.protocol.Command;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.tour.Tour;
+import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.Pair;
 import yokohama.baykit.bayserver.watercraft.Ship;
 
+import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,6 +27,7 @@ public final class WarpShip extends Ship {
 
     boolean connected;
     int socketTimeoutSec;
+    ArrayList<Pair<Command, DataConsumeListener>> cmdBuf = new ArrayList<>();
 
     public void initWarp(
             SocketChannel ch,
@@ -51,7 +56,9 @@ public final class WarpShip extends Ship {
         super.reset();
         if(!tourMap.isEmpty())
             BayLog.error("BUG: Some tours is active: %s", tourMap);
+        tourMap.clear();
         connected = false;
+        cmdBuf.clear();
     }
 
     //////////////////////////////////////////////////////////////////////////////////
@@ -126,12 +133,15 @@ public final class WarpShip extends Ship {
             tourMap.keySet().forEach(warpId -> {
                 Tour tur = getTour(warpId);
                 BayLog.debug("%s send error to owner: %s running=%b", this, tur, tur.isRunning());
-                if (tur.isRunning()) {
-                    try {
+                try {
+                    if (tur.isRunning()) {
                         tur.res.sendError(Tour.TOUR_ID_NOCHECK, status, msg);
-                    } catch (IOException e) {
-                        BayLog.error(e);
                     }
+                    else {
+                        tur.res.endContent(Tour.TOUR_ID_NOCHECK);
+                    }
+                } catch (IOException e) {
+                    BayLog.error(e);
                 }
             });
             tourMap.clear();
@@ -163,4 +173,25 @@ public final class WarpShip extends Ship {
         return timeout;
     }
 
+
+    public void post(Command cmd) throws IOException {
+        post(cmd, null);
+    }
+
+    public void post(Command cmd, DataConsumeListener listener) throws IOException {
+        if(!connected) {
+            Pair<Command, DataConsumeListener> p = new Pair<>(cmd, listener);
+            cmdBuf.add(p);
+        }
+        else {
+            protocolHandler.commandPacker.post(this, cmd, listener);
+        }
+    }
+
+    public void flush() throws IOException {
+        for(Pair<Command, DataConsumeListener> cmdAndLis: cmdBuf) {
+            protocolHandler.commandPacker.post(this, cmdAndLis.a, cmdAndLis.b);
+        }
+        cmdBuf.clear();
+    }
 }
