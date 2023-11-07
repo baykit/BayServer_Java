@@ -13,7 +13,7 @@ import java.util.Map;
 
 import static java.nio.channels.SelectionKey.*;
 
-public class NonBlockingHandler {
+public class NonBlockingHandler implements TimerHandler{
 
     class ChannelState {
         final SelectableChannel ch;
@@ -78,8 +78,21 @@ public class NonBlockingHandler {
 
     public NonBlockingHandler(GrandAgent agent) {
         this.agent = agent;
+
+        agent.addTimerHandler(this);
     }
 
+    ////////////////////////////////////////////////////////////////////
+    // Implements TimerHandler
+    ////////////////////////////////////////////////////////////////////
+    @Override
+    public void onTimer() {
+        closeTimeoutSockets();
+    }
+
+    ////////////////////////////////////////////////////////////////////
+    // Custom methods
+    ////////////////////////////////////////////////////////////////////
     public ChannelState addChannelListener(SelectableChannel ch, ChannelListener lis) {
         ChannelState chState = new ChannelState(ch, lis);
         addChannelState(ch, chState);
@@ -216,8 +229,14 @@ public class NonBlockingHandler {
                 key.interestOps(op);
 
                 nextSocketAction = chStt.listener.onConnectable(ch);
-                if(nextSocketAction == NextSocketAction.Continue)
-                    askToRead(ch);
+                if(nextSocketAction == NextSocketAction.Read) {
+                    // Write OP Off
+                    op = key.interestOps() & ~OP_WRITE;
+                    if (op != OP_READ)
+                        key.cancel();
+                    else
+                        key.interestOps(op);
+                }
             }
             else {
                 // read or write
@@ -235,11 +254,11 @@ public class NonBlockingHandler {
                     nextSocketAction = chStt.listener.onWritable(ch);
                     if(nextSocketAction == NextSocketAction.Read) {
                         // Handle as "Write Off"
-                        int op = key.interestOps() & ~OP_WRITE;
+                        int op = (key.interestOps() & ~OP_WRITE) | OP_READ;
                         if(op != OP_READ)
                             key.cancel();
                         else
-                            key.interestOps(op);
+                            key.interestOps(OP_READ);
                     }
                     BayLog.debug("%s write next state=%s", agent, nextSocketAction);
                 }
@@ -253,11 +272,11 @@ public class NonBlockingHandler {
                 BayLog.info("%s I/O Error: skt=%s", agent, ch);
             }
             else if(e instanceof Sink){
-                BayLog.info("%s Unhandled error error: %s (skt=%s)", agent, e, ch);
+                BayLog.error("%s Unhandled error error: %s (skt=%s)", agent, e, ch);
                 throw (Sink)e;
             }
             else {
-                BayLog.info("%s Unhandled error error: %s (skt=%s)", agent, e, ch);
+                BayLog.error(e, "%s Unhandled error error: %s (skt=%s)", agent, e, ch);
                 throw new Sink("Unhandled error: %s", e);
             }
 
@@ -332,7 +351,7 @@ public class NonBlockingHandler {
         }
     }
 
-    public void closeTimeoutSockets() throws IOException {
+    public void closeTimeoutSockets() {
         if(channels.isEmpty())
             return;
 

@@ -2,6 +2,7 @@ package yokohama.baykit.bayserver.tour;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
+import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.transporter.DataListener;
 import yokohama.baykit.bayserver.util.Valve;
@@ -14,13 +15,16 @@ import java.nio.ByteBuffer;
 
 public class ReadFileTaxi extends Taxi implements Valve {
 
+    int agentId;
     InputStream in;
     boolean chValid;
     DataListener dataListener;
     ByteBuffer buf;
     boolean running;
+    long startTime;
 
-    public ReadFileTaxi(int bufsize) {
+    public ReadFileTaxi(int agtId, int bufsize) {
+        this.agentId = agtId;
         this.buf = ByteBuffer.allocate(bufsize);
     }
 
@@ -51,6 +55,7 @@ public class ReadFileTaxi extends Taxi implements Valve {
     ////////////////////////////////////////////////////////////////////////////////
     @Override
     protected synchronized void depart() {
+        startTime = System.currentTimeMillis();
         try {
             buf.clear();
             int readLen = in.read(buf.array(), 0, buf.capacity());
@@ -78,13 +83,19 @@ public class ReadFileTaxi extends Taxi implements Valve {
         }
     }
 
+    @Override
+    protected void onTimer() {
+        int durationSec = (int)(System.currentTimeMillis() - startTime) / 1000;
+        dataListener.checkTimeout(durationSec);
+    }
+
 
     private void nextRun() {
         if(running)
             throw new Sink("%s already running", this);
         running = true;
         //BayLog.debug("POST NEXT RUN: %s", this);
-        TaxiRunner.post(this);
+        TaxiRunner.post(agentId, this);
     }
 
     private void close() {

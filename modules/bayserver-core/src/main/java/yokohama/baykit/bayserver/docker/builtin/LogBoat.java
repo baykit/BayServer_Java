@@ -42,11 +42,11 @@ public class LogBoat extends Boat implements Reusable {
     ////////////////////////////////////////////////////////////////////
     // Custom methods
     ////////////////////////////////////////////////////////////////////
-    public void init(String fileName, WriteFileTaxi txi) throws IOException{
+    public void init(int agtId, String fileName, WriteFileTaxi txi) throws IOException{
         super.init();
         this.taxi = txi;
         this.fileName = fileName;
-        taxi.init(new FileOutputStream(fileName), this);
+        taxi.init(agtId, new FileOutputStream(fileName), this);
     }
 
     public synchronized void log(String data) {

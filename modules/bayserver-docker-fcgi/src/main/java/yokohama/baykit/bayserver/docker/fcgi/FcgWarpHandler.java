@@ -101,7 +101,9 @@ public class FcgWarpHandler extends FcgProtocolHandler implements WarpHandler {
 
     @Override
     public void postWarpEnd(Tour tur) throws IOException {
-        sendStdIn(tur, null, 0, 0, null);
+        sendStdIn(tur, null, 0, 0, () -> {
+            ship.agent.nonBlockingHandler.askToRead(ship.ch);
+        });
     }
 
     @Override
@@ -281,14 +283,14 @@ public class FcgWarpHandler extends FcgProtocolHandler implements WarpHandler {
 
     private void sendStdIn(Tour tur, byte[] data, int ofs, int len, DataConsumeListener lis) throws IOException {
         CmdStdIn cmd = new CmdStdIn(WarpData.get(tur).warpId, data, ofs, len);
-        commandPacker.post(ship, cmd, lis);
+        ship().post(cmd, lis);
     }
 
     private void sendBeginReq(Tour tur) throws IOException {
         CmdBeginRequest cmd = new CmdBeginRequest(WarpData.get(tur).warpId);
         cmd.role = CmdBeginRequest.FCGI_RESPONDER;
         cmd.keepConn = true;
-        commandPacker.post(ship, cmd);
+        ship().post(cmd);
     }
 
 
@@ -334,10 +336,10 @@ public class FcgWarpHandler extends FcgProtocolHandler implements WarpHandler {
                     BayLog.info("%s fcgi_warp: env: %s=%s", ship(), kv[0], kv[1]));
         }
 
-        commandPacker.post(ship, cmd);
+        ship().post(cmd);
 
         CmdParams cmdParamsEnd = new CmdParams(warpId);
-        commandPacker.post(ship, cmdParamsEnd);
+        ship().post(cmdParamsEnd);
     }
 
     WarpShip ship() {

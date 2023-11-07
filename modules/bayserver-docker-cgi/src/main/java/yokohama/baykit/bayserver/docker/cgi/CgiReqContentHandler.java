@@ -18,6 +18,7 @@ public class CgiReqContentHandler implements ReqContentHandler {
     Process process;
     boolean stdOutClosed;
     boolean stdErrClosed;
+    long lastAccess;
 
 
     public CgiReqContentHandler(CgiDocker cgiDocker, Tour tur) {
@@ -36,11 +37,13 @@ public class CgiReqContentHandler implements ReqContentHandler {
         process.getOutputStream().write(buf, start, len);
         process.getOutputStream().flush();
         tur.req.consumed(Tour.TOUR_ID_NOCHECK, len);
+        access();
     }
 
     @Override
     public void onEndContent(Tour tur) throws IOException, HttpException {
         BayLog.debug("%s CGI:endReqContent", tur);
+        access();
     }
 
     @Override
@@ -72,6 +75,7 @@ public class CgiReqContentHandler implements ReqContentHandler {
 
         stdOutClosed = false;
         stdErrClosed = false;
+        access();
     }
 
     public void closePipes() {
@@ -97,7 +101,21 @@ public class CgiReqContentHandler implements ReqContentHandler {
             processFinished();
     }
 
+    public void access() {
+        lastAccess = System.currentTimeMillis();
+    }
+
+    public boolean timedOut() {
+        if(cgiDocker.timeoutSec <= 0)
+            return false;
+
+        long durationSec = (System.currentTimeMillis() - lastAccess) / 1000;
+        BayLog.debug("%s Check CGI timeout: dur=%d, timeout=%d", tour, durationSec, cgiDocker.timeoutSec);
+        return durationSec > cgiDocker.timeoutSec;
+    }
+
     private void processFinished() {
+        BayLog.debug("%s process_finished()", tour);
 
         try {
             process.waitFor();

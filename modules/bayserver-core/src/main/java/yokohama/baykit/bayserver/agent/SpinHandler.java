@@ -5,7 +5,7 @@ import yokohama.baykit.bayserver.Sink;
 
 import java.util.ArrayList;
 
-public class SpinHandler {
+public class SpinHandler implements TimerHandler {
 
     public interface SpinListener {
         NextSocketAction lap(boolean spun[]);
@@ -30,6 +30,7 @@ public class SpinHandler {
 
     public SpinHandler(GrandAgent agent) {
         this.agent = agent;
+        agent.addTimerHandler(this);
     }
 
     @Override
@@ -37,6 +38,17 @@ public class SpinHandler {
         return agent.toString();
     }
 
+    ////////////////////////////////////////////////////////////////////
+    // Implements TimerHandler
+    ////////////////////////////////////////////////////////////////////
+    @Override
+    public void onTimer() {
+        stopTimeoutSpins();
+    }
+
+    ////////////////////////////////////////////////////////////////////
+    // Custom method
+    ////////////////////////////////////////////////////////////////////
     boolean processData() {
         if (listeners.isEmpty())
             return false;

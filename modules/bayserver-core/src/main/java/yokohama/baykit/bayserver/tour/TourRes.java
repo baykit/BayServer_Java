@@ -5,6 +5,7 @@ import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
+import yokohama.baykit.bayserver.docker.base.InboundHandler;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.*;
@@ -36,6 +37,7 @@ public class TourRes implements Reusable {
     boolean canCompress;
     GzipCompressor compressor;
     SendFileYacht yacht;
+    boolean tourReturned;
 
     public TourRes(Tour tour) {
         this.tour = tour;
@@ -64,6 +66,7 @@ public class TourRes implements Reusable {
         resConsumeListener = null;
         canCompress = false;
         compressor = null;
+        tourReturned = false;
     }
 
     public String charset() {
@@ -107,9 +110,17 @@ public class TourRes implements Reusable {
                 }
             }
         }
-        tour.ship.sendHeaders(tour.shipId, tour);
 
-        headerSent = true;
+        try {
+            tour.ship.sendHeaders(tour.shipId, tour);
+        }
+        catch(IOException e) {
+            tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
+            throw e;
+        }
+        finally {
+            headerSent = true;
+        }
     }
 
     public void setConsumeListener(ContentConsumeListener listener) {
@@ -143,23 +154,32 @@ public class TourRes implements Reusable {
         if (resConsumeListener == null)
             throw new Sink("Response consume listener is null");
 
-        BayLog.debug("%s sendContent len=%d", tour, len);
+        bytesPosted += len;
+        BayLog.debug("%s posted res content len=%d posted=%d limit=%d consumed=%d",
+                tour, len, bytesPosted, bytesLimit, bytesConsumed);
 
-        if (canCompress) {
-            getCompressor().compress(buf, ofs, len, lis);
-        } else {
-            try {
-                tour.ship.sendResContent(tour.shipId, tour, buf, ofs, len, lis);
+        if(tour.isZombie() || tour.isAborted()) {
+            // Don't send peer any data. Do nothing
+            BayLog.debug("%s Aborted or zombie tour. do nothing: %s state=%s", this, tour, tour.state);
+            tour.changeState(checkId, Tour.TourState.ENDED);
+            lis.dataConsumed();
+        }
+        else {
+            if (canCompress) {
+                getCompressor().compress(buf, ofs, len, lis);
             }
-            catch(IOException e) {
-                lis.dataConsumed();
-                throw e;
+            else {
+                try {
+                    tour.ship.sendResContent(tour.shipId, tour, buf, ofs, len, lis);
+                }
+                catch(IOException e) {
+                    lis.dataConsumed();
+                    tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
+                    throw e;
+                }
             }
         }
-        bytesPosted += len;
 
-        BayLog.debug("%s posted res content len=%d posted=%d limit=%d consumed=%d",
-                    tour, len, bytesPosted, bytesLimit, bytesConsumed);
         if (bytesLimit > 0 && bytesPosted > bytesLimit) {
             throw new ProtocolException("Post data exceed content-length: " + bytesPosted + "/" + bytesLimit);
         }
@@ -181,6 +201,10 @@ public class TourRes implements Reusable {
         tour.checkTourId(checkId);
 
         BayLog.debug("%s end ResContent", this);
+        if(tour.isEnded()) {
+            BayLog.debug("%s Tour is already ended (Ignore).", this);
+            return;
+        }
 
         if (!tour.isZombie() && tour.city != null)
             tour.city.log(tour);
@@ -190,14 +214,33 @@ public class TourRes implements Reusable {
             getCompressor().finish();
         }
 
-        DataConsumeListener lis = () -> tour.ship.returnTour(tour);
+        DataConsumeListener lis = () -> {
+            tour.checkTourId(checkId);
+            tour.ship.returnTour(tour);
+            tourReturned = true;
+        };
 
         try {
-            tour.ship.sendEndTour(tour.shipId, checkId, tour, lis);
+            if(tour.isZombie() || tour.isAborted()) {
+                // Don't send peer any data. Do nothing
+                BayLog.debug("%s Aborted or zombie tour. do nothing: %s state=%s", this, tour, tour.state);
+                lis.dataConsumed();
+            }
+            else {
+                try {
+                    tour.ship.sendEndTour(tour.shipId, checkId, tour, lis);
+                }
+                catch(IOException e) {
+                    BayLog.debug("%s Error on sending end tour", this);
+                    lis.dataConsumed();
+                    throw e;
+                }
+            }
         }
-        catch(IOException e) {
-            lis.dataConsumed();
-            throw e;
+        finally {
+            BayLog.debug("%s Tour is returned: %s", this, tourReturned);
+            if(!tourReturned)
+                tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ENDED);
         }
     }
 
@@ -230,8 +273,21 @@ public class TourRes implements Reusable {
         }
         else {
             setConsumeListener(ContentConsumeListener.devNull);
-            tour.ship.sendError(tour.shipId, tour, status, message, e);
-            headerSent = true;
+
+            if(tour.isZombie() || tour.isAborted()) {
+                // Don't send peer any data. Do nothing
+                BayLog.debug("%s Aborted or zombie tour. do nothing: %s state=%s", this, tour, tour.state);
+            }
+            else {
+                try {
+                    tour.ship.sendError(tour.shipId, tour, status, message, e);
+                }
+                catch(IOException ex) {
+                    BayLog.error(e, "%s Error in sending error", this);
+                    tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
+                }
+                headerSent = true;
+            }
         }
         endContent(checkId);
     }
@@ -286,10 +342,10 @@ public class TourRes implements Reusable {
                     }
 
                     case Taxi:{
-                        ReadFileTaxi txi = new ReadFileTaxi(bufsize);
+                        ReadFileTaxi txi = new ReadFileTaxi(tour.ship.agent.agentId, bufsize);
                         yacht.init(tour, file, txi);
                         txi.init(new FileInputStream(file), yacht);
-                        if(!TaxiRunner.post(txi)) {
+                        if(!TaxiRunner.post(tour.ship.agent.agentId, txi)) {
                             throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");
                         }
                         break;
@@ -311,22 +367,42 @@ public class TourRes implements Reusable {
     private void sendRedirect(int checkId, int status, String location) throws IOException {
         tour.checkTourId(checkId);
 
-        if(headerSent) {
-            BayLog.error("Try to redirect after response header is sent (Ignore)");
+        try {
+            if(headerSent) {
+                BayLog.error("Try to redirect after response header is sent (Ignore)");
+            }
+            else {
+                setConsumeListener(ContentConsumeListener.devNull);
+                try {
+                    tour.ship.sendRedirect(tour.shipId, tour, status, location);
+                }
+                catch(IOException e) {
+                    tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
+                    throw e;
+                }
+                finally {
+                    headerSent = true;
+                }
+            }
         }
-        else {
-            setConsumeListener(ContentConsumeListener.devNull);
-            tour.ship.sendRedirect(tour.shipId, tour, status, location);
-            headerSent = true;
+        finally {
+            endContent(checkId);
         }
 
-        endContent(checkId);
     }
 
     private GzipCompressor getCompressor() throws IOException {
         if (compressor == null) {
+            int sipId = tour.ship.shipId;
+            int turId = tour.tourId;
             compressor = new GzipCompressor((newBuf, newOfs, newLen, lis) -> {
-                tour.ship.sendResContent(tour.shipId, tour, newBuf, newOfs, newLen, lis);
+                try {
+                    tour.ship.sendResContent(sipId, tour, newBuf, newOfs, newLen, lis);
+                }
+                catch(IOException e) {
+                    tour.changeState(turId, Tour.TourState.ABORTED);
+                    throw e;
+                }
             });
         }
         return compressor;

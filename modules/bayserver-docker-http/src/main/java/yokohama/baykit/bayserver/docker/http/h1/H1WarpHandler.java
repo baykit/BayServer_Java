@@ -206,19 +206,22 @@ public class H1WarpHandler extends H1ProtocolHandler implements WarpHandler {
             cmd.headers.forEach(kv -> BayLog.info("%s warp_http reqHdr: %s=%s", tur, kv[0], kv[1]));
         }
 
-        commandPacker.post(sip, cmd);
+        sip.post(cmd);
 
     }
 
     @Override
     public void postWarpContents(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
         CmdContent cmd = new CmdContent(buf, start, len);
-        commandPacker.post(ship(), cmd, lis);
+        ship().post(cmd, lis);
     }
 
     @Override
     public void postWarpEnd(Tour tur) throws IOException {
-
+        CmdEndContent cmd = new CmdEndContent();
+        ship().post(cmd, () -> {
+            ship.agent.nonBlockingHandler.askToRead(ship.ch);
+        });
     }
 
     @Override
