@@ -18,13 +18,14 @@ public class WriteFileTaxi extends Taxi implements Valve {
     boolean chValid;
     DataListener dataListener;
     protected ArrayList<ByteBuffer> writeQueue = new ArrayList<>();
-    int count;
+    int agentId;
 
     public WriteFileTaxi(){
 
     }
 
-    public void init(OutputStream out, DataListener lis) throws IOException {
+    public void init(int agtId, OutputStream out, DataListener lis) throws IOException {
+        this.agentId = agtId;
         this.out = out;
         this.dataListener = lis;
         this.chValid = true;
@@ -36,18 +37,18 @@ public class WriteFileTaxi extends Taxi implements Valve {
         return super.toString() + " " + dataListener.toString();
     }
 
-    ////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////
     // Implements Valve
-    ////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////
 
     @Override
     public void openValve() {
         nextRun();
     }
 
-    ////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////
     // Implements Taxi
-    ////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////
     @Override
     protected void depart() {
         try {
@@ -74,6 +75,11 @@ public class WriteFileTaxi extends Taxi implements Valve {
         }
     }
 
+    @Override
+    protected void onTimer() {
+
+    }
+
     public void post(byte[] data, int ofs, int len) {
         synchronized (writeQueue) {
             boolean empty = writeQueue.isEmpty();
@@ -84,6 +90,6 @@ public class WriteFileTaxi extends Taxi implements Valve {
     }
 
     private void nextRun() {
-        TaxiRunner.post(this);
+        TaxiRunner.post(agentId, this);
     }
 }

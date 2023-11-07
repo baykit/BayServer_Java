@@ -13,6 +13,7 @@ public class CgiStdErrYacht extends Yacht {
 
     Tour tour;
     int tourId;
+    CgiReqContentHandler handler;
 
     CgiStdErrYacht() {
         reset();
@@ -29,6 +30,7 @@ public class CgiStdErrYacht extends Yacht {
     public void reset() {
         tourId = 0;
         tour = null;
+        this.handler = null;
     }
 
     ////////////////////////////////////////////////////////////////////
@@ -43,12 +45,13 @@ public class CgiStdErrYacht extends Yacht {
         if(msg.length() > 0)
             BayLog.error("CGI Stderr: %s", msg);
 
+        handler.access();
         return NextSocketAction.Continue;
     }
 
     @Override
     public NextSocketAction notifyEof() throws IOException {
-        BayLog.debug("%s CGI StdErr: EOF\\(^o^)/", this);
+        BayLog.debug("%s CGI StdErr: EOF \\(^o^)/", this);
         return NextSocketAction.Close;
     }
 
@@ -60,17 +63,18 @@ public class CgiStdErrYacht extends Yacht {
 
     @Override
     public final boolean checkTimeout(int durationSec) {
-        BayLog.warn("%s invalid timeout check", this);
-        return false;
+        BayLog.debug("%s CGI StdErr check timeout: dur=%d", tour, durationSec);
+        return handler.timedOut();
     }
 
 
     ////////////////////////////////////////////////////////////////////
     // Custom methods
     ////////////////////////////////////////////////////////////////////
-    public void init(Tour tur) {
+    public void init(Tour tur, CgiReqContentHandler handler) {
         super.initYacht();
         this.tour = tur;
         this.tourId = tur.tourId;
+        this.handler = handler;
     }
 }

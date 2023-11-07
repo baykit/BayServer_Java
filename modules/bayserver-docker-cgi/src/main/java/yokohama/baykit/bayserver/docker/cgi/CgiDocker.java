@@ -157,29 +157,29 @@ public class CgiDocker extends ClubBase {
                 };
 
                 SpinReadTransporter outTp = new SpinReadTransporter(bufsize);
-                outYat.init(tur, outTp);
+                outYat.init(tur, outTp, handler);
                 outTp.init(tur.ship.agent.spinHandler, outYat, handler.process.getInputStream(), -1, timeoutSec, ch);
                 outTp.openValve();
 
                 SpinReadTransporter errTp = new SpinReadTransporter(bufsize);
-                errYat.init(tur);
+                errYat.init(tur, handler);
                 errTp.init(tur.ship.agent.spinHandler, errYat, handler.process.getErrorStream(), -1, timeoutSec, ch);
                 errTp.openValve();
                 break;
             }
 
             case Taxi:{
-                ReadFileTaxi outTxi = new ReadFileTaxi(bufsize);
-                outYat.init(tur, outTxi);
+                ReadFileTaxi outTxi = new ReadFileTaxi(tur.ship.agent.agentId, bufsize);
+                outYat.init(tur, outTxi, handler);
                 outTxi.init(handler.process.getInputStream(), outYat);
-                if(!TaxiRunner.post(outTxi)) {
+                if(!TaxiRunner.post(tur.ship.agent.agentId, outTxi)) {
                     throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");
                 }
 
-                ReadFileTaxi errTxi = new ReadFileTaxi(bufsize);
-                errYat.init(tur);
+                ReadFileTaxi errTxi = new ReadFileTaxi(tur.ship.agent.agentId, bufsize);
+                errYat.init(tur, handler);
                 errTxi.init(handler.process.getErrorStream(), errYat);
-                if(!TaxiRunner.post(errTxi)) {
+                if(!TaxiRunner.post(tur.ship.agent.agentId, errTxi)) {
                     throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");
                 }
 

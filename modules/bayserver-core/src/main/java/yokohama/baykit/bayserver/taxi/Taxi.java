@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.taxi;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.util.Counter;
 
-public abstract class Taxi implements Runnable {
+public abstract class Taxi {
 
     static Counter taxiIdCounter = new Counter();
 
@@ -18,7 +18,6 @@ public abstract class Taxi implements Runnable {
         return "taxi#" + taxiId;
     }
 
-    @Override
     public void run() {
         BayLog.trace("%s Start taxi on: %s", this, Thread.currentThread().getName());
         depart();
@@ -26,4 +25,5 @@ public abstract class Taxi implements Runnable {
     }
 
     protected abstract void depart();
+    protected abstract void onTimer();
 }

@@ -73,6 +73,7 @@ public class SignalSender {
      */
     void send(String host, int port, String cmd) throws IOException {
         try (Socket s = new Socket(host, port)) {
+            s.setSoTimeout(60 * 1000);
             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
             bw.write(cmd);
             bw.newLine();

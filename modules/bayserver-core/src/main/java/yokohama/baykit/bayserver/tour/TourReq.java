@@ -166,32 +166,40 @@ public class TourReq implements Reusable {
 
     public boolean postContent(int checkId, byte[] data, int start, int len) throws IOException {
         tour.checkTourId(checkId);
+
+        boolean dataPassed = false;
+
         if(!tour.isRunning()) {
             BayLog.debug("%s tour is not running.", tour);
-            return true;
         }
 
-        if (tour.req.contentHandler == null) {
+        else if (tour.req.contentHandler == null) {
             BayLog.warn("%s content read, but no content handler", tour);
-            return true;
         }
-        if (consumeListener == null) {
+
+        else if (consumeListener == null) {
             throw new Sink("Request consume listener is null");
         }
 
-        if (bytesPosted + len > bytesLimit) {
+        else if (bytesPosted + len > bytesLimit) {
             throw new ProtocolException(BayMessage.get(Symbol.HTP_READ_DATA_EXCEEDED, bytesPosted + len,  bytesLimit));
         }
 
         // If has error, only read content. (Do not call content handler)
-        if(tour.error == null)
-            contentHandler.onReadContent(tour, data, start, len);
-        bytesPosted += len;
+        else if(tour.error != null) {
+            BayLog.debug("%s tour has error.", tour);
+        }
 
+        else {
+            contentHandler.onReadContent(tour, data, start, len);
+            dataPassed = true;
+        }
+
+        bytesPosted += len;
         BayLog.debug("%s read content: len=%d posted=%d limit=%d consumed=%d available=%b",
                        tour, len, bytesPosted, bytesLimit, bytesConsumed, available);
 
-        if(tour.error == null)
+        if(!dataPassed)
             return true;
 
         boolean oldAvailable = available;

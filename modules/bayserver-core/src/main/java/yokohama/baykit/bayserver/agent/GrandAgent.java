@@ -42,6 +42,7 @@ public class GrandAgent extends Thread {
     boolean aborted;
     public Map<DatagramChannel, Transporter> unanchorableTransporters = new HashMap<>();
     public CommandReceiver commandReceiver;
+    ArrayList<TimerHandler> timerHandlers = new ArrayList<>();
 
     public GrandAgent(
             int agentId,
@@ -153,8 +154,9 @@ public class GrandAgent extends Thread {
 
                 if(!processed) {
                     // timeout check if there is nothing to do
-                    nonBlockingHandler.closeTimeoutSockets();
-                    spinHandler.stopTimeoutSpins();
+                    for(TimerHandler th: timerHandlers) {
+                        th.onTimer();
+                    }
                 }
             }
 
@@ -214,6 +216,14 @@ public class GrandAgent extends Thread {
 
     public void runCommandReceiver(Pipe.SourceChannel readCh, Pipe.SinkChannel writeCh) {
         commandReceiver = new CommandReceiver(this, readCh, writeCh);
+    }
+
+    public void addTimerHandler(TimerHandler th) {
+        timerHandlers.add(th);
+    }
+
+    public void removeTimerHandler(TimerHandler th) {
+        timerHandlers.remove(th);
     }
 
     private void clean() {

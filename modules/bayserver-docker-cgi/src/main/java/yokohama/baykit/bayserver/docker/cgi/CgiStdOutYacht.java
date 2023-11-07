@@ -19,6 +19,7 @@ public class CgiStdOutYacht extends Yacht {
 
     Tour tour;
     int tourId;
+    CgiReqContentHandler handler;
 
     String remain = "";
     boolean headerReading;
@@ -42,6 +43,7 @@ public class CgiStdOutYacht extends Yacht {
         tour = null;
         headerReading = true;
         remain = "";
+        handler = null;
     }
 
     ////////////////////////////////////////////////////////////////////
@@ -123,6 +125,7 @@ public class CgiStdOutYacht extends Yacht {
             }
         }
 
+        handler.access();
         if(available)
             return NextSocketAction.Continue;
         else
@@ -131,7 +134,7 @@ public class CgiStdOutYacht extends Yacht {
 
     @Override
     public NextSocketAction notifyEof() throws IOException {
-        BayLog.debug("%s CGI StdOut: EOF(^o^)", this);
+        BayLog.debug("%s CGI StdOut: EOF \\(^o^)/", this);
         return NextSocketAction.Close;
     }
 
@@ -143,7 +146,14 @@ public class CgiStdOutYacht extends Yacht {
 
     @Override
     public final boolean checkTimeout(int durationSec) {
-        BayLog.warn("%s invalid timeout check", this);
+        BayLog.debug("%s CGI StdOut check timeout: dur=%d", tour, durationSec);
+
+        if (handler.timedOut()) {
+            // Kill cgi process instead of handing timeout
+            BayLog.warn("%s Kill process!: %s", tour, handler.process);
+            handler.process.destroyForcibly();
+            return true;
+        }
         return false;
     }
 
@@ -151,8 +161,9 @@ public class CgiStdOutYacht extends Yacht {
     ////////////////////////////////////////////////////////////////////
     // Custom methods
     ////////////////////////////////////////////////////////////////////
-    public void init(Tour tur, Valve vv) {
+    public void init(Tour tur, Valve vv, CgiReqContentHandler handler) {
         super.initYacht();
+        this.handler = handler;
         this.tour = tur;
         this.tourId = tur.tourId;
         tur.res.setConsumeListener((len, resume) -> {

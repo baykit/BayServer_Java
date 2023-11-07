@@ -263,7 +263,7 @@ public class AjpWarpHandler extends AjpProtocolHandler implements WarpHandler {
                 });
             });
         }
-        commandPacker.post(wsip, cmd);
+        ship().post(cmd);
     }
 
     void sendData(Tour tur, byte[] data, int ofs, int len, DataConsumeListener lis) throws IOException {
@@ -272,7 +272,7 @@ public class AjpWarpHandler extends AjpProtocolHandler implements WarpHandler {
 
         CmdData cmd = new CmdData(data, ofs, len);
         cmd.toServer = true;
-        commandPacker.post(wsip, cmd, lis);
+        ship().post(cmd, lis);
     }
 
     WarpShip ship() {
