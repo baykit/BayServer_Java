@@ -2,6 +2,7 @@ package yokohama.baykit.bayserver.agent;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayMessage;
+import yokohama.baykit.bayserver.MemUsage;
 import yokohama.baykit.bayserver.Symbol;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.util.BlockingIOException;
@@ -89,6 +90,12 @@ public class GrandAgentMonitor {
     public void printUsage() throws IOException {
         BayLog.debug("%s send mem_usage command", this);
         send(GrandAgent.CMD_MEM_USAGE);
+        try {
+            Thread.sleep(1 * 1000); // lazy implementation
+        }
+        catch(InterruptedException e) {
+            BayLog.error(e);
+        }
     }
 
     public void send(int cmd) throws IOException {
@@ -210,6 +217,32 @@ public class GrandAgentMonitor {
 
 
     public static void printUsageAll() {
+        // print memory usage
+        BayLog.info("BayServer MemUsage");
+
+        String version = System.getProperty("java.version");
+        String runtimeVersion = System.getProperty("java.runtime.version");
+        String vmVersion = System.getProperty("java.vm.version");
+        String specVersion = System.getProperty("java.specification.version");
+
+        BayLog.info(" Java Version: %s", version);
+        BayLog.info(" Java Runtime Version: %s", runtimeVersion);
+        BayLog.info(" Java VM Version: %s", vmVersion);
+        BayLog.info(" Java Specification Version: %s", specVersion);
+
+        Runtime runtime = Runtime.getRuntime();
+        int numberOfProcessors = runtime.availableProcessors();
+        long maxMemory = runtime.maxMemory();
+        long allocatedMemory = runtime.totalMemory();
+        long freeMemory = runtime.freeMemory();
+        long usedMemory = allocatedMemory - freeMemory;
+
+        BayLog.info(" Number of processors: %d", numberOfProcessors);
+        BayLog.info(" Max memory: %d MBytes", maxMemory / (1024 * 1024));
+        BayLog.info(" Allocated memory: %d MBytes", allocatedMemory / (1024 * 1024));
+        BayLog.info(" Free memory: %d MBytes", freeMemory / (1024 * 1024));
+        BayLog.info(" Used memory: %d MBytes", usedMemory / (1024 * 1024));
+
         for (GrandAgentMonitor mon : monitors.values()) {
             try {
                 mon.printUsage();
