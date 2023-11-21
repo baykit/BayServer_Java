@@ -3,20 +3,16 @@ package yokohama.baykit.bayserver.docker.fcgi;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.base.InboundHandler;
-import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.base.InboundShip;
 import yokohama.baykit.bayserver.docker.fcgi.command.*;
 import yokohama.baykit.bayserver.tour.TourReq;
 import yokohama.baykit.bayserver.util.*;
-import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.docker.fcgi.command.*;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerFactory;
-import yokohama.baykit.bayserver.util.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -221,11 +217,7 @@ public class FcgInboundHandler extends FcgProtocolHandler implements InboundHand
             }
 
             if(reqContLen > 0) {
-                int sid = ship().shipId;
-                tur.req.setConsumeListener(reqContLen, (len, resume) -> {
-                    if (resume)
-                        sip.resume(sid);
-                });
+                tur.req.setReqContentLength(reqContLen);
             }
 
             changeState(ReadStdIn);
@@ -325,9 +317,17 @@ public class FcgInboundHandler extends FcgProtocolHandler implements InboundHand
             }
         }
         else {
-            boolean success = tur.req.postContent(Tour.TOUR_ID_NOCHECK, cmd.data, cmd.start, cmd.length);
-            //if(tur.reqBytesRead == contLen)
-            //    endContent(tur);
+            int sid = ship().shipId;
+            boolean success =
+                    tur.req.postContent(
+                            Tour.TOUR_ID_NOCHECK,
+                            cmd.data,
+                            cmd.start,
+                            cmd.length,
+                            (len, resume) -> {
+                                if (resume)
+                                    sip.resume(sid);
+                            });
 
             if (!success)
                 return NextSocketAction.Suspend;

@@ -1,7 +1,6 @@
 package yokohama.baykit.bayserver.tour;
 
 import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.Headers;
 import yokohama.baykit.bayserver.util.HttpUtil;
@@ -69,7 +68,6 @@ public class TourReq implements Reusable {
     public int bytesConsumed;
     public int bytesLimit;
     public ReqContentHandler contentHandler;
-    public ContentConsumeListener consumeListener;
     boolean available;
     boolean ended;
 
@@ -115,7 +113,6 @@ public class TourReq implements Reusable {
 
         charset = null;
         contentHandler = null;
-        consumeListener = null;
         available = false;
         ended = false;
     }
@@ -153,18 +150,17 @@ public class TourReq implements Reusable {
         this.contentHandler = hnd;
     }
 
-    public void setConsumeListener(int limit, ContentConsumeListener listener) {
+    public void setReqContentLength(int limit) {
         if (limit < 0) {
             throw new Sink("Invalid limit");
         }
-        this.consumeListener = listener;
         this.bytesLimit = limit;
         this.bytesConsumed = 0;
         this.bytesPosted = 0;
         this.available = true;
     }
 
-    public boolean postContent(int checkId, byte[] data, int start, int len) throws IOException {
+    public boolean postContent(int checkId, byte[] data, int start, int len, ContentConsumeListener lis) throws IOException {
         tour.checkTourId(checkId);
 
         boolean dataPassed = false;
@@ -177,10 +173,6 @@ public class TourReq implements Reusable {
             BayLog.warn("%s content read, but no content handler", tour);
         }
 
-        else if (consumeListener == null) {
-            throw new Sink("Request consume listener is null");
-        }
-
         else if (bytesPosted + len > bytesLimit) {
             throw new ProtocolException(BayMessage.get(Symbol.HTP_READ_DATA_EXCEEDED, bytesPosted + len,  bytesLimit));
         }
@@ -191,7 +183,7 @@ public class TourReq implements Reusable {
         }
 
         else {
-            contentHandler.onReadContent(tour, data, start, len);
+            contentHandler.onReadContent(tour, data, start, len, lis);
             dataPassed = true;
         }
 
@@ -226,10 +218,8 @@ public class TourReq implements Reusable {
         ended = true;
     }
 
-    public void consumed(int checkId, int length) {
+    public void consumed(int checkId, int length, ContentConsumeListener lis) {
         tour.checkTourId(checkId);
-        if (consumeListener == null)
-            throw new Sink("Request consume listener is null");
 
         bytesConsumed += length;
         BayLog.debug("%s reqConsumed: len=%d posted=%d limit=%d consumed=%d available=%b",
@@ -245,7 +235,7 @@ public class TourReq implements Reusable {
             resume = true;
         }
 
-        consumeListener.contentConsumed(length, resume);
+        lis.contentConsumed(length, resume);
     }
 
     public synchronized boolean abort() {

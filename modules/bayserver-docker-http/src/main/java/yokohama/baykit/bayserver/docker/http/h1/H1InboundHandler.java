@@ -15,9 +15,6 @@ import yokohama.baykit.bayserver.docker.http.h1.command.CmdEndContent;
 import yokohama.baykit.bayserver.docker.http.h1.command.CmdHeader;
 import yokohama.baykit.bayserver.tour.TourReq;
 import yokohama.baykit.bayserver.util.*;
-import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.protocol.*;
-import yokohama.baykit.bayserver.util.*;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -242,11 +239,7 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
         }
 
         if(reqContLen > 0) {
-            int sid = ship().shipId;
-            tur.req.setConsumeListener(reqContLen, (len, resume) -> {
-                if (resume)
-                    sip.resume(sid);
-            });
+            tur.req.setReqContentLength(reqContLen);
         }
 
         try {
@@ -293,7 +286,17 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
 
         Tour tur = curTour;
         int tourId = curTourId;
-        boolean success = tur.req.postContent(tourId, cmd.buffer, cmd.start, cmd.len);
+        int sid = ship().shipId;
+        boolean success =
+                tur.req.postContent(
+                        tourId,
+                        cmd.buffer,
+                        cmd.start,
+                        cmd.len,
+                        (len, resume) -> {
+                            if (resume)
+                                tur.ship.resume(sid);
+                        });
 
         if (tur.req.bytesPosted == tur.req.bytesLimit) {
             if(tur.error != null){
