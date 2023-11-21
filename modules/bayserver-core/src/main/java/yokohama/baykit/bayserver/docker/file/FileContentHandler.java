@@ -2,6 +2,7 @@ package yokohama.baykit.bayserver.docker.file;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.HttpException;
+import yokohama.baykit.bayserver.tour.ContentConsumeListener;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 
@@ -23,8 +24,9 @@ public class FileContentHandler implements ReqContentHandler {
     ///////////////////////////////////////////////////////////////////////
 
     @Override
-    public void onReadContent(Tour tur, byte[] buf, int start, int len) throws IOException {
+    public void onReadContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
         BayLog.debug("%s onReadContent(Ignore) len=%d", tur, len);
+        tur.req.consumed(tur.tourId, len, lis);
     }
 
     @Override

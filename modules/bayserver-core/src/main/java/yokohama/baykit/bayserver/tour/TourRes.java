@@ -1,10 +1,8 @@
 package yokohama.baykit.bayserver.tour;
 
-import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.BayServer;
-import yokohama.baykit.bayserver.HttpException;
-import yokohama.baykit.bayserver.Sink;
+import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
+import yokohama.baykit.bayserver.docker.Trouble;
 import yokohama.baykit.bayserver.docker.base.InboundHandler;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
@@ -82,7 +80,7 @@ public class TourRes implements Reusable {
     public void sendHeaders(int checkId) throws IOException {
         tour.checkTourId(checkId);
 
-        if (tour.isZombie())
+        if (tour.isZombie() || tour.isAborted())
             return;
 
         if (headerSent())
@@ -110,7 +108,54 @@ public class TourRes implements Reusable {
         }
 
         try {
-            tour.ship.sendHeaders(tour.shipId, tour);
+            boolean handled = false;
+            if (!tour.errorHandling && tour.res.headers.status() >= 400) {
+                Trouble trb = BayServer.harbor.trouble();
+                if (trb != null) {
+                    Trouble.Command cmd = trb.find(tour.res.headers.status());
+                    if (cmd != null) {
+                        Tour errTour = tour.ship.getErrorTour();
+                        errTour.req.uri = cmd.target;
+                        tour.req.headers.copyTo(errTour.req.headers);
+                        tour.res.headers.copyTo(errTour.res.headers);
+                        errTour.req.remotePort = tour.req.remotePort;
+                        errTour.req.remoteAddress = tour.req.remoteAddress;
+                        errTour.req.serverAddress = tour.req.serverAddress;
+                        errTour.req.serverPort = tour.req.serverPort;
+                        errTour.req.serverName = tour.req.serverName;
+                        errTour.res.headerSent = tour.res.headerSent;
+                        tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ZOMBIE);
+                        switch (cmd.method) {
+                            case GUIDE: {
+                                try {
+                                    errTour.go();
+                                } catch (HttpException e) {
+                                    throw new IOException(e);
+                                }
+                                break;
+                            }
+
+                            case TEXT: {
+                                tour.ship.sendHeaders(tour.ship.shipId, errTour);
+                                byte[] data = cmd.target.getBytes();
+                                errTour.res.sendContent(Tour.TOUR_ID_NOCHECK, data, 0, data.length);
+                                errTour.res.endContent(Tour.TOUR_ID_NOCHECK);
+                                break;
+                            }
+
+                            case REROUTE: {
+                                errTour.res.sendHttpException(Tour.TOUR_ID_NOCHECK, HttpException.movedTemp(cmd.target));
+                                break;
+                            }
+                        }
+                        handled = true;
+                    }
+                }
+            }
+
+            if (!handled) {
+                tour.ship.sendHeaders(tour.shipId, tour);
+            }
         }
         catch(IOException e) {
             tour.changeState(checkId, Tour.TourState.ABORTED);
@@ -227,7 +272,7 @@ public class TourRes implements Reusable {
             }
             else {
                 try {
-                    tour.ship.sendEndTour(tour.shipId, checkId, tour, lis);
+                    tour.ship.sendEndTour(tour.shipId, tour, lis);
                 }
                 catch(IOException e) {
                     BayLog.debug("%s Error on sending end tour", this);
@@ -263,6 +308,10 @@ public class TourRes implements Reusable {
     public void sendError(int checkId, int status, String message, Throwable e) throws IOException {
         tour.checkTourId(checkId);
 
+        BayLog.debug("%s send error: status=%d, message=%s ex=%s", this, status, message, e == null ? "" : e.getMessage(), e);
+        if (e != null)
+            BayLog.debug(e);
+
         if (tour.isZombie())
             return;
 
@@ -280,8 +329,18 @@ public class TourRes implements Reusable {
                 BayLog.debug("%s Aborted or zombie tour. do nothing: %s state=%s", this, tour, tour.state);
             }
             else {
+                StringBuilder body = new StringBuilder();
+
+                // Create body
+                String str = HttpStatus.description(status);
+
+                // print status
+                body.append("<h1>").append(status).append(" ").append(str).append("</h1>").append(Constants.CRLF);
+
+                tour.res.headers.setStatus(status);
+
                 try {
-                    tour.ship.sendError(tour.shipId, tour, status, message, e);
+                    sendErrorContent(body.toString());
                 }
                 catch(IOException ex) {
                     BayLog.debug(e, "%s Error in sending error", this);
@@ -375,7 +434,14 @@ public class TourRes implements Reusable {
             else {
                 setConsumeListener(ContentConsumeListener.devNull);
                 try {
-                    tour.ship.sendRedirect(tour.shipId, tour, status, location);
+                    Headers hdr = tour.res.headers;
+                    hdr.setStatus(status);
+                    hdr.set(Headers.LOCATION, location);
+
+                    String body = "<H2>Document Moved.</H2><BR>" + "<A HREF=\""
+                            + location + "\">" + location + "</A>";
+
+                    sendErrorContent(body);
                 }
                 catch(IOException e) {
                     tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
@@ -390,6 +456,34 @@ public class TourRes implements Reusable {
             endContent(checkId);
         }
 
+    }
+
+    private void sendErrorContent(String content) throws IOException {
+
+        // Get charset
+        String charset = tour.res.charset();
+
+        // Set content type
+        if (charset != null && !charset.equals("")) {
+            tour.res.headers.setContentType("text/html; charset=" + charset);
+        } else {
+            tour.res.headers.setContentType("text/html");
+        }
+
+        byte[] bytes = null;
+        if (content != null && !content.equals("")) {
+            // Create writer
+            if (charset != null && !charset.equals("")) {
+                bytes = content.getBytes(charset);
+            } else {
+                bytes = content.getBytes();
+            }
+            tour.res.headers.setContentLength(bytes.length);
+        }
+        tour.ship.sendHeaders(tour.ship.shipId, tour);
+
+        if (bytes != null)
+            tour.ship.sendResContent(tour.ship.shipId, tour, bytes, 0, bytes.length, null);
     }
 
     private GzipCompressor getCompressor() throws IOException {

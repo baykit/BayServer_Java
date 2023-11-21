@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.docker.warp;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.tour.ContentConsumeListener;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.Headers;
@@ -34,7 +35,7 @@ public class WarpData implements ReqContentHandler {
     //////////////////////////////////////////////////////
 
     @Override
-    public synchronized final void onReadContent(Tour tur, byte[] buf, int start, int len) throws IOException {
+    public synchronized final void onReadContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
         BayLog.debug("%s onReadReqContent tur=%s len=%d", warpShip, tur, len);
         warpShip.checkShipId(warpShipId);
         int maxLen = warpShip.protocolHandler.maxReqPacketDataSize();
@@ -54,7 +55,7 @@ public class WarpData implements ReqContentHandler {
                     buf,
                     start + pos,
                     postLen,
-                    () -> tur.req.consumed(turId, len));
+                    () -> tur.req.consumed(turId, len, lis));
         }
     }
 

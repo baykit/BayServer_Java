@@ -6,7 +6,7 @@ import java.io.IOException;
 
 public interface ReqContentHandler {
 
-    void onReadContent(Tour tur, byte[] buf, int start, int len) throws IOException;
+    void onReadContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException;
 
     void onEndContent(Tour tur) throws IOException, HttpException;
 
@@ -14,7 +14,7 @@ public interface ReqContentHandler {
 
     ReqContentHandler devNull = new ReqContentHandler() {
         @Override
-        public void onReadContent(Tour tur, byte[] buf, int start, int len) throws IOException {
+        public void onReadContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
 
         }
 

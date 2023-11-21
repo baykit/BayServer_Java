@@ -4,6 +4,7 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.HttpException;
+import yokohama.baykit.bayserver.tour.ContentConsumeListener;
 import yokohama.baykit.bayserver.train.Train;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
@@ -131,10 +132,10 @@ public class CgiTrain extends Train implements ReqContentHandler {
     ///////////////////////////////////////////////////////////////////
 
     @Override
-    public void onReadContent(Tour tur, byte[] buf, int start, int len) throws IOException {
+    public void onReadContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
         BayLog.trace("%s CGITask:onReadContent: len=%d", tur, len);
         process.getOutputStream().write(buf, start, len);
-        tur.req.consumed(Tour.TOUR_ID_NOCHECK, len);
+        tur.req.consumed(Tour.TOUR_ID_NOCHECK, len, lis);
     }
 
     @Override

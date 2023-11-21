@@ -2,6 +2,7 @@ package yokohama.baykit.bayserver.docker.cgi;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.HttpException;
+import yokohama.baykit.bayserver.tour.ContentConsumeListener;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.HttpStatus;
@@ -32,11 +33,11 @@ public class CgiReqContentHandler implements ReqContentHandler {
     ///////////////////////////////////////////////////////////////////
 
     @Override
-    public void onReadContent(Tour tur, byte[] buf, int start, int len) throws IOException {
+    public void onReadContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
         BayLog.debug("%s CGI:onReadReqContent: len=%d", tur, len);
         process.getOutputStream().write(buf, start, len);
         process.getOutputStream().flush();
-        tur.req.consumed(Tour.TOUR_ID_NOCHECK, len);
+        tur.req.consumed(Tour.TOUR_ID_NOCHECK, len, lis);
         access();
     }
 

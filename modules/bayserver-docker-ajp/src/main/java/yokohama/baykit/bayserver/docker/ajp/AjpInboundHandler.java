@@ -173,11 +173,7 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
         int reqContLen = cmd.headers.contentLength();
 
         if(reqContLen > 0) {
-            int sid = sip.shipId;
-            tur.req.setConsumeListener(reqContLen, (len, resume) -> {
-                if (resume)
-                    sip.resume(sid);
-            });
+            tur.req.setReqContentLength(reqContLen);
         }
 
         try {
@@ -218,7 +214,17 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
             throw new ProtocolException("Invalid AJP command: " + cmd.type + " state=" + state);
 
         Tour tur = sip.getTour(DUMMY_KEY);
-        boolean success = tur.req.postContent(Tour.TOUR_ID_NOCHECK, cmd.data, cmd.start, cmd.length);
+        int sid = sip.shipId;
+        boolean success =
+                tur.req.postContent(
+                        Tour.TOUR_ID_NOCHECK,
+                        cmd.data,
+                        cmd.start,
+                        cmd.length,
+                        (len, resume) -> {
+                            if (resume)
+                                sip.resume(sid);
+                        });
 
         if(tur.req.bytesPosted == tur.req.bytesLimit) {
             // request content completed

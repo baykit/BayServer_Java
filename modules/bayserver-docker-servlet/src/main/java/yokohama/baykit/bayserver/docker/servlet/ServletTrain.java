@@ -3,12 +3,12 @@ package yokohama.baykit.bayserver.docker.servlet;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.HttpException;
+import yokohama.baykit.bayserver.tour.ContentConsumeListener;
 import yokohama.baykit.bayserver.train.Train;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.servlet.duck.*;
 import yokohama.baykit.bayserver.util.HttpStatus;
-import yokohama.baykit.bayserver.docker.servlet.duck.*;
 
 import java.io.IOException;
 import java.io.PipedInputStream;
@@ -133,7 +133,7 @@ class ServletTrain extends Train implements ReqContentHandler {
     ///////////////////////////////////////////////////////////////////
 
     @Override
-    public void onReadContent(Tour tur, byte[] buf, int start, int len) {
+    public void onReadContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) {
         BayLog.debug(tur + " Servlet:onReadReqContent: len=" + len);
 
         try {
@@ -142,7 +142,7 @@ class ServletTrain extends Train implements ReqContentHandler {
         catch(IOException e) {
             throw new IllegalStateException(e);
         }
-        tur.req.consumed(Tour.TOUR_ID_NOCHECK, len);
+        tur.req.consumed(Tour.TOUR_ID_NOCHECK, len, lis);
     }
 
     @Override
