@@ -14,9 +14,6 @@ import yokohama.baykit.bayserver.docker.base.InboundShip;
 import yokohama.baykit.bayserver.docker.http.h2.command.*;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.HttpUtil;
-import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.docker.http.h2.command.*;
-import yokohama.baykit.bayserver.protocol.*;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -216,29 +213,7 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
             int reqContLen = tur.req.headers.contentLength();
 
             if(reqContLen > 0) {
-                int sid = sip.shipId;
-
-                tur.req.setConsumeListener(reqContLen, (len, resume) -> {
-                    sip.checkShipId(sid);
-
-                    if (len > 0) {
-                        CmdWindowUpdate upd = new CmdWindowUpdate(cmd.streamId);
-                        upd.windowSizeIncrement = len;
-                        CmdWindowUpdate upd2 = new CmdWindowUpdate(0);
-                        upd2.windowSizeIncrement = len;
-                        CommandPacker cmdPacker = commandPacker;
-                        try {
-                            cmdPacker.post(sip, upd);
-                            cmdPacker.post(sip, upd2);
-                        }
-                        catch(IOException e) {
-                            BayLog.error(e);
-                        }
-                    }
-
-                    if (resume)
-                        sip.resume(Ship.SHIP_ID_NOCHECK);
-                });
+                tur.req.setReqContentLength(reqContLen);
             }
 
             try {
@@ -278,7 +253,35 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
 
         boolean success = true;
         if(cmd.length > 0) {
-            success = tur.req.postContent(Tour.TOUR_ID_NOCHECK, cmd.data, cmd.start, cmd.length);
+            int tid = tur.tourId;
+            success =
+                    tur.req.postContent(
+                            Tour.TOUR_ID_NOCHECK,
+                            cmd.data,
+                            cmd.start,
+                            cmd.length,
+                            (len, resume) -> {
+                                tur.checkTourId(tid);
+
+                                if (len > 0) {
+                                    CmdWindowUpdate upd = new CmdWindowUpdate(cmd.streamId);
+                                    upd.windowSizeIncrement = len;
+                                    CmdWindowUpdate upd2 = new CmdWindowUpdate(0);
+                                    upd2.windowSizeIncrement = len;
+                                    CommandPacker cmdPacker = commandPacker;
+                                    try {
+                                        cmdPacker.post(tur.ship, upd);
+                                        cmdPacker.post(tur.ship, upd2);
+                                    }
+                                    catch(IOException e) {
+                                        BayLog.error(e);
+                                    }
+                                }
+
+                                if (resume)
+                                    tur.ship.resume(tur.shipId);
+                            });
+
             if (tur.req.bytesPosted >= tur.req.headers.contentLength()) {
 
                 if(tur.error != null){

@@ -113,74 +113,10 @@ public class InboundShip extends Ship {
     public void sendHeaders(int chkId, Tour tur) throws IOException {
         checkShipId(chkId);
 
-        if(tur.isZombie() || tur.isAborted()) {
-            // Don't send peer any data
-            return;
+        for(String[] nv: portDkr.additionalHeaders()) {
+            tur.res.headers.add(nv[0], nv[1]);
         }
-
-        boolean handled = false;
-        if(!tur.errorHandling && tur.res.headers.status() >= 400) {
-            Trouble trb = BayServer.harbor.trouble();
-            if(trb != null) {
-                Trouble.Command cmd = trb.find(tur.res.headers.status());
-                if (cmd != null) {
-                    Tour errTour = getErrorTour();
-                    errTour.req.uri = cmd.target;
-                    tur.req.headers.copyTo(errTour.req.headers);
-                    tur.res.headers.copyTo(errTour.res.headers);
-                    errTour.req.remotePort = tur.req.remotePort;
-                    errTour.req.remoteAddress = tur.req.remoteAddress;
-                    errTour.req.serverAddress = tur.req.serverAddress;
-                    errTour.req.serverPort = tur.req.serverPort;
-                    errTour.req.serverName = tur.req.serverName;
-                    errTour.res.headerSent = tur.res.headerSent;
-                    tur.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ZOMBIE);
-                    switch (cmd.method) {
-                        case GUIDE: {
-                            try {
-                                errTour.go();
-                            } catch (HttpException e) {
-                                throw new IOException(e);
-                            }
-                            break;
-                        }
-
-                        case TEXT: {
-                            ((InboundHandler)protocolHandler).sendResHeaders(errTour);
-                            byte[] data = cmd.target.getBytes();
-                            errTour.res.sendContent(Tour.TOUR_ID_NOCHECK, data, 0, data.length);
-                            errTour.res.endContent(Tour.TOUR_ID_NOCHECK);
-                            break;
-                        }
-
-                        case REROUTE: {
-                            errTour.res.sendHttpException(Tour.TOUR_ID_NOCHECK, HttpException.movedTemp(cmd.target));
-                            break;
-                        }
-                    }
-                    handled = true;
-                }
-            }
-        }
-        if(!handled) {
-            for(String[] nv: portDkr.additionalHeaders()) {
-                tur.res.headers.add(nv[0], nv[1]);
-            }
-            ((InboundHandler) protocolHandler).sendResHeaders(tur);
-        }
-    }
-
-    public void sendRedirect(int chkId, Tour tour, int status, String location) throws IOException {
-        checkShipId(chkId);
-
-        Headers hdr = tour.res.headers;
-        hdr.setStatus(status);
-        hdr.set(Headers.LOCATION, location);
-
-        String body = "<H2>Document Moved.</H2><BR>" + "<A HREF=\""
-                + location + "\">" + location + "</A>";
-
-        sendErrorContent(chkId, tour, body);
+        ((InboundHandler) protocolHandler).sendResHeaders(tur);
     }
 
     public void sendResContent(int chkId, Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
@@ -196,8 +132,8 @@ public class InboundShip extends Ship {
         }
     }
 
-    public synchronized void sendEndTour(int chkShipId, int chkTourId, Tour tur, DataConsumeListener lis) throws IOException {
-        checkShipId(chkShipId);
+    public synchronized void sendEndTour(int chkId, Tour tur, DataConsumeListener lis) throws IOException {
+        checkShipId(chkId);
 
         BayLog.debug("%s sendEndTour: %s state=%s", this, tur, tur.state);
 
@@ -220,93 +156,9 @@ public class InboundShip extends Ship {
         ((InboundHandler)protocolHandler).sendEndTour(tur, keepAlive, lis);
     }
 
-    public void sendError(int chkId, Tour tour, int status, String message, Throwable e)
-            throws IOException {
-
-        checkShipId(chkId);
-
-        if(tour == null)
-            throw new NullPointerException();
-
-        BayLog.debug("%s send error: status=%d, message=%s ex=%s", this, status, message, e == null ? "" : e.getMessage(), e);
-        if (e != null)
-            BayLog.debug(e);
-
-        StringBuilder body = new StringBuilder();
-
-        // Create body
-        String str = HttpStatus.description(status);
-
-        // print status
-        body.append("<h1>").append(status).append(" ").append(str).append("</h1>").append(Constants.CRLF);
-
-        // print message
-	/*
-        if (message != null && BayLog.isDebugMode()) {
-            body.append(message);
-        }
-	*/
-
-        // print stack trace
-	/*
-        if (e != null && BayLog.isDebugMode()) {
-            StringWriter sw = new StringWriter();
-            PrintWriter pw = new PrintWriter(sw, true);
-            e.printStackTrace(pw);
-
-            String stackTrace = sw.toString();
-
-            body.append("<P><HR><P>");
-            body.append(Constants.CRLF);
-            body.append("<pre>");
-            body.append(Constants.CRLF);
-            body.append(stackTrace);
-            body.append(Constants.CRLF);
-            body.append("</pre>");
-        }
-	*/
-
-        tour.res.headers.setStatus(status);
-        sendErrorContent(chkId, tour, body.toString());
-    }
-
-
-
-
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // Custom methods
     ///////////////////////////////////////////////////////////////////////////////////////////////
-
-    protected void sendErrorContent(int chkId, Tour tur, String content)
-            throws IOException {
-
-        // Get charset
-        String charset = tur.res.charset();
-
-        // Set content type
-        if (charset != null && !charset.equals("")) {
-            tur.res.headers.setContentType("text/html; charset=" + charset);
-        } else {
-            tur.res.headers.setContentType("text/html");
-        }
-
-        byte[] bytes = null;
-        if (content != null && !content.equals("")) {
-            // Create writer
-            if (charset != null && !charset.equals("")) {
-                bytes = content.getBytes(charset);
-            } else {
-                bytes = content.getBytes();
-            }
-            tur.res.headers.setContentLength(bytes.length);
-        }
-        sendHeaders(chkId, tur);
-
-        if (bytes != null)
-            sendResContent(chkId, tur, bytes, 0, bytes.length, null);
-
-        //ship.tourEnded();
-    }
 
     void endShip() {
         BayLog.debug("%s endShip", this);
