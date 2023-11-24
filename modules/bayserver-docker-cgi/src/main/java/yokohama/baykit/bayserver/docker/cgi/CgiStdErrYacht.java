@@ -50,7 +50,7 @@ public class CgiStdErrYacht extends Yacht {
     }
 
     @Override
-    public NextSocketAction notifyEof() throws IOException {
+    public NextSocketAction notifyEof() {
         BayLog.debug("%s CGI StdErr: EOF \\(^o^)/", this);
         return NextSocketAction.Close;
     }

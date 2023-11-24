@@ -56,9 +56,13 @@ public class Tour implements Reusable {
         this.objectId = oidCounter.next();
     }
 
+    public String toString() {
+        return ship + " tour#" + tourId + "/" + objectId + "[key=" + req.key + "]";
+    }
+
     public void init(int key, InboundShip sip) {
         if(isInitialized())
-            throw new Sink(ship + " Tour already initialized: " + this);
+            throw new Sink("%s Tour already initialized: state=%s", this, state);
 
         this.ship = sip;
         this.shipId = sip.id();
@@ -95,11 +99,6 @@ public class Tour implements Reusable {
         return tourId;
     }
 
-
-    public String toString() {
-        return ship + " tour#" + tourId + "/" + objectId + "[key=" + req.key + "]";
-    }
-
     public void go() throws HttpException {
 
         city = ship.portDocker().findCity(req.reqHost);
@@ -117,19 +116,9 @@ public class Tour implements Reusable {
             try {
                 city.enter(this);
             }
-            catch(Sink e) {
-                changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
-                throw e;
-            }
             catch(HttpException e) {
                 changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
-                BayLog.error(e);
                 throw e;
-            }
-            catch(Exception e) {
-                changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
-                BayLog.error(e);
-                throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e.toString());
             }
         }
     }

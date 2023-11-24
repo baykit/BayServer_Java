@@ -13,7 +13,7 @@ public interface DataListener {
 
     NextSocketAction notifyRead(ByteBuffer buf, InetSocketAddress adr) throws IOException;
 
-    NextSocketAction notifyEof() throws IOException;
+    NextSocketAction notifyEof();
 
     NextSocketAction notifyHandshakeDone(String protocol) throws IOException;
 

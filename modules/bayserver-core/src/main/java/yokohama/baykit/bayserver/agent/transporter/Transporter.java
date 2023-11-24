@@ -201,31 +201,32 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
             BayLog.debug("%s EOF (ignore): %s", this, e);
         }
 
-        try {
-            if(buf == null) {
-                return dataListener.notifyEof();
+        if(buf == null) {
+            // Does not throw IOException
+            return dataListener.notifyEof();
+        }
+        else {
+            try {
+                return dataListener.notifyRead(buf, tmpAddress[0]);
             }
-            else {
-                try {
-                    return dataListener.notifyRead(buf, tmpAddress[0]);
-                }
-                catch(UpgradeException e) {
-                    BayLog.debug("%s Protocol upgrade", dataListener);
-                    buf.rewind();
-                    return dataListener.notifyRead(buf, tmpAddress[0]);
-                }
+            catch(UpgradeException e) {
+                BayLog.debug("%s Protocol upgrade", dataListener);
+                buf.rewind();
+                return dataListener.notifyRead(buf, tmpAddress[0]);
             }
-        } catch (ProtocolException e) {
-            boolean close = dataListener.notifyProtocolError(e);
-            if(!close && serverMode)
-                return NextSocketAction.Continue;
-            else
+            catch (ProtocolException e) {
+                boolean close = dataListener.notifyProtocolError(e);
+                if(!close && serverMode)
+                    return NextSocketAction.Continue;
+                else
+                    return NextSocketAction.Close;
+            }
+            catch (IOException e) {
+                // IOException which occur in notifyRead must be distinguished from
+                // IOException which occur in handshake or readNonBlock.
+                onError(ch, e);
                 return NextSocketAction.Close;
-        } catch (IOException e) {
-            // IOException which occur in notifyXXX must be distinguished from
-            // IOException which occur in handshake or readNonBlock.
-            onError(ch, e);
-            return NextSocketAction.Close;
+            }
         }
     }
 

@@ -1,9 +1,6 @@
 package yokohama.baykit.bayserver.agent;
 
-import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.BayMessage;
-import yokohama.baykit.bayserver.MemUsage;
-import yokohama.baykit.bayserver.Symbol;
+import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.docker.base.PortBase;
@@ -39,7 +36,7 @@ public class GrandAgent extends Thread {
     public NonBlockingHandler nonBlockingHandler;
     public AcceptHandler acceptHandler;
     public final int maxInboundShips;
-    boolean aborted;
+    public boolean aborted;
     public Map<DatagramChannel, Transporter> unanchorableTransporters = new HashMap<>();
     public CommandReceiver commandReceiver;
     ArrayList<TimerHandler> timerHandlers = new ArrayList<>();
@@ -119,16 +116,15 @@ public class GrandAgent extends Thread {
                 */
 
                 int count;
-                if (aborted) {
-                    // agent finished
-                    BayLog.debug("%s End loop", this);
-                    break;
-                }
-                else if (!spinHandler.isEmpty()) {
+                if (!spinHandler.isEmpty()) {
                     count = selector.selectNow();
                 }
                 else {
                     count = selector.select(selectTimeoutSec * 1000L);
+                }
+                if(aborted) {
+                    BayLog.info("%s aborted by another thread", this);
+                    break;
                 }
 
                 //BayLog.debug(this + " select count=" + count);
@@ -159,11 +155,10 @@ public class GrandAgent extends Thread {
                     }
                 }
             }
-
         }
         catch (Throwable e) {
             // If error occurs, grand agent ends
-            BayLog.error(e);
+            BayLog.fatal(e);
         }
         finally {
             BayLog.info("%s end", this);
@@ -179,11 +174,16 @@ public class GrandAgent extends Thread {
         abort(null);
     }
 
-    public void abort(Throwable err) {
+    public synchronized void abort(Throwable err) {
+        BayLog.fatal("%s abort", this);
         if(err != null) {
-            BayLog.fatal("%s abort", this);
             BayLog.fatal(err);
         }
+        if(aborted) {
+            BayLog.info("%s already aborted (Ignore)", this);
+            return;
+        }
+        aborted = true;
 
         commandReceiver.end();
         listeners.forEach(lis -> lis.remove(agentId));
@@ -191,7 +191,6 @@ public class GrandAgent extends Thread {
         agents.remove(this);
 
         clean();
-        aborted = true;
     }
 
 
@@ -271,6 +270,4 @@ public class GrandAgent extends Thread {
     /////////////////////////////////////////////////////////////////////////////
     // private methods                                                         //
     /////////////////////////////////////////////////////////////////////////////
-
-
 }

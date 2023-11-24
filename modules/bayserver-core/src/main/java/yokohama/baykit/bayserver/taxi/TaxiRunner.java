@@ -57,17 +57,27 @@ public class TaxiRunner implements TimerHandler {
     // Custom methods
     //////////////////////////////////////////////
     void terminate() {
+        BayLog.debug("%s terminate TaxiRunner", agent);
         agent.removeTimerHandler(this);
+        exe.shutdown();
     }
 
     boolean submit(Taxi txi) {
         try {
             exe.submit(() -> {
+                if(agent.aborted) {
+                    BayLog.error("Agent is aborted");
+                    return;
+                }
                 synchronized (runningTaxies) {
                     runningTaxies.add(txi);
                 }
                 try {
                     txi.run();
+                }
+                catch(Throwable e) {
+                    BayLog.error(e);
+                    agent.abort(e);
                 }
                 finally {
                     synchronized (runningTaxies) {
