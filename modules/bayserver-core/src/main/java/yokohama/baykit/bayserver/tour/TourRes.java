@@ -37,7 +37,6 @@ public class TourRes implements Reusable {
     boolean canCompress;
     GzipCompressor compressor;
     SendFileYacht yacht;
-    boolean tourReturned;
 
     public TourRes(Tour tour) {
         this.tour = tour;
@@ -66,7 +65,6 @@ public class TourRes implements Reusable {
         resConsumeListener = null;
         canCompress = false;
         compressor = null;
-        tourReturned = false;
     }
 
     public String charset() {
@@ -214,10 +212,11 @@ public class TourRes implements Reusable {
             getCompressor().finish();
         }
 
+        final boolean tourReturned[] = new boolean[] {false};
         DataConsumeListener lis = () -> {
             tour.checkTourId(checkId);
             tour.ship.returnTour(tour);
-            tourReturned = true;
+            tourReturned[0] = true;
         };
 
         try {
@@ -238,8 +237,10 @@ public class TourRes implements Reusable {
             }
         }
         finally {
-            BayLog.debug("%s Tour is returned: %s", this, tourReturned);
-            if(!tourReturned)
+            // If tour is returned, we cannot change its state because
+            // it will become uninitialized.
+            BayLog.debug("%s is returned: %s", this, tourReturned[0]);
+            if(!tourReturned[0])
                 tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ENDED);
         }
     }
@@ -266,8 +267,8 @@ public class TourRes implements Reusable {
             return;
 
         if(headerSent) {
-            BayLog.warn("Try to send error after response header is sent (Ignore)");
-            BayLog.warn("%s: status=%d, message=%s", this, status, message);
+            BayLog.debug("Try to send error after response header is sent (Ignore)");
+            BayLog.debug("%s: status=%d, message=%s", this, status, message);
             if (e != null)
                 BayLog.error(e);
         }
@@ -283,7 +284,7 @@ public class TourRes implements Reusable {
                     tour.ship.sendError(tour.shipId, tour, status, message, e);
                 }
                 catch(IOException ex) {
-                    BayLog.error(e, "%s Error in sending error", this);
+                    BayLog.debug(e, "%s Error in sending error", this);
                     tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
                 }
                 headerSent = true;

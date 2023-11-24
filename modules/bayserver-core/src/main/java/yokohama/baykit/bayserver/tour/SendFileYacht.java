@@ -73,9 +73,14 @@ public class SendFileYacht extends Yacht {
     }
 
     @Override
-    public NextSocketAction notifyEof() throws IOException {
+    public NextSocketAction notifyEof() {
         BayLog.debug("%s EOF(^o^) %s", this, file.getPath());
-        tour.res.endContent(tourId);
+        try {
+            tour.res.endContent(tourId);
+        }
+        catch(IOException e) {
+            BayLog.debug(e);
+        }
         return NextSocketAction.Close;
     }
 
