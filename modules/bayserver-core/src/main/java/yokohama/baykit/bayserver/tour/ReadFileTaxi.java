@@ -54,7 +54,7 @@ public class ReadFileTaxi extends Taxi implements Valve {
     // Implements Taxi
     ////////////////////////////////////////////////////////////////////////////////
     @Override
-    protected synchronized void depart() {
+    protected void depart() {
         startTime = System.currentTimeMillis();
         try {
             buf.clear();
@@ -63,7 +63,6 @@ public class ReadFileTaxi extends Taxi implements Valve {
                 if(!chValid)
                     throw new Sink();
 
-                dataListener.notifyEof();
                 close();
                 return;
             }
@@ -77,16 +76,21 @@ public class ReadFileTaxi extends Taxi implements Valve {
             if(act == NextSocketAction.Continue)
                 nextRun();
         }
-        catch(Throwable e) {
-            BayLog.error(e);
+        catch(IOException e) {
+            BayLog.debug(e);
             close();
+        }
+        catch(RuntimeException | Error e) {
+            close();
+            throw e;
         }
     }
 
     @Override
     protected void onTimer() {
         int durationSec = (int)(System.currentTimeMillis() - startTime) / 1000;
-        dataListener.checkTimeout(durationSec);
+        if (dataListener.checkTimeout(durationSec))
+            close();
     }
 
 
@@ -98,13 +102,19 @@ public class ReadFileTaxi extends Taxi implements Valve {
         TaxiRunner.post(agentId, this);
     }
 
-    private void close() {
+    private synchronized void close() {
+        if(!chValid)
+            return;
+
+        dataListener.notifyEof();
+
         try {
             in.close();
-        } catch (IOException ex) {
-            BayLog.error(ex);
-            ex.printStackTrace();
         }
+        catch (IOException ex) {
+            BayLog.error(ex);
+        }
+
         chValid = false;
         dataListener.notifyClose();
     }

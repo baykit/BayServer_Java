@@ -133,7 +133,7 @@ public class CgiStdOutYacht extends Yacht {
     }
 
     @Override
-    public NextSocketAction notifyEof() throws IOException {
+    public NextSocketAction notifyEof() {
         BayLog.debug("%s CGI StdOut: EOF \\(^o^)/", this);
         return NextSocketAction.Close;
     }

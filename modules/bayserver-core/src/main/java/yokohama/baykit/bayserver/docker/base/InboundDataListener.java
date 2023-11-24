@@ -43,7 +43,7 @@ public class InboundDataListener implements DataListener {
     }
 
     @Override
-    public NextSocketAction notifyEof() throws IOException {
+    public NextSocketAction notifyEof() {
         BayLog.debug("%s EOF detected", this);
         return NextSocketAction.Close;
     }

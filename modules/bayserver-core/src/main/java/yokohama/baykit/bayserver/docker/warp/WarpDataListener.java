@@ -57,7 +57,7 @@ public class WarpDataListener implements DataListener {
     }
 
     @Override
-    public NextSocketAction notifyEof() throws IOException {
+    public NextSocketAction notifyEof() {
         BayLog.debug("%s EOF detected", this);
 
         if(ship.tourMap.isEmpty()) {
@@ -69,18 +69,19 @@ public class WarpDataListener implements DataListener {
             Tour tur = pir.b;
             tur.checkTourId(pir.a);
 
-            if (!tur.res.headerSent()) {
-                BayLog.debug("%s Send ServiceUnavailable: tur=%s", this, tur);
-                tur.res.sendError(Tour.TOUR_ID_NOCHECK, HttpStatus.SERVICE_UNAVAILABLE, "Server closed on reading headers");
-            } else {
-                // NOT treat EOF as Error
-                BayLog.debug("%s EOF is not an error: tur=%s", this, tur);
-                try {
+            try {
+                if (!tur.res.headerSent()) {
+                    BayLog.debug("%s Send ServiceUnavailable: tur=%s", this, tur);
+                    tur.res.sendError(Tour.TOUR_ID_NOCHECK, HttpStatus.SERVICE_UNAVAILABLE, "Server closed on reading headers");
+                }
+                else {
+                    // NOT treat EOF as Error
+                    BayLog.debug("%s EOF is not an error: tur=%s", this, tur);
                     tur.res.endContent(Tour.TOUR_ID_NOCHECK);
                 }
-                catch(IOException e) {
-                    BayLog.debug(e, "%s end content error: tur=%s", this, tur);
-                }
+            }
+            catch(IOException e) {
+                BayLog.debug(e);
             }
         }
         ship.tourMap.clear();

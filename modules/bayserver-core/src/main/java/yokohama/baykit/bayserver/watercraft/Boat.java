@@ -42,7 +42,7 @@ public abstract class Boat implements DataListener {
     }
 
     @Override
-    public NextSocketAction notifyEof() throws IOException {
+    public NextSocketAction notifyEof() {
         throw new Sink();
     }
 

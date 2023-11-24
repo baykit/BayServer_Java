@@ -119,7 +119,7 @@ public final class UdpInboundDataListener implements DataListener {
     }
 
     @Override
-    public NextSocketAction notifyEof() throws IOException {
+    public NextSocketAction notifyEof() {
         return NextSocketAction.Continue;
     }
 
