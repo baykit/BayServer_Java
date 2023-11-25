@@ -76,8 +76,8 @@ public class TaxiRunner implements TimerHandler {
                     txi.run();
                 }
                 catch(Throwable e) {
-                    BayLog.error(e);
-                    agent.abort(e);
+                    BayLog.fatal(e);
+                    agent.reqShutdown();
                 }
                 finally {
                     synchronized (runningTaxies) {
