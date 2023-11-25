@@ -4,7 +4,6 @@ import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgentMonitor;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.base.InboundHandler;
-import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.docker.base.InboundShip;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
@@ -13,8 +12,6 @@ import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.HttpUtil;
 import yokohama.baykit.bayserver.util.StringUtil;
-import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.docker.ajp.command.*;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
@@ -149,7 +146,7 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
             tur = sip.getTour(DUMMY_KEY, true);
             tur.res.sendError(Tour.TOUR_ID_NOCHECK, HttpStatus.SERVICE_UNAVAILABLE, "No available tours");
             tur.res.endContent(Tour.TOUR_ID_NOCHECK);
-            sip.agent.shutdown();
+            sip.agent.reqShutdown();
             return NextSocketAction.Continue;
         }
 

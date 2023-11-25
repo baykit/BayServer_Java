@@ -36,12 +36,12 @@ class CommandReceiver {
                     agent.printUsage();
                     break;
                 case GrandAgent.CMD_SHUTDOWN:
-                    agent.shutdown();
+                    agent.reqShutdown();
                     aborted = true;
                     break;
                 case GrandAgent.CMD_ABORT:
                     IOUtil.writeInt32(comSendChannel, GrandAgent.CMD_OK);
-                    agent.abort(null);
+                    agent.abort();
                     return;
                 default:
                     BayLog.error("Unknown command: %d", cmd);
