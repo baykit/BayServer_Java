@@ -115,6 +115,11 @@ public class GrandAgent extends Thread {
                 });
                 */
 
+                if(aborted) {
+                    BayLog.info("%s aborted by another thread", this);
+                    break;
+                }
+
                 int count;
                 if (!spinHandler.isEmpty()) {
                     count = selector.selectNow();
@@ -122,6 +127,7 @@ public class GrandAgent extends Thread {
                 else {
                     count = selector.select(selectTimeoutSec * 1000L);
                 }
+
                 if(aborted) {
                     BayLog.info("%s aborted by another thread", this);
                     break;
@@ -162,7 +168,7 @@ public class GrandAgent extends Thread {
         }
         finally {
             BayLog.info("%s end", this);
-            abort(null);
+            shutdown();
         }
     }
 
@@ -171,19 +177,6 @@ public class GrandAgent extends Thread {
         BayLog.debug("%s shutdown", this);
         if(acceptHandler != null)
             acceptHandler.shutdown();
-        abort(null);
-    }
-
-    public synchronized void abort(Throwable err) {
-        BayLog.fatal("%s abort", this);
-        if(err != null) {
-            BayLog.fatal(err);
-        }
-        if(aborted) {
-            BayLog.info("%s already aborted (Ignore)", this);
-            return;
-        }
-        aborted = true;
 
         commandReceiver.end();
         listeners.forEach(lis -> lis.remove(agentId));
@@ -191,6 +184,17 @@ public class GrandAgent extends Thread {
         agents.remove(this);
 
         clean();
+    }
+
+    public synchronized void abort() {
+        BayLog.fatal("%s abort", this);
+    }
+
+    /**
+     * Another thread requests to shut down this GrandAgent
+     */
+    public void reqShutdown() {
+        aborted = true;
     }
 
 
