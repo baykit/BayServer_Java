@@ -148,7 +148,7 @@ public class HttpUtil {
             Pattern ptn = Pattern.compile("Basic (.*)");
             Matcher mch = ptn.matcher(auth);
             if (!mch.matches()) {
-                BayLog.warn("Not matched with basic authentication format");
+                BayLog.debug("Not matched with basic authentication format");
             } else {
                 auth = mch.group(1);
                 try {
