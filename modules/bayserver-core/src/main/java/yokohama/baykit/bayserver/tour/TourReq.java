@@ -251,7 +251,7 @@ public class TourReq implements Reusable {
     public synchronized boolean abort() {
         BayLog.debug("%s req abort", tour);
         if (tour.isPreparing()) {
-            tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
+            tour.changeState(tour.tourId, Tour.TourState.ABORTED);
             return true;
         }
         else if (tour.isRunning()) {
@@ -261,7 +261,7 @@ public class TourReq implements Reusable {
                 aborted = contentHandler.onAbort(tour);
 
             if (aborted)
-                tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
+                tour.changeState(tour.tourId, Tour.TourState.ABORTED);
 
             return aborted;
         }

@@ -84,12 +84,12 @@ public class Tour implements Reusable {
         club = null;
         errorHandling = false;
 
+        changeState(Tour.TOUR_ID_NOCHECK, TourState.UNINITIALIZED);
         tourId = INVALID_TOUR_ID;
 
         interval = 0;
         isSecure = false;
         //BayLog.trace("%s reset running false", this);
-        changeState(Tour.TOUR_ID_NOCHECK, TourState.UNINITIALIZED);
         error = null;
 
         ship = null;
@@ -117,7 +117,7 @@ public class Tour implements Reusable {
                 city.enter(this);
             }
             catch(HttpException e) {
-                changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
+                changeState(tourId, Tour.TourState.ABORTED);
                 throw e;
             }
         }
