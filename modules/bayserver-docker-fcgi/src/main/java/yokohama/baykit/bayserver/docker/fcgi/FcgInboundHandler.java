@@ -166,7 +166,7 @@ public class FcgInboundHandler extends FcgProtocolHandler implements InboundHand
             BayLog.error(BayMessage.get(Symbol.INT_NO_MORE_TOURS));
             tur = sip.getTour(cmd.reqId, true);
             tur.res.sendError(Tour.TOUR_ID_NOCHECK, HttpStatus.SERVICE_UNAVAILABLE, "No available tours");
-            sip.agent.shutdown();
+            //sip.agent.shutdown();
             return NextSocketAction.Continue;
         }
 

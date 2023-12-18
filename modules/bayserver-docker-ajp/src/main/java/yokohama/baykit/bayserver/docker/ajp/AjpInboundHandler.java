@@ -146,7 +146,7 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
             tur = sip.getTour(DUMMY_KEY, true);
             tur.res.sendError(Tour.TOUR_ID_NOCHECK, HttpStatus.SERVICE_UNAVAILABLE, "No available tours");
             tur.res.endContent(Tour.TOUR_ID_NOCHECK);
-            sip.agent.reqShutdown();
+            //sip.agent.reqShutdown();
             return NextSocketAction.Continue;
         }
 
