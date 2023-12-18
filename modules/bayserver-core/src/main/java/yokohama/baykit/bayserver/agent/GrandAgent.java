@@ -186,7 +186,7 @@ public class GrandAgent extends Thread {
         clean();
     }
 
-    public synchronized void abort() {
+    public void abort() {
         BayLog.fatal("%s abort", this);
     }
 
