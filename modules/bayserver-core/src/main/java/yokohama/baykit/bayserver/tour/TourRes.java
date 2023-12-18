@@ -113,7 +113,7 @@ public class TourRes implements Reusable {
             tour.ship.sendHeaders(tour.shipId, tour);
         }
         catch(IOException e) {
-            tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
+            tour.changeState(checkId, Tour.TourState.ABORTED);
             throw e;
         }
         finally {
@@ -241,7 +241,7 @@ public class TourRes implements Reusable {
             // it will become uninitialized.
             BayLog.debug("%s is returned: %s", this, tourReturned[0]);
             if(!tourReturned[0])
-                tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ENDED);
+                tour.changeState(checkId, Tour.TourState.ENDED);
         }
     }
 
@@ -285,7 +285,7 @@ public class TourRes implements Reusable {
                 }
                 catch(IOException ex) {
                     BayLog.debug(e, "%s Error in sending error", this);
-                    tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
+                    tour.changeState(checkId, Tour.TourState.ABORTED);
                 }
                 headerSent = true;
             }
