@@ -240,7 +240,7 @@ public class TourRes implements Reusable {
         return headerSent;
     }
 
-    public void endContent(int checkId) throws IOException {
+    public synchronized void endContent(int checkId) throws IOException {
         tour.checkTourId(checkId);
 
         BayLog.debug("%s end ResContent", this);
