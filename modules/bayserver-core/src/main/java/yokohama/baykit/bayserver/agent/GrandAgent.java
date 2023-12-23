@@ -179,11 +179,11 @@ public class GrandAgent extends Thread {
             acceptHandler.shutdown();
 
         commandReceiver.end();
+        clean();
+
         listeners.forEach(lis -> lis.remove(agentId));
 
         agents.remove(this);
-
-        clean();
     }
 
     public void abort() {
