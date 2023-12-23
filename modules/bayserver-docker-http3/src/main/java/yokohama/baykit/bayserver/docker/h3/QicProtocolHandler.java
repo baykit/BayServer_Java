@@ -401,11 +401,7 @@ public class QicProtocolHandler
 
             int reqContLen = tur.req.headers.contentLength();
             if (reqContLen > 0) {
-                int sid = ship.shipId;
-                tur.req.setConsumeListener(reqContLen, (len, resume) -> {
-                    if (resume)
-                        ship.resume(sid);
-                });
+                tur.req.setReqContentLength(reqContLen);
             }
 
             try {
@@ -466,7 +462,17 @@ public class QicProtocolHandler
                     break;
                 }
                 else {
-                    tur.req.postContent(Tour.TOUR_ID_NOCHECK, buf, 0, nRead);
+                    int sid = ship.shipId;
+                    boolean success =
+                            tur.req.postContent(
+                                    Tour.TOUR_ID_NOCHECK,
+                                    buf,
+                                    0,
+                                    nRead,
+                                    (len, resume) -> {
+                                        if (resume)
+                                            tur.ship.resume(sid);
+                                    });
                 }
             }
 
