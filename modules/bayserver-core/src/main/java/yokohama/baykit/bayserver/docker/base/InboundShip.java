@@ -132,7 +132,7 @@ public class InboundShip extends Ship {
         }
     }
 
-    public synchronized void sendEndTour(int chkId, Tour tur, DataConsumeListener lis) throws IOException {
+    public void sendEndTour(int chkId, Tour tur, DataConsumeListener lis) throws IOException {
         checkShipId(chkId);
 
         BayLog.debug("%s sendEndTour: %s state=%s", this, tur, tur.state);
