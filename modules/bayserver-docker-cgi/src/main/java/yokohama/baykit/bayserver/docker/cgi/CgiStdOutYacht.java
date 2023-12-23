@@ -141,7 +141,7 @@ public class CgiStdOutYacht extends Yacht {
     @Override
     public void notifyClose() {
         BayLog.debug("%s CGI StdOut: notifyClose", this);
-        ((CgiReqContentHandler)tour.req.contentHandler).stdOutClosed();
+        handler.stdOutClosed();
     }
 
     @Override
