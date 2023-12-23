@@ -58,7 +58,7 @@ public class CgiStdErrYacht extends Yacht {
     @Override
     public void notifyClose() {
         BayLog.debug("%s CGI StdErr: notifyClose", this);
-        ((CgiReqContentHandler) tour.req.contentHandler).stdErrClosed();
+        handler.stdErrClosed();
     }
 
     @Override
