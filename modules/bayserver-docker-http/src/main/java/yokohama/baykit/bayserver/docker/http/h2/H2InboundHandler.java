@@ -6,7 +6,6 @@ import yokohama.baykit.bayserver.docker.base.InboundHandler;
 import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.tour.TourReq;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
-import yokohama.baykit.bayserver.watercraft.Ship;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.tour.TourStore;

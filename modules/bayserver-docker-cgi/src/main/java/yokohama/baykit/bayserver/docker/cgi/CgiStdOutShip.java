@@ -2,18 +2,18 @@ package yokohama.baykit.bayserver.docker.cgi;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
+import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.Valve;
-import yokohama.baykit.bayserver.watercraft.Yacht;
+import yokohama.baykit.bayserver.ship.ReadOnlyShip;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.StringTokenizer;
 
-public class CgiStdOutYacht extends Yacht {
+public class CgiStdOutShip extends ReadOnlyShip {
 
     int fileWroteLen;
 
@@ -24,18 +24,33 @@ public class CgiStdOutYacht extends Yacht {
     String remain = "";
     boolean headerReading;
 
-    CgiStdOutYacht() {
+    CgiStdOutShip() {
         reset();
     }
 
+    @Override
     public String toString() {
-        return "CGIYat#" + yachtId + "/" + objectId + " tour=" + tour + " id=" + tourId;
+        return agent + " out_sip#" + shipId + "/" + objectId;
     }
 
-    ////////////////////////////////////////////////////////////////////
-    // Implements Reusable
-    ////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
+    // Initialize methods
+    /////////////////////////////////////
+    public void init(GrandAgent agt, Tour tur, Valve vv, CgiReqContentHandler handler) {
+        super.init(agt);
+        this.handler = handler;
+        this.tour = tur;
+        this.tourId = tur.tourId;
+        tur.res.setConsumeListener((len, resume) -> {
+            if(resume) {
+                vv.openValve();
+            }
+        });
+    }
 
+    /////////////////////////////////////
+    // Implements Reusable
+    /////////////////////////////////////
     @Override
     public void reset() {
         fileWroteLen = 0;
@@ -46,15 +61,15 @@ public class CgiStdOutYacht extends Yacht {
         handler = null;
     }
 
-    ////////////////////////////////////////////////////////////////////
-    // Implements Yacht
-    ////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
+    // Implements ReadOnlyShip
+    /////////////////////////////////////
 
     @Override
-    public NextSocketAction notifyRead(ByteBuffer buf, InetSocketAddress adr) throws IOException {
+    public NextSocketAction bytesReceived(ByteBuffer buf) throws IOException {
 
         fileWroteLen += buf.limit();
-        BayLog.debug("%s read file %s bytes: %d", this, buf.limit(), fileWroteLen);
+        BayLog.debug("%s read %s bytes: total=%d", this, buf.limit(), fileWroteLen);
 
         if (headerReading) {
 
@@ -134,20 +149,16 @@ public class CgiStdOutYacht extends Yacht {
 
     @Override
     public NextSocketAction notifyEof() {
-        BayLog.debug("%s CGI StdOut: EOF \\(^o^)/", this);
         return NextSocketAction.Close;
     }
 
     @Override
     public void notifyClose() {
-        BayLog.debug("%s CGI StdOut: notifyClose", this);
         handler.stdOutClosed();
     }
 
     @Override
     public final boolean checkTimeout(int durationSec) {
-        BayLog.debug("%s CGI StdOut check timeout: dur=%d", tour, durationSec);
-
         if (handler.timedOut()) {
             // Kill cgi process instead of handing timeout
             BayLog.warn("%s Kill process!: %s", tour, handler.process);
@@ -155,21 +166,5 @@ public class CgiStdOutYacht extends Yacht {
             return true;
         }
         return false;
-    }
-
-
-    ////////////////////////////////////////////////////////////////////
-    // Custom methods
-    ////////////////////////////////////////////////////////////////////
-    public void init(Tour tur, Valve vv, CgiReqContentHandler handler) {
-        super.initYacht();
-        this.handler = handler;
-        this.tour = tur;
-        this.tourId = tur.tourId;
-        tur.res.setConsumeListener((len, resume) -> {
-            if(resume) {
-                vv.openValve();
-            }
-        });
     }
 }

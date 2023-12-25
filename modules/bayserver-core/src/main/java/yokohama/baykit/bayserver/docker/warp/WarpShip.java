@@ -11,9 +11,8 @@ import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.Pair;
-import yokohama.baykit.bayserver.watercraft.Ship;
+import yokohama.baykit.bayserver.ship.Ship;
 
-import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;

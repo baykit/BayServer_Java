@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.protocol;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.util.ClassUtil;
 import yokohama.baykit.bayserver.util.Reusable;
-import yokohama.baykit.bayserver.watercraft.Ship;
+import yokohama.baykit.bayserver.ship.Ship;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
