@@ -2,34 +2,29 @@ package yokohama.baykit.bayserver.tour;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
+import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.util.Valve;
-import yokohama.baykit.bayserver.watercraft.Yacht;
+import yokohama.baykit.bayserver.ship.ReadOnlyShip;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
-public class SendFileYacht extends Yacht {
+public class SendFileShip extends ReadOnlyShip {
 
-    File file;
-    int fileLen;
     int fileWroteLen;
 
     Tour tour;
     int tourId;
 
-    SendFileYacht() {
+    SendFileShip() {
         reset();
     }
 
-    public void init(Tour tur, File file, Valve tp) throws IOException{
-        super.initYacht();
+    public void init(GrandAgent agt, Tour tur, Valve tp) throws IOException {
+        super.init(agt);
         this.tour = tur;
         this.tourId = tur.tourId;
-        this.file = file;
-        this.fileLen = (int)file.length();
         tur.res.setConsumeListener((len, resume) -> {
             if(resume) {
                 tp.openValve();
@@ -37,30 +32,32 @@ public class SendFileYacht extends Yacht {
         });
     }
 
+    @Override
     public String toString() {
-        return "fyacht#" + yachtId + "/" + objectId + " tour=" + tour + " id=" + tourId;
+        return agent + " fsip#" + shipId + "/" + objectId;
     }
 
-    ////////////////////////////////////////////////////////////////////
-    // Implements Reusable
-    ////////////////////////////////////////////////////////////////////
-
-    public void reset() {
-        fileWroteLen = 0;
-        tourId = 0;
-        fileLen = 0;
-        tour = null;
-    }
 
     ////////////////////////////////////////////////////////////////////
     // Implements DataListener
     ////////////////////////////////////////////////////////////////////
 
+    public void reset() {
+        super.reset();
+        fileWroteLen = 0;
+        tourId = 0;
+        tour = null;
+    }
+
+    ////////////////////////////////////////////////////////////////////
+    // Implements ReadOnlyShip
+    ////////////////////////////////////////////////////////////////////
+
     @Override
-    public NextSocketAction notifyRead(ByteBuffer buf, InetSocketAddress adr) throws IOException {
+    public NextSocketAction bytesReceived(ByteBuffer buf) throws IOException {
 
         fileWroteLen += buf.limit();
-        BayLog.debug("%s read file %d bytes: total=%d/%d", this, buf.limit(), fileWroteLen, fileLen);
+        BayLog.debug("%s read file %d bytes: total=%d", this, buf.limit(), fileWroteLen);
         boolean available = tour.res.sendContent(tourId, buf.array(), 0, buf.limit());
 
         if(available) {
@@ -74,7 +71,6 @@ public class SendFileYacht extends Yacht {
 
     @Override
     public NextSocketAction notifyEof() {
-        BayLog.debug("%s EOF(^o^) %s", this, file.getPath());
         try {
             tour.res.endContent(tourId);
         }
@@ -86,7 +82,6 @@ public class SendFileYacht extends Yacht {
 
     @Override
     public void notifyClose() {
-        BayLog.debug("File closed: %s", file.getPath());
     }
 
     @Override

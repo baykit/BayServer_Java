@@ -3,11 +3,10 @@ package yokohama.baykit.bayserver.tour;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
 import yokohama.baykit.bayserver.docker.Trouble;
-import yokohama.baykit.bayserver.docker.base.InboundHandler;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.*;
-import yokohama.baykit.bayserver.util.*;
+import yokohama.baykit.bayserver.ship.ReadOnlyDataListener;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -34,7 +33,7 @@ public class TourRes implements Reusable {
     public ContentConsumeListener resConsumeListener;
     boolean canCompress;
     GzipCompressor compressor;
-    SendFileYacht yacht;
+    SendFileShip sendShip;
 
     public TourRes(Tour tour) {
         this.tour = tour;
@@ -46,7 +45,7 @@ public class TourRes implements Reusable {
     }
 
     void init() {
-        this.yacht = new SendFileYacht();
+        this.sendShip = new SendFileShip();
     }
 
     @Override
@@ -58,7 +57,7 @@ public class TourRes implements Reusable {
 
         charset = null;
         headerSent = false;
-        yacht.reset();
+        sendShip.reset();
         available = false;
         resConsumeListener = null;
         canCompress = false;
@@ -395,16 +394,22 @@ public class TourRes implements Reusable {
                     case Spin: {
                         int timeout = 10;
                         SpinReadTransporter tp = new SpinReadTransporter(bufsize);
-                        yacht.init(tour, file, tp);
-                        tp.init(tour.ship.agent.spinHandler, yacht, new FileInputStream(file), (int)file.length(), timeout,null);
+                        sendShip.init(tour.ship.agent, tour, tp);
+                        tp.init(
+                                tour.ship.agent.spinHandler,
+                                new ReadOnlyDataListener(sendShip),
+                                new FileInputStream(file),
+                                (int)file.length(),
+                                timeout,
+                                null);
                         tp.openValve();
                         break;
                     }
 
                     case Taxi:{
                         ReadFileTaxi txi = new ReadFileTaxi(tour.ship.agent.agentId, bufsize);
-                        yacht.init(tour, file, txi);
-                        txi.init(new FileInputStream(file), yacht);
+                        sendShip.init(tour.ship.agent, tour, txi);
+                        txi.init(new FileInputStream(file), new ReadOnlyDataListener(sendShip));
                         if(!TaxiRunner.post(tour.ship.agent.agentId, txi)) {
                             throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");
                         }

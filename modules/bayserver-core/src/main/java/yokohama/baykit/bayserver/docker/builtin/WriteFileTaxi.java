@@ -16,7 +16,6 @@ public class WriteFileTaxi extends Taxi implements Valve {
 
     OutputStream out;
     boolean chValid;
-    DataListener dataListener;
     protected ArrayList<ByteBuffer> writeQueue = new ArrayList<>();
     int agentId;
 
@@ -24,17 +23,10 @@ public class WriteFileTaxi extends Taxi implements Valve {
 
     }
 
-    public void init(int agtId, OutputStream out, DataListener lis) throws IOException {
+    public void init(int agtId, OutputStream out) throws IOException {
         this.agentId = agtId;
         this.out = out;
-        this.dataListener = lis;
         this.chValid = true;
-    }
-
-
-    @Override
-    public String toString() {
-        return super.toString() + " " + dataListener.toString();
     }
 
     /////////////////////////////////////////

@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.watercraft;
+package yokohama.baykit.bayserver.ship;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
@@ -35,7 +35,7 @@ public abstract class Ship implements Reusable {
         this.shipId = INVALID_SHIP_ID;
     }
 
-    public void init(SelectableChannel ch, GrandAgent agent, Postman pm){
+    protected void init(SelectableChannel ch, GrandAgent agent, Postman pm){
         if(initialized)
             throw new Sink("Ship already initialized");
         this.shipId = idCounter.next();
@@ -50,7 +50,8 @@ public abstract class Ship implements Reusable {
     public void reset() {
         BayLog.debug("%s reset", this);
         initialized = false;
-        postman.reset();
+        if(postman != null)
+            postman.reset();
         postman = null;  // for reloading certification
         protocolHandler = null;
         agent = null;
