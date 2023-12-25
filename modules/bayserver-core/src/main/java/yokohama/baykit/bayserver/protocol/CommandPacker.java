@@ -1,7 +1,7 @@
 package yokohama.baykit.bayserver.protocol;
 
 
-import yokohama.baykit.bayserver.watercraft.Ship;
+import yokohama.baykit.bayserver.ship.Ship;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Reusable;
 

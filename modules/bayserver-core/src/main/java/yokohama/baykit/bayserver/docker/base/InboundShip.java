@@ -3,14 +3,11 @@ package yokohama.baykit.bayserver.docker.base;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.docker.Port;
-import yokohama.baykit.bayserver.docker.Trouble;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.tour.TourStore;
 import yokohama.baykit.bayserver.util.*;
-import yokohama.baykit.bayserver.watercraft.Ship;
-import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.util.*;
+import yokohama.baykit.bayserver.ship.Ship;
 
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;

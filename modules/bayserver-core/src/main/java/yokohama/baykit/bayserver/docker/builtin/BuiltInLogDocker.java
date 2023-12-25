@@ -10,9 +10,9 @@ import yokohama.baykit.bayserver.docker.Log;
 import yokohama.baykit.bayserver.docker.base.DockerBase;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.SysUtil;
-import yokohama.baykit.bayserver.*;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,15 +25,17 @@ public class BuiltInLogDocker extends DockerBase implements Log {
         @Override
         public void add(int agentId) {
             String fileName = filePrefix + "_" + agentId + "." + fileExt;
-            LogBoat boat = new LogBoat();
+            LogShip lsip = new LogShip();
             try {
-                boat.init(agentId, fileName, new WriteFileTaxi());
+                WriteFileTaxi txi = new WriteFileTaxi();
+                lsip.init(GrandAgent.get(agentId), txi);
+                txi.init(agentId, new FileOutputStream(fileName));
             }
             catch(IOException e) {
                 BayLog.fatal(BayMessage.get(Symbol.INT_CANNOT_OPEN_LOG_FILE, fileName));
                 BayLog.fatal(e);
             }
-            loggers.put(agentId, boat);
+            loggers.put(agentId, lsip);
         }
 
         @Override
@@ -60,7 +62,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
      *  Logger for each agent.
      *  Map of Agent ID => LogBoat
      */
-    Map<Integer, LogBoat> loggers = new HashMap<>();
+    Map<Integer, LogShip> loggers = new HashMap<>();
 
     /** Log format */
     String format;
@@ -287,7 +289,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
         compile(str, items, fileName, lineNo);
     }
 
-    private LogBoat getLogger(GrandAgent agt) {
+    private LogShip getLogger(GrandAgent agt) {
         return loggers.get(agt.agentId);
     }
 }
