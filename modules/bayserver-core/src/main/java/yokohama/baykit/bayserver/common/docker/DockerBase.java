@@ -1,11 +1,10 @@
-package yokohama.baykit.bayserver.docker.base;
+package yokohama.baykit.bayserver.common.docker;
 
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.bcf.BcfObject;
 import yokohama.baykit.bayserver.docker.Docker;
-import yokohama.baykit.bayserver.*;
 
 public abstract class DockerBase implements Docker {
 

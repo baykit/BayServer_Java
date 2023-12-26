@@ -1,11 +1,10 @@
 package yokohama.baykit.bayserver.docker.file;
 
-import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.docker.Docker;
-import yokohama.baykit.bayserver.docker.base.ClubBase;
+import yokohama.baykit.bayserver.common.docker.ClubBase;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.URLDecoder;
 import yokohama.baykit.bayserver.BayLog;
