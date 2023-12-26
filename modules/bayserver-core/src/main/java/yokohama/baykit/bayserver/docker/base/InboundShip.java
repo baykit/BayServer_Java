@@ -5,6 +5,7 @@ import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
@@ -40,10 +41,10 @@ public class InboundShip extends Ship {
     public void initInbound(
             SelectableChannel ch,
             GrandAgent agt,
-            Postman pm,
+            Transporter tp,
             Port portDkr,
             ProtocolHandler protoHandler) {
-        super.init(ch, agt, pm);
+        super.init(ch, agt, tp, tp);
         this.portDkr = portDkr;
         this.socketTimeoutSec = portDkr.timeoutSec() >= 0 ? portDkr.timeoutSec() : BayServer.harbor.socketTimeoutSec();
         this.tourStore = TourStore.getStore(agt.agentId);

@@ -9,6 +9,7 @@ import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.util.Counter;
 import yokohama.baykit.bayserver.util.Postman;
 import yokohama.baykit.bayserver.util.Reusable;
+import yokohama.baykit.bayserver.util.Valve;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -29,6 +30,7 @@ public abstract class Ship implements Reusable {
     public int shipId;
     public GrandAgent agent;
     public Postman postman;
+    public Valve valve;
     public SelectableChannel ch;
     public ProtocolHandler protocolHandler;
     public boolean initialized;
@@ -43,12 +45,13 @@ public abstract class Ship implements Reusable {
     // Initialize mthods
     /////////////////////////////////////
 
-    protected void init(SelectableChannel ch, GrandAgent agent, Postman pm){
+    protected void init(SelectableChannel ch, GrandAgent agent, Postman pm, Valve vlv){
         if(initialized)
             throw new Sink("Ship already initialized");
         this.shipId = idCounter.next();
         this.agent = agent;
         this.postman = pm;
+        this.valve = vlv;
         this.ch = ch;
         this.initialized = true;
         BayLog.debug("%s Initialized", this);
@@ -62,6 +65,8 @@ public abstract class Ship implements Reusable {
     public void reset() {
         BayLog.debug("%s reset", this);
         initialized = false;
+        if(postman != null)
+            postman.reset();
         postman = null;  // for reloading certification
         protocolHandler = null;
         agent = null;
@@ -90,7 +95,7 @@ public abstract class Ship implements Reusable {
 
     public void resume(int checkId) {
         checkShipId(checkId);
-        postman.openValve();
+        valve.openValve();
     }
 
     public final void checkShipId(int shipId) {

@@ -26,13 +26,13 @@ public class TcpDataListener implements DataListener {
     /////////////////////////////////////
 
     @Override
-    public NextSocketAction notifyHandshakeDone(String pcl) {
-        return NextSocketAction.Continue;
+    public NextSocketAction notifyHandshakeDone(String protocol) throws IOException {
+        return ship.notifyHandshakeDone(protocol);
     }
 
     @Override
     public NextSocketAction notifyConnect() throws IOException {
-        throw new IllegalStateException();
+        return ship.notifyConnect();
     }
 
     @Override

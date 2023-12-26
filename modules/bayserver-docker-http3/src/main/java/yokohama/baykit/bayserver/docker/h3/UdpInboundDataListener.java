@@ -6,6 +6,7 @@ import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.transporter.DataListener;
+import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.docker.base.InboundShip;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
@@ -24,7 +25,7 @@ import java.util.HashMap;
 
 public final class UdpInboundDataListener implements DataListener {
 
-    Postman postman;
+    Transporter transporter;
     byte[] connIdSeed = Quiche.newConnectionIdSeed();
     static HashMap<String, QicProtocolHandler> handlers = new HashMap<>();
     Http3Config h3Config = new Http3ConfigBuilder().build();
@@ -47,11 +48,11 @@ public final class UdpInboundDataListener implements DataListener {
     public void initUdp(
             DatagramChannel ch,
             GrandAgent agt,
-            Postman pm,
+            Transporter tp,
             Port dkr) {
         this.ch = ch;
         this.agent = agt;
-        this.postman = pm;
+        this.transporter = tp;
         this.portDkr = dkr;
         this.initialized = true;
 
@@ -196,9 +197,9 @@ public final class UdpInboundDataListener implements DataListener {
 
         BayLog.info("%s New connection scid=%s odcid=%s ref=%d", this, Utils.asHex(srcConId), Utils.asHex(odcid), con.getPointer());
 
-        QicProtocolHandler hnd = new QicProtocolHandler(con, adr, h3Config, postman);
+        QicProtocolHandler hnd = new QicProtocolHandler(con, adr, h3Config, transporter);
         InboundShip sip = new InboundShip();
-        sip.initInbound(ch, agent, postman, portDkr, hnd);
+        sip.initInbound(ch, agent, transporter, portDkr, hnd);
         hnd.setShip(sip);
 
         addHandler(srcConId, hnd);
@@ -312,7 +313,7 @@ public final class UdpInboundDataListener implements DataListener {
 
         // Check packets held in data listener
         if(tmpPostPacket != null) {
-            postman.post(tmpPostPacket.asBuffer(), tmpPostAddress, tmpPostPacket, null);
+            transporter.post(tmpPostPacket.asBuffer(), tmpPostAddress, tmpPostPacket, null);
             tmpPostPacket = null;
             tmpPostAddress = null;
             posted = true;
