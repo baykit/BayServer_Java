@@ -2,7 +2,7 @@ package yokohama.baykit.bayserver.docker.fcgi;
 
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.common.DataConsumeListener;
+import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.common.InboundHandler;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;

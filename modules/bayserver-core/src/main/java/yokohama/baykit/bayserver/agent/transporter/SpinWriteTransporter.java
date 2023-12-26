@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.agent.transporter;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.SpinHandler;
-import yokohama.baykit.bayserver.common.Reusable;
+import yokohama.baykit.bayserver.util.Reusable;
 import yokohama.baykit.bayserver.common.Valve;
 
 import java.io.File;

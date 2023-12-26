@@ -2,8 +2,8 @@ package yokohama.baykit.bayserver.protocol;
 
 
 import yokohama.baykit.bayserver.ship.Ship;
-import yokohama.baykit.bayserver.common.DataConsumeListener;
-import yokohama.baykit.bayserver.common.Reusable;
+import yokohama.baykit.bayserver.util.DataConsumeListener;
+import yokohama.baykit.bayserver.util.Reusable;
 
 import java.io.IOException;
 

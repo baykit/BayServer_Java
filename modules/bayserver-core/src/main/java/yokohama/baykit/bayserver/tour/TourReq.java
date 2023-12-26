@@ -4,7 +4,7 @@ import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.Headers;
 import yokohama.baykit.bayserver.util.HttpUtil;
-import yokohama.baykit.bayserver.common.Reusable;
+import yokohama.baykit.bayserver.util.Reusable;
 import yokohama.baykit.bayserver.util.StringUtil;
 
 import java.io.IOException;

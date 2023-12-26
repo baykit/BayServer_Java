@@ -8,7 +8,7 @@ import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.util.Counter;
 import yokohama.baykit.bayserver.common.Postman;
-import yokohama.baykit.bayserver.common.Reusable;
+import yokohama.baykit.bayserver.util.Reusable;
 import yokohama.baykit.bayserver.common.Valve;
 
 import java.io.IOException;

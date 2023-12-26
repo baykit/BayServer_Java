@@ -4,7 +4,7 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.SpinHandler;
 import yokohama.baykit.bayserver.common.Valve;
-import yokohama.baykit.bayserver.common.Reusable;
+import yokohama.baykit.bayserver.util.Reusable;
 
 import java.io.IOException;
 import java.io.InputStream;
