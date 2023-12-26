@@ -1,5 +1,7 @@
 package yokohama.baykit.bayserver.util;
 
+import yokohama.baykit.bayserver.BayLog;
+
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -314,8 +316,15 @@ public class Headers {
         String length = get(CONTENT_LENGTH);
         if (StringUtil.empty(length))
             return -1;
-        else
-            return Integer.parseInt(length);
+        else {
+            try {
+                return Integer.parseInt(length);
+            }
+            catch(NumberFormatException e) {
+                BayLog.debug(e);
+                return -1;
+            }
+        }
     }
 
     public void setContentLength(long length) {
