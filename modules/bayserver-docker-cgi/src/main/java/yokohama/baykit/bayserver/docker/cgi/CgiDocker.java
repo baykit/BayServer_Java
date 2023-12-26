@@ -189,14 +189,14 @@ public class CgiDocker extends ClubBase {
             case Taxi:{
                 ReadStreamTaxi outTxi = new ReadStreamTaxi(tur.ship.agent.agentId, bufsize);
                 outShip.init(handler.process.getInputStream(), tur.ship.agent, tur, outTxi, handler);
-                outTxi.init(outShip);
+                outTxi.init(handler.process.getInputStream(), new TcpDataListener(outShip));
                 if(!TaxiRunner.post(tur.ship.agent.agentId, outTxi)) {
                     throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");
                 }
 
                 ReadStreamTaxi errTxi = new ReadStreamTaxi(tur.ship.agent.agentId, bufsize);
                 errSip.init(handler.process.getErrorStream(), tur.ship.agent, handler);
-                errTxi.init(errSip);
+                errTxi.init(handler.process.getErrorStream(), new TcpDataListener(errSip));
 
                 int sipId = tur.ship.shipId;
                 tur.res.setConsumeListener((len, resume) -> {

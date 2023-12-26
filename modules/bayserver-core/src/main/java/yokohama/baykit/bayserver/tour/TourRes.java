@@ -419,7 +419,7 @@ public class TourRes implements Reusable {
                     case Taxi:{
                         ReadStreamTaxi txi = new ReadStreamTaxi(tour.ship.agent.agentId, bufsize);
                         sendFileShip.init(in, tour, txi);
-                        txi.init(sendFileShip);
+                        txi.init(in, new TcpDataListener(sendFileShip));
                         int sid = sendFileShip.id();
                         tour.res.setConsumeListener((len, resume) -> {
                             if(resume) {

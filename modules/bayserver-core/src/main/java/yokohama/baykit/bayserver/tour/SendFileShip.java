@@ -31,7 +31,7 @@ public class SendFileShip extends ReadOnlyShip {
 
     @Override
     public String toString() {
-        return agent + " fsip#" + shipId + "/" + objectId;
+        return agent + " send_file#" + shipId + "/" + objectId;
     }
 
 
@@ -67,7 +67,7 @@ public class SendFileShip extends ReadOnlyShip {
 
     @Override
     public void notifyError(Throwable e) {
-        BayLog.debug(e);
+        BayLog.debug(e, "%s Notify Error", this);
         try {
             tour.res.sendError(tourId, HttpStatus.INTERNAL_SERVER_ERROR, null, e);
         }
@@ -78,6 +78,7 @@ public class SendFileShip extends ReadOnlyShip {
 
     @Override
     public NextSocketAction notifyEof() {
+        BayLog.debug("%s EOF", this);
         try {
             tour.res.endContent(tourId);
         }
