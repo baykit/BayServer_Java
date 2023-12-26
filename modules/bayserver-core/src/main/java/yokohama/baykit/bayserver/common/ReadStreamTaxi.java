@@ -3,17 +3,20 @@ package yokohama.baykit.bayserver.common;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.agent.transporter.DataListener;
 import yokohama.baykit.bayserver.util.Valve;
 import yokohama.baykit.bayserver.taxi.Taxi;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 public class ReadStreamTaxi extends Taxi implements Valve {
 
     int agentId;
-    ReadOnlyShip ship;
+    InputStream input;
+    DataListener dataListener;
     boolean chValid;
     ByteBuffer buf;
     boolean running;
@@ -24,14 +27,15 @@ public class ReadStreamTaxi extends Taxi implements Valve {
         this.buf = ByteBuffer.allocate(bufsize);
     }
 
-    public void init(ReadOnlyShip ship) {
-        this.ship = ship;
+    public void init(InputStream input, DataListener dataListener) {
+        this.input = input;
+        this.dataListener = dataListener;
         this.chValid = true;
     }
 
     @Override
     public String toString() {
-        return "rd_file_txi#" + taxiId;
+        return "rd_stream_txi#" + taxiId;
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -52,11 +56,12 @@ public class ReadStreamTaxi extends Taxi implements Valve {
         startTime = System.currentTimeMillis();
         try {
             buf.clear();
-            int readLen = ship.input.read(buf.array(), 0, buf.capacity());
+            int readLen = input.read(buf.array(), 0, buf.capacity());
             if(readLen == -1) {
                 if(!chValid)
                     throw new Sink();
 
+                BayLog.debug("%s Detected EOF", this);
                 close();
                 return;
             }
@@ -64,7 +69,7 @@ public class ReadStreamTaxi extends Taxi implements Valve {
             buf.position(readLen);
             buf.flip();
 
-            NextSocketAction act = ship.notifyRead(buf);
+            NextSocketAction act = dataListener.notifyRead(buf, null);
 
             running = false;
             if(act == NextSocketAction.Continue)
@@ -75,6 +80,7 @@ public class ReadStreamTaxi extends Taxi implements Valve {
             close();
         }
         catch(RuntimeException | Error e) {
+            BayLog.error(e);
             close();
             throw e;
         }
@@ -83,7 +89,7 @@ public class ReadStreamTaxi extends Taxi implements Valve {
     @Override
     protected void onTimer() {
         int durationSec = (int)(System.currentTimeMillis() - startTime) / 1000;
-        if (ship.checkTimeout(durationSec))
+        if (dataListener.checkTimeout(durationSec))
             close();
     }
 
@@ -97,19 +103,20 @@ public class ReadStreamTaxi extends Taxi implements Valve {
     }
 
     private synchronized void close() {
+        BayLog.debug("%s Close taxi", this);
         if(!chValid)
             return;
 
-        ship.notifyEof();
+        dataListener.notifyEof();
 
         try {
-            ship.input.close();
+            input.close();
         }
-        catch (IOException ex) {
-            BayLog.error(ex);
+        catch (IOException e) {
+            BayLog.error(e, "%s Cannot close", this);
         }
 
         chValid = false;
-        ship.notifyClose();
+        dataListener.notifyClose();
     }
 }
