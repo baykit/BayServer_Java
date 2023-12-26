@@ -3,16 +3,14 @@ package yokohama.baykit.bayserver.docker.http.h2;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.Town;
 import yokohama.baykit.bayserver.docker.http.h2.command.*;
-import yokohama.baykit.bayserver.docker.warp.WarpData;
-import yokohama.baykit.bayserver.docker.warp.WarpHandler;
-import yokohama.baykit.bayserver.docker.warp.WarpShip;
+import yokohama.baykit.bayserver.common.WarpData;
+import yokohama.baykit.bayserver.common.WarpHandler;
+import yokohama.baykit.bayserver.common.WarpShip;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.HttpStatus;
-import yokohama.baykit.bayserver.docker.http.h2.command.*;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
@@ -213,7 +211,7 @@ public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
         String townPath = town.name();
         if (!townPath.endsWith("/"))
             townPath += "/";
-        String newUri = ship().docker().warpBase + tur.req.uri.substring(townPath.length());
+        String newUri = ship().docker().warpBase() + tur.req.uri.substring(townPath.length());
 
         CmdHeaders cmdHdr = new CmdHeaders(WarpData.get(tur).warpId);
         HeaderBlockBuilder bld = new HeaderBlockBuilder();

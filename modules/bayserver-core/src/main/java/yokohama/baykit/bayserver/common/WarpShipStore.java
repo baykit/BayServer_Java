@@ -1,7 +1,8 @@
-package yokohama.baykit.bayserver.docker.warp;
+package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
+import yokohama.baykit.bayserver.common.WarpShip;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.ObjectStore;
 

@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.docker.base;
+package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
