@@ -9,7 +9,7 @@ import yokohama.baykit.bayserver.docker.http.h2.command.*;
 import yokohama.baykit.bayserver.common.WarpData;
 import yokohama.baykit.bayserver.common.WarpHandler;
 import yokohama.baykit.bayserver.common.WarpShip;
-import yokohama.baykit.bayserver.util.DataConsumeListener;
+import yokohama.baykit.bayserver.common.DataConsumeListener;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolException;

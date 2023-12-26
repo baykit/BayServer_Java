@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.docker.http.h1;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.UpgradeException;
+import yokohama.baykit.bayserver.common.DataConsumeListener;
 import yokohama.baykit.bayserver.common.InboundHandler;
 import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.common.InboundShip;

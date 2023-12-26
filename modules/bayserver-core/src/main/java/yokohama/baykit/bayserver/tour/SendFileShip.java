@@ -4,9 +4,8 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.common.ReadOnlyShip;
-import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.HttpStatus;
-import yokohama.baykit.bayserver.util.Valve;
+import yokohama.baykit.bayserver.common.Valve;
 
 import java.io.IOException;
 import java.io.InputStream;

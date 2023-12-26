@@ -1,5 +1,7 @@
 package yokohama.baykit.bayserver.util;
 
+import yokohama.baykit.bayserver.common.DataConsumeListener;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.zip.GZIPOutputStream;

@@ -3,7 +3,6 @@ package yokohama.baykit.bayserver.common;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.taxi.Taxi;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
-import yokohama.baykit.bayserver.util.Valve;
 
 import java.io.IOException;
 import java.io.OutputStream;

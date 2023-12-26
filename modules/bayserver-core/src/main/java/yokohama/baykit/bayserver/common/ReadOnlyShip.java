@@ -5,7 +5,6 @@ import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.ship.Ship;
-import yokohama.baykit.bayserver.util.Valve;
 
 import java.io.IOException;
 import java.io.InputStream;
