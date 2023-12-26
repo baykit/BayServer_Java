@@ -6,6 +6,7 @@ import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
+import yokohama.baykit.bayserver.agent.transporter.TcpDataListener;
 import yokohama.baykit.bayserver.docker.*;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
@@ -13,8 +14,6 @@ import yokohama.baykit.bayserver.util.Cities;
 import yokohama.baykit.bayserver.util.IOUtil;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.SysUtil;
-import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.docker.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -233,7 +232,7 @@ public abstract class PortBase extends DockerBase implements Port {
             tp = new PlainTransporter(true, IOUtil.getSockRecvBufSize((SocketChannel)ch));
         ProtocolHandler protoHnd = getProtocolHandlerStore(protocol(), agent).rent();
         sip.initInbound(ch, agent, tp, this, protoHnd);
-        tp.init(agent.nonBlockingHandler, ch, new InboundDataListener(sip));
+        tp.init(agent.nonBlockingHandler, ch, new TcpDataListener(sip));
         return tp;
     }
 

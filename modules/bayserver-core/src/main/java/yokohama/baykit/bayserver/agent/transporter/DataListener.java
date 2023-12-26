@@ -7,6 +7,9 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
+/**
+ * This interface absorbs the transport layer such as TCP/IP, UDP
+ */
 public interface DataListener {
 
     NextSocketAction notifyConnect() throws IOException;
