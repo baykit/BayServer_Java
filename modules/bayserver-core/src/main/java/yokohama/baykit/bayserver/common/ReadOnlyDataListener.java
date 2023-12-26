@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.ship;
+package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;

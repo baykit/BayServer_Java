@@ -50,8 +50,6 @@ public abstract class Ship implements Reusable {
     public void reset() {
         BayLog.debug("%s reset", this);
         initialized = false;
-        if(postman != null)
-            postman.reset();
         postman = null;  // for reloading certification
         protocolHandler = null;
         agent = null;

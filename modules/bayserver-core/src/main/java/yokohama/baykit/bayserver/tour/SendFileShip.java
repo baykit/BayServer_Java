@@ -2,12 +2,13 @@ package yokohama.baykit.bayserver.tour;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.common.ReadOnlyShip;
+import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.Valve;
-import yokohama.baykit.bayserver.ship.ReadOnlyShip;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 public class SendFileShip extends ReadOnlyShip {
@@ -17,19 +18,14 @@ public class SendFileShip extends ReadOnlyShip {
     Tour tour;
     int tourId;
 
-    SendFileShip() {
+    public SendFileShip() {
         reset();
     }
 
-    public void init(GrandAgent agt, Tour tur, Valve tp) throws IOException {
-        super.init(agt);
+    public void init(InputStream input, Tour tur, Valve vlv) throws IOException {
+        super.init(input, tur.ship.agent, vlv);
         this.tour = tur;
         this.tourId = tur.tourId;
-        tur.res.setConsumeListener((len, resume) -> {
-            if(resume) {
-                tp.openValve();
-            }
-        });
     }
 
     @Override
@@ -66,7 +62,17 @@ public class SendFileShip extends ReadOnlyShip {
         else {
             return NextSocketAction.Suspend;
         }
+    }
 
+    @Override
+    public void notifyError(Throwable e) {
+        BayLog.debug(e);
+        try {
+            tour.res.sendError(tourId, HttpStatus.INTERNAL_SERVER_ERROR, null, e);
+        }
+        catch(IOException ex) {
+            BayLog.debug(ex);
+        }
     }
 
     @Override
