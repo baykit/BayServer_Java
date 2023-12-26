@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.docker.warp;
+package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
@@ -6,6 +6,8 @@ import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
+import yokohama.baykit.bayserver.docker.Club;
+import yokohama.baykit.bayserver.docker.Warp;
 import yokohama.baykit.bayserver.protocol.Command;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
@@ -16,7 +18,6 @@ import yokohama.baykit.bayserver.util.Pair;
 import yokohama.baykit.bayserver.ship.Ship;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
@@ -25,7 +26,7 @@ import java.util.Map;
 
 public final class WarpShip extends Ship {
 
-    public WarpDocker docker;
+    public Warp docker;
     protected Map<Integer, Pair<Integer, Tour>> tourMap = new HashMap<>();
 
     boolean connected;
@@ -45,11 +46,11 @@ public final class WarpShip extends Ship {
             SocketChannel ch,
             GrandAgent agent,
             Transporter tp,
-            WarpDocker dkr,
+            Warp dkr,
             ProtocolHandler protoHandler) {
         super.init(ch, agent, tp, tp);
         this.docker = dkr;
-        this.socketTimeoutSec = docker.timeoutSec >= 0 ? docker.timeoutSec : BayServer.harbor.socketTimeoutSec();
+        this.socketTimeoutSec = dkr.timeoutSec() >= 0 ? dkr.timeoutSec() : BayServer.harbor.socketTimeoutSec();
         setProtocolHandler(protoHandler);
     }
 
@@ -161,7 +162,7 @@ public final class WarpShip extends Ship {
     /////////////////////////////////////
     // Custom methods
     /////////////////////////////////////
-    public WarpDocker docker() {
+    public Warp docker() {
         return docker;
     }
 
@@ -193,7 +194,8 @@ public final class WarpShip extends Ship {
         WarpData wdat = WarpData.get(tur);
         BayLog.debug("%s end: started=%b ended=%b", tur, wdat.started, wdat.ended);
         tourMap.remove(wdat.warpId);
-        docker.keepShip(this);
+        BayLog.debug("%s keep warp ship", this);
+        docker.onEndTour(this);
     }
 
     public void notifyServiceUnavailable(String msg) throws IOException {
@@ -241,8 +243,7 @@ public final class WarpShip extends Ship {
     }
 
     void endShip() {
-        docker.returnProtocolHandler(agent, protocolHandler);
-        docker.returnShip(this);
+        docker.onEndShip(this);
     }
 
     public void abort(int checkId) {

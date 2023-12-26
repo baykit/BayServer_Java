@@ -5,15 +5,14 @@ import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.Constants;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.Town;
 import yokohama.baykit.bayserver.docker.http.h1.command.CmdContent;
 import yokohama.baykit.bayserver.docker.http.h1.command.CmdEndContent;
 import yokohama.baykit.bayserver.docker.http.h1.command.CmdHeader;
-import yokohama.baykit.bayserver.docker.warp.WarpData;
-import yokohama.baykit.bayserver.docker.warp.WarpHandler;
-import yokohama.baykit.bayserver.docker.warp.WarpShip;
+import yokohama.baykit.bayserver.common.WarpData;
+import yokohama.baykit.bayserver.common.WarpHandler;
+import yokohama.baykit.bayserver.common.WarpShip;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Headers;
 import yokohama.baykit.bayserver.util.HttpStatus;
@@ -165,7 +164,7 @@ public class H1WarpHandler extends H1ProtocolHandler implements WarpHandler {
             townPath += "/";
 
         WarpShip sip = ship();
-        String newUri = sip.docker().warpBase + tur.req.uri.substring(townPath.length());
+        String newUri = sip.docker().warpBase() + tur.req.uri.substring(townPath.length());
 
         CmdHeader cmd =
                 CmdHeader.newReqHeader(
@@ -199,7 +198,7 @@ public class H1WarpHandler extends H1ProtocolHandler implements WarpHandler {
         else
             cmd.setHeader(Headers.X_FORWARDED_HOST, tur.req.headers.get(Headers.HOST));
 
-        cmd.setHeader(Headers.HOST, sip.docker().host + ":" + sip.docker().port);
+        cmd.setHeader(Headers.HOST, sip.docker().host() + ":" + sip.docker().port());
         cmd.setHeader(Headers.CONNECTION, "Keep-Alive");
 
         if(BayServer.harbor.traceHeader()) {

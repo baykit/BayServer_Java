@@ -4,10 +4,10 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.docker.warp.WarpData;
-import yokohama.baykit.bayserver.docker.warp.WarpHandler;
+import yokohama.baykit.bayserver.common.WarpData;
+import yokohama.baykit.bayserver.common.WarpHandler;
 import yokohama.baykit.bayserver.ship.Ship;
-import yokohama.baykit.bayserver.docker.warp.WarpShip;
+import yokohama.baykit.bayserver.common.WarpShip;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.fcgi.command.*;
 import yokohama.baykit.bayserver.protocol.PacketStore;
@@ -324,7 +324,7 @@ public class FcgWarpHandler extends FcgProtocolHandler implements WarpHandler {
                 cmd.addParam(name, value);
         });
 
-        scriptFname[0] = "proxy:fcgi://" +  ((FcgWarpDocker) ship().docker()).host + ":" +  ((FcgWarpDocker) ship().docker()).port + scriptFname[0];
+        scriptFname[0] = "proxy:fcgi://" +  ((FcgWarpDocker) ship().docker()).host + ":" +  ship().docker().port() + scriptFname[0];
         cmd.addParam(CGIUtil.SCRIPT_FILENAME, scriptFname[0]);
 
         cmd.addParam(FcgParams.CONTEXT_PREFIX, "");

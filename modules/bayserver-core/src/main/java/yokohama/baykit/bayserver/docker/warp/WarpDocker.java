@@ -4,8 +4,12 @@ import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.agent.transporter.TcpDataListener;
+import yokohama.baykit.bayserver.common.WarpShip;
+import yokohama.baykit.bayserver.common.WarpShipStore;
+import yokohama.baykit.bayserver.docker.Warp;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
+import yokohama.baykit.bayserver.ship.Ship;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
@@ -27,7 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class WarpDocker extends ClubBase {
+public abstract class WarpDocker extends ClubBase implements Warp {
 
     class AgentListener implements LifecycleListener {
 
@@ -55,16 +59,16 @@ public abstract class WarpDocker extends ClubBase {
     /** Agent ID => WarpShipStore */
     final Map<Integer, WarpShipStore> stores = new HashMap<>();
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
     // Abstract methods
-    ///////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
     public abstract boolean secure();
     protected abstract String protocol();
     protected abstract Transporter newTransporter(GrandAgent agent, SocketChannel ch) throws IOException;
 
-    //////////////////////////////////////////////////////
+    /////////////////////////////////////
     // Implements Docker
-    //////////////////////////////////////////////////////
+    /////////////////////////////////////
 
     @Override
     public void init(BcfElement elm, Docker parent) throws ConfigException {
@@ -92,9 +96,9 @@ public abstract class WarpDocker extends ClubBase {
         GrandAgent.addLifecycleListener(new AgentListener());
     }
 
-    //////////////////////////////////////////////////////
+    /////////////////////////////////////
     // Implements DockerBase
-    //////////////////////////////////////////////////////
+    /////////////////////////////////////
 
     @Override
     public boolean initKeyVal(BcfKeyVal kv) throws ConfigException {
@@ -128,9 +132,9 @@ public abstract class WarpDocker extends ClubBase {
         return true;
     }
 
-    //////////////////////////////////////////////////////
+    /////////////////////////////////////
     // Implements Club
-    //////////////////////////////////////////////////////
+    /////////////////////////////////////
 
 
     @Override
@@ -182,25 +186,49 @@ public abstract class WarpDocker extends ClubBase {
         }
     }
 
+    /////////////////////////////////////
+    // Implements Warp
+    /////////////////////////////////////
 
-    //////////////////////////////////////////////////////
+    @Override
+    public String host() {
+        return host;
+    }
+
+    @Override
+    public int port() {
+        return port;
+    }
+
+    @Override
+    public String warpBase() {
+        return warpBase;
+    }
+
+    @Override
+    public int timeoutSec() {
+        return timeoutSec;
+    }
+
+    @Override
+    public void onEndTour(Ship warpShip) {
+        BayLog.debug("%s keep warp ship: %s", this, warpShip);
+        getShipStore(warpShip.agent.agentId).keep((WarpShip) warpShip);
+
+    }
+
+    @Override
+    public void onEndShip(Ship warpShip) {
+        BayLog.debug("%s Return protocol handler: ", warpShip);
+        getProtocolHandlerStore(warpShip.agent.agentId).Return(warpShip.protocolHandler);
+        BayLog.debug("%s return warp ship", warpShip);
+        getShipStore(warpShip.agent.agentId).Return((WarpShip) warpShip);
+    }
+
+    /////////////////////////////////////
     // Other methods
-    //////////////////////////////////////////////////////
+    /////////////////////////////////////
 
-    public void keepShip(WarpShip wsip) {
-        BayLog.debug("%s keep warp ship: %s", this, wsip);
-        getShipStore(wsip.agent.agentId).keep(wsip);
-    }
-
-    public void returnShip(WarpShip wsip) {
-        BayLog.debug("%s return warp ship: %s", this, wsip);
-        getShipStore(wsip.agent.agentId).Return(wsip);
-    }
-
-    public void returnProtocolHandler(GrandAgent agt, ProtocolHandler protoHnd) {
-        BayLog.debug("%s Return protocol handler: ", protoHnd);
-        getProtocolHandlerStore(agt.agentId).Return(protoHnd);
-    }
 
     public WarpShipStore getShipStore(int agtId) {
         return stores.get(agtId);

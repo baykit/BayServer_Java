@@ -4,15 +4,12 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.protocol.*;
-import yokohama.baykit.bayserver.docker.warp.WarpData;
-import yokohama.baykit.bayserver.docker.warp.WarpHandler;
-import yokohama.baykit.bayserver.docker.warp.WarpShip;
+import yokohama.baykit.bayserver.common.WarpData;
+import yokohama.baykit.bayserver.common.WarpHandler;
+import yokohama.baykit.bayserver.common.WarpShip;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.ajp.command.*;
-import yokohama.baykit.bayserver.docker.warp.*;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
-import yokohama.baykit.bayserver.docker.ajp.command.*;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
@@ -246,7 +243,7 @@ public class AjpWarpHandler extends AjpProtocolHandler implements WarpHandler {
         if(!twnPath.endsWith("/"))
             twnPath += "/";
         relUri = relUri.substring(twnPath.length());
-        String reqUri =  wsip.docker().warpBase + relUri;
+        String reqUri =  wsip.docker().warpBase() + relUri;
 
         int pos = reqUri.indexOf('?');
         if(pos >= 0) {
@@ -264,7 +261,7 @@ public class AjpWarpHandler extends AjpProtocolHandler implements WarpHandler {
         tur.req.headers.copyTo(cmd.headers);
         //cmd.headers.setHeader(Headers.HOST, docker.host + ":" + docker.port);
         //cmd.headers.setHeader(Headers.CONNECTION, "keep-alive");
-        cmd.serverPort =  wsip.docker().port;
+        cmd.serverPort =  wsip.docker().port();
 
         if(BayServer.harbor.traceHeader()) {
             cmd.headers.headerNames().forEach(name -> {
