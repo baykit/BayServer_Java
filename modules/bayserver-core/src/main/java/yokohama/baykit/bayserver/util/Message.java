@@ -1,13 +1,11 @@
 package yokohama.baykit.bayserver.util;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.bcf.BcfDocument;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.bcf.BcfParser;
 import yokohama.baykit.bayserver.bcf.ParseException;
 
-import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.HashMap;

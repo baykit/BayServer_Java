@@ -15,7 +15,7 @@ import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerFactory;
 import yokohama.baykit.bayserver.util.CGIUtil;
-import yokohama.baykit.bayserver.common.DataConsumeListener;
+import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Headers;
 import yokohama.baykit.bayserver.util.StringUtil;
 

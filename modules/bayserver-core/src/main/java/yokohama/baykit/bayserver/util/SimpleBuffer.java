@@ -1,7 +1,5 @@
 package yokohama.baykit.bayserver.util;
 
-import yokohama.baykit.bayserver.common.Reusable;
-
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 

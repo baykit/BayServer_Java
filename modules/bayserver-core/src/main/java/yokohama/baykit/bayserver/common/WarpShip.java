@@ -11,6 +11,7 @@ import yokohama.baykit.bayserver.protocol.Command;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.tour.Tour;
+import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.Pair;
 import yokohama.baykit.bayserver.ship.Ship;

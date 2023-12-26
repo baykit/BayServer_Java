@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.tour.Tour;
+import yokohama.baykit.bayserver.util.DataConsumeListener;
 
 import java.io.IOException;
 

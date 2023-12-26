@@ -1,7 +1,6 @@
 package yokohama.baykit.bayserver.util;
 
 import yokohama.baykit.bayserver.bcf.*;
-import yokohama.baykit.bayserver.bcf.*;
 
 import java.util.HashMap;
 import java.util.HashSet;
