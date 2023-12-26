@@ -7,7 +7,7 @@ import yokohama.baykit.bayserver.bcf.ParseException;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
-import yokohama.baykit.bayserver.tour.ReadFileTaxi;
+import yokohama.baykit.bayserver.common.ReadFileTaxi;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.base.ClubBase;
@@ -15,7 +15,7 @@ import yokohama.baykit.bayserver.util.CGIUtil;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.SysUtil;
-import yokohama.baykit.bayserver.ship.ReadOnlyDataListener;
+import yokohama.baykit.bayserver.common.ReadOnlyDataListener;
 
 import java.io.File;
 import java.io.IOException;
@@ -156,7 +156,7 @@ public class CgiDocker extends ClubBase {
                 };
 
                 SpinReadTransporter outTp = new SpinReadTransporter(bufsize);
-                outShip.init(tur.ship.agent, tur, outTp, handler);
+                outShip.init(handler.process.getInputStream(), tur.ship.agent, tur, outTp, handler);
                 outTp.init(
                         tur.ship.agent.spinHandler,
                         new ReadOnlyDataListener(outShip),
@@ -164,10 +164,9 @@ public class CgiDocker extends ClubBase {
                         -1,
                         timeoutSec,
                         ch);
-                outTp.openValve();
 
                 SpinReadTransporter errTp = new SpinReadTransporter(bufsize);
-                errSip.init(tur.ship.agent, handler);
+                errSip.init(handler.process.getErrorStream(), tur.ship.agent, handler);
                 errTp.init(
                         tur.ship.agent.spinHandler,
                         new ReadOnlyDataListener(errSip),
@@ -175,21 +174,37 @@ public class CgiDocker extends ClubBase {
                         -1,
                         timeoutSec,
                         ch);
+
+                int sipId = tur.ship.shipId;
+                tur.res.setConsumeListener((len, resume) -> {
+                    if(resume) {
+                        outShip.resume(sipId);
+                    }
+                });
+                outTp.openValve();
                 errTp.openValve();
                 break;
             }
 
             case Taxi:{
                 ReadFileTaxi outTxi = new ReadFileTaxi(tur.ship.agent.agentId, bufsize);
-                outShip.init(tur.ship.agent, tur, outTxi, handler);
-                outTxi.init(handler.process.getInputStream(), new ReadOnlyDataListener(outShip));
+                outShip.init(handler.process.getInputStream(), tur.ship.agent, tur, outTxi, handler);
+                outTxi.init(outShip);
                 if(!TaxiRunner.post(tur.ship.agent.agentId, outTxi)) {
                     throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");
                 }
 
                 ReadFileTaxi errTxi = new ReadFileTaxi(tur.ship.agent.agentId, bufsize);
-                errSip.init(tur.ship.agent, handler);
-                errTxi.init(handler.process.getErrorStream(), new ReadOnlyDataListener(errSip));
+                errSip.init(handler.process.getErrorStream(), tur.ship.agent, handler);
+                errTxi.init(errSip);
+
+                int sipId = tur.ship.shipId;
+                tur.res.setConsumeListener((len, resume) -> {
+                    if(resume) {
+                        outShip.resume(sipId);
+                    }
+                });
+
                 if(!TaxiRunner.post(tur.ship.agent.agentId, errTxi)) {
                     throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");
                 }

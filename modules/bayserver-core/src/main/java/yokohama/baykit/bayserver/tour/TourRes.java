@@ -2,15 +2,18 @@ package yokohama.baykit.bayserver.tour;
 
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
+import yokohama.baykit.bayserver.common.ReadFileTaxi;
+import yokohama.baykit.bayserver.common.ReadFileTrain;
 import yokohama.baykit.bayserver.docker.Trouble;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.*;
-import yokohama.baykit.bayserver.ship.ReadOnlyDataListener;
+import yokohama.baykit.bayserver.common.ReadOnlyDataListener;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.StringTokenizer;
 
 public class TourRes implements Reusable {
@@ -33,7 +36,7 @@ public class TourRes implements Reusable {
     public ContentConsumeListener resConsumeListener;
     boolean canCompress;
     GzipCompressor compressor;
-    SendFileShip sendShip;
+    SendFileShip sendFileShip;
 
     public TourRes(Tour tour) {
         this.tour = tour;
@@ -45,7 +48,7 @@ public class TourRes implements Reusable {
     }
 
     void init() {
-        this.sendShip = new SendFileShip();
+        this.sendFileShip = new SendFileShip();
     }
 
     @Override
@@ -57,7 +60,7 @@ public class TourRes implements Reusable {
 
         charset = null;
         headerSent = false;
-        sendShip.reset();
+        sendFileShip.reset();
         available = false;
         resConsumeListener = null;
         canCompress = false;
@@ -388,28 +391,41 @@ public class TourRes implements Reusable {
         try {
             sendHeaders(Tour.TOUR_ID_NOCHECK);
 
+            InputStream in = new FileInputStream(file);
             if (async) {
                 int bufsize = tour.ship.protocolHandler.maxResPacketDataSize();
                 switch(BayServer.harbor.fileSendMethod()) {
                     case Spin: {
                         int timeout = 10;
                         SpinReadTransporter tp = new SpinReadTransporter(bufsize);
-                        sendShip.init(tour.ship.agent, tour, tp);
+                        sendFileShip.init(in, tour, tp);
                         tp.init(
                                 tour.ship.agent.spinHandler,
-                                new ReadOnlyDataListener(sendShip),
+                                new ReadOnlyDataListener(sendFileShip),
                                 new FileInputStream(file),
                                 (int)file.length(),
                                 timeout,
                                 null);
+                        int sid = sendFileShip.id();
+                        tour.res.setConsumeListener((len, resume) -> {
+                            if(resume) {
+                                sendFileShip.resume(sid);
+                            }
+                        });
                         tp.openValve();
                         break;
                     }
 
                     case Taxi:{
                         ReadFileTaxi txi = new ReadFileTaxi(tour.ship.agent.agentId, bufsize);
-                        sendShip.init(tour.ship.agent, tour, txi);
-                        txi.init(new FileInputStream(file), new ReadOnlyDataListener(sendShip));
+                        sendFileShip.init(in, tour, txi);
+                        txi.init(sendFileShip);
+                        int sid = sendFileShip.id();
+                        tour.res.setConsumeListener((len, resume) -> {
+                            if(resume) {
+                                sendFileShip.resume(sid);
+                            }
+                        });
                         if(!TaxiRunner.post(tour.ship.agent.agentId, txi)) {
                             throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");
                         }
@@ -421,7 +437,7 @@ public class TourRes implements Reusable {
                 }
 
             } else {
-                new SendFileTrain(tour, file).depart();
+                new ReadFileTrain(sendFileShip, tour).depart();
             }
         } catch (IOException e) {
             BayLog.error(e);

@@ -7,7 +7,7 @@ public abstract class Taxi {
 
     static Counter taxiIdCounter = new Counter();
 
-    final int taxiId;
+    protected final int taxiId;
 
     public Taxi() {
         this.taxiId = taxiIdCounter.next();
