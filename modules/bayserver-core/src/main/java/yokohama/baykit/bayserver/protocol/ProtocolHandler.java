@@ -19,6 +19,26 @@ public abstract class ProtocolHandler<C extends Command<C, P, T, ?>, P extends P
     public boolean serverMode;
     public Ship ship;
 
+    @Override
+    public String toString() {
+        return ClassUtil.getLocalName(getClass()) + " ship=" + ship;
+    }
+
+    /////////////////////////////////////
+    // Implements Reusable
+    /////////////////////////////////////
+
+    @Override
+    public void reset() {
+        commandUnpacker.reset();
+        commandPacker.reset();
+        packetPacker.reset();
+        packetUnpacker.reset();
+    }
+
+    /////////////////////////////////////
+    // Abstract methods
+    /////////////////////////////////////
     public abstract String protocol();
 
     /**
@@ -31,29 +51,16 @@ public abstract class ProtocolHandler<C extends Command<C, P, T, ?>, P extends P
      */
     public abstract int maxResPacketDataSize();
 
-    @Override
-    public String toString() {
-        return ClassUtil.getLocalName(getClass()) + " ship=" + ship;
-    }
+    /**
+     * Send protocol error to client
+     */
+    public abstract boolean onProtocolError(ProtocolException e) throws IOException;
 
-    /////////////////////////////////////////////////////////////////////////////////
-    // Implements Reusable
-    /////////////////////////////////////////////////////////////////////////////////
-
-    @Override
-    public void reset() {
-        commandUnpacker.reset();
-        commandPacker.reset();
-        packetPacker.reset();
-        packetUnpacker.reset();
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
     // Other methods
-    /////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
 
     public NextSocketAction bytesReceived(ByteBuffer buf) throws IOException {
         return packetUnpacker.bytesReceived(buf);
     }
-
 }

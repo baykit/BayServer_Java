@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.docker.h3;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.base.InboundHandler;
-import yokohama.baykit.bayserver.docker.base.InboundShip;
+import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
@@ -13,8 +13,6 @@ import yokohama.baykit.bayserver.util.*;
 import io.quiche4j.Connection;
 import io.quiche4j.Quiche;
 import io.quiche4j.http3.*;
-import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.util.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -150,14 +148,15 @@ public class QicProtocolHandler
         return NextSocketAction.Continue;
     }
 
+    @Override
+    public boolean onProtocolError(ProtocolException e) throws IOException {
+        BayLog.debug(e);
+        return false;
+    }
+
     ////////////////////////////////////////////
     // Implements InboundHandler
     ////////////////////////////////////////////
-
-    @Override
-    public boolean sendReqProtocolError(ProtocolException e) throws IOException {
-        return false;
-    }
 
     @Override
     public void sendResHeaders(Tour tur) throws IOException {
