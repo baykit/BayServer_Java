@@ -1,6 +1,7 @@
-package yokohama.baykit.bayserver.ship;
+package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.ship.Ship;
 
 public abstract class WriteOnlyShip extends Ship {
 
@@ -8,5 +9,8 @@ public abstract class WriteOnlyShip extends Ship {
         super.init(null, agt, null);
     }
 
+    /////////////////////////////////////
+    // Abstract methods
+    /////////////////////////////////////
     public abstract void notifyClose();
 }

@@ -3,9 +3,11 @@ package yokohama.baykit.bayserver.docker.cgi;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.ship.ReadOnlyShip;
+import yokohama.baykit.bayserver.common.ReadOnlyShip;
+import yokohama.baykit.bayserver.util.HttpStatus;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 public class CgiStdErrShip extends ReadOnlyShip  {
@@ -26,8 +28,8 @@ public class CgiStdErrShip extends ReadOnlyShip  {
     /////////////////////////////////////
     // Initialize methods
     /////////////////////////////////////
-    public void init(GrandAgent agt, CgiReqContentHandler handler) {
-        init(agt);
+    public void init(InputStream input, GrandAgent agt, CgiReqContentHandler handler) {
+        super.init(input, agt, null);
         this.handler = handler;
     }
 
@@ -53,6 +55,11 @@ public class CgiStdErrShip extends ReadOnlyShip  {
 
         handler.access();
         return NextSocketAction.Continue;
+    }
+
+    @Override
+    public void notifyError(Throwable e) {
+        BayLog.debug(e);
     }
 
     @Override

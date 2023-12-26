@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.docker.builtin;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.util.CharUtil;
 import yokohama.baykit.bayserver.util.StringUtil;
-import yokohama.baykit.bayserver.ship.WriteOnlyShip;
+import yokohama.baykit.bayserver.common.WriteOnlyShip;
 
 import java.io.IOException;
 

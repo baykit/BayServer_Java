@@ -5,11 +5,13 @@ import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.tour.Tour;
+import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.Valve;
-import yokohama.baykit.bayserver.ship.ReadOnlyShip;
+import yokohama.baykit.bayserver.common.ReadOnlyShip;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.StringTokenizer;
 
@@ -36,16 +38,11 @@ public class CgiStdOutShip extends ReadOnlyShip {
     /////////////////////////////////////
     // Initialize methods
     /////////////////////////////////////
-    public void init(GrandAgent agt, Tour tur, Valve vv, CgiReqContentHandler handler) {
-        super.init(agt);
+    public void init(InputStream input, GrandAgent agt, Tour tur, Valve vv, CgiReqContentHandler handler) {
+        super.init(input, agt, vv);
         this.handler = handler;
         this.tour = tur;
         this.tourId = tur.tourId;
-        tur.res.setConsumeListener((len, resume) -> {
-            if(resume) {
-                vv.openValve();
-            }
-        });
     }
 
     /////////////////////////////////////
@@ -145,6 +142,17 @@ public class CgiStdOutShip extends ReadOnlyShip {
             return NextSocketAction.Continue;
         else
             return NextSocketAction.Suspend;
+    }
+
+    @Override
+    public void notifyError(Throwable e) {
+        BayLog.debug(e);
+        try {
+            tour.res.sendError(tourId, HttpStatus.INTERNAL_SERVER_ERROR, null, e);
+        }
+        catch(IOException ex) {
+            BayLog.debug(ex);
+        }
     }
 
     @Override
