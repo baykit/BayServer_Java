@@ -10,7 +10,7 @@ import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class ReadFileTaxi extends Taxi implements Valve {
+public class ReadStreamTaxi extends Taxi implements Valve {
 
     int agentId;
     ReadOnlyShip ship;
@@ -19,7 +19,7 @@ public class ReadFileTaxi extends Taxi implements Valve {
     boolean running;
     long startTime;
 
-    public ReadFileTaxi(int agtId, int bufsize) {
+    public ReadStreamTaxi(int agtId, int bufsize) {
         this.agentId = agtId;
         this.buf = ByteBuffer.allocate(bufsize);
     }

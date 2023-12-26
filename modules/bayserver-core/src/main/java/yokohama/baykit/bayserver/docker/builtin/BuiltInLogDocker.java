@@ -5,6 +5,8 @@ import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
+import yokohama.baykit.bayserver.common.WriteStreamShip;
+import yokohama.baykit.bayserver.common.WriteStreamTaxi;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Log;
 import yokohama.baykit.bayserver.common.docker.DockerBase;
@@ -25,9 +27,9 @@ public class BuiltInLogDocker extends DockerBase implements Log {
         @Override
         public void add(int agentId) {
             String fileName = filePrefix + "_" + agentId + "." + fileExt;
-            LogShip lsip = new LogShip();
+            WriteStreamShip lsip = new WriteStreamShip();
             try {
-                WriteFileTaxi txi = new WriteFileTaxi();
+                WriteStreamTaxi txi = new WriteStreamTaxi();
                 lsip.init(GrandAgent.get(agentId), txi);
                 txi.init(agentId, new FileOutputStream(fileName));
             }
@@ -62,7 +64,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
      *  Logger for each agent.
      *  Map of Agent ID => LogBoat
      */
-    Map<Integer, LogShip> loggers = new HashMap<>();
+    Map<Integer, WriteStreamShip> loggers = new HashMap<>();
 
     /** Log format */
     String format;
@@ -289,7 +291,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
         compile(str, items, fileName, lineNo);
     }
 
-    private LogShip getLogger(GrandAgent agt) {
+    private WriteStreamShip getLogger(GrandAgent agt) {
         return loggers.get(agt.agentId);
     }
 }
