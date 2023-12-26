@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.protocol;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
-import yokohama.baykit.bayserver.common.Reusable;
+import yokohama.baykit.bayserver.util.Reusable;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.ObjectStore;
 

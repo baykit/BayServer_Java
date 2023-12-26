@@ -2,11 +2,11 @@ package yokohama.baykit.bayserver.tour;
 
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
-import yokohama.baykit.bayserver.common.DataConsumeListener;
+import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.common.ReadStreamTaxi;
 import yokohama.baykit.bayserver.common.ReadStreamTrain;
 import yokohama.baykit.bayserver.agent.transporter.TcpDataListener;
-import yokohama.baykit.bayserver.common.Reusable;
+import yokohama.baykit.bayserver.util.Reusable;
 import yokohama.baykit.bayserver.docker.Trouble;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.protocol.ProtocolException;

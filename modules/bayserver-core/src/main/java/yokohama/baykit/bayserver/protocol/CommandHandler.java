@@ -1,6 +1,6 @@
 package yokohama.baykit.bayserver.protocol;
 
-import yokohama.baykit.bayserver.common.Reusable;
+import yokohama.baykit.bayserver.util.Reusable;
 
 /**
  * base class for handling commands

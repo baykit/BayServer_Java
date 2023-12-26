@@ -11,7 +11,7 @@ import yokohama.baykit.bayserver.docker.Club;
 import yokohama.baykit.bayserver.docker.Town;
 import yokohama.baykit.bayserver.util.Counter;
 import yokohama.baykit.bayserver.util.HttpStatus;
-import yokohama.baykit.bayserver.common.Reusable;
+import yokohama.baykit.bayserver.util.Reusable;
 
 /**
  * Tour holds request information
