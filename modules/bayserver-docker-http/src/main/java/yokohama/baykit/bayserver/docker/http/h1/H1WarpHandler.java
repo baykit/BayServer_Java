@@ -51,9 +51,9 @@ public class H1WarpHandler extends H1ProtocolHandler implements WarpHandler {
         resetState();
     }
 
-    //////////////////////////////////////////////////////
+    /////////////////////////////////////
     // Implements Reusable
-    //////////////////////////////////////////////////////
+    /////////////////////////////////////
 
     @Override
     public void reset() {
@@ -61,9 +61,9 @@ public class H1WarpHandler extends H1ProtocolHandler implements WarpHandler {
         resetState();
     }
 
-    //////////////////////////////////////////////////////
+    /////////////////////////////////////
     // Implements H1CommandHandler
-    //////////////////////////////////////////////////////
+    /////////////////////////////////////
 
     @Override
     public NextSocketAction handleHeader(CmdHeader cmd) throws IOException {
@@ -141,9 +141,9 @@ public class H1WarpHandler extends H1ProtocolHandler implements WarpHandler {
         return state == Finished;
     }
 
-    //////////////////////////////////////////////////////
+    /////////////////////////////////////
     // Implements WarpHandler
-    //////////////////////////////////////////////////////
+    /////////////////////////////////////
     @Override
     public int nextWarpId() {
         return H1WarpHandler.FIXED_WARP_ID;
@@ -230,9 +230,18 @@ public class H1WarpHandler extends H1ProtocolHandler implements WarpHandler {
         }
     }
 
-    //////////////////////////////////////////////////////
-    // Other methods
-    //////////////////////////////////////////////////////
+    /////////////////////////////////////
+    // Implements ProtocolHandler
+    /////////////////////////////////////
+
+    @Override
+    public boolean onProtocolError(ProtocolException e) throws IOException {
+        throw new Sink();
+    }
+
+    /////////////////////////////////////
+    // Custom methods
+    /////////////////////////////////////
 
     void resetState() {
         changeState(Finished);

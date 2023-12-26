@@ -8,9 +8,8 @@ import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.transporter.DataListener;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.docker.Port;
-import yokohama.baykit.bayserver.docker.base.InboundShip;
+import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
-import yokohama.baykit.bayserver.util.Postman;
 import io.quiche4j.*;
 import io.quiche4j.http3.*;
 

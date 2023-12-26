@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.docker;
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
-import yokohama.baykit.bayserver.docker.base.InboundShip;
+import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 
 import java.io.IOException;

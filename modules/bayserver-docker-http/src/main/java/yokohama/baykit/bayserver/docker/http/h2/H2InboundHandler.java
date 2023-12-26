@@ -9,7 +9,7 @@ import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.tour.TourStore;
-import yokohama.baykit.bayserver.docker.base.InboundShip;
+import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.docker.http.h2.command.*;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.HttpUtil;
@@ -116,7 +116,8 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
     }
 
     @Override
-    public boolean sendReqProtocolError(ProtocolException e) {
+    public boolean onProtocolError(ProtocolException e) {
+        BayLog.debug(e);
         BayLog.error(e, e.getMessage());
         CmdGoAway cmd = new CmdGoAway(CTL_STREAM_ID);
         cmd.streamId = 0;

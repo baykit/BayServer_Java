@@ -1,20 +1,11 @@
 package yokohama.baykit.bayserver.docker.base;
 
-import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 
 import java.io.IOException;
 
 public interface InboundHandler {
-
-    /**
-     * Send protocol error
-     * @param e
-     * @return true if connection must be closed
-     * @throws IOException
-     */
-    boolean sendReqProtocolError(ProtocolException e) throws IOException;
 
     /**
      * Send HTTP headers to client

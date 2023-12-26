@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.docker.http.h2;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.tour.Tour;
@@ -37,6 +38,9 @@ public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
         super(pktStore, false);
     }
 
+    /////////////////////////////////////
+    // Implements Reusable
+    /////////////////////////////////////
 
     @Override
     public void reset() {
@@ -44,9 +48,9 @@ public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
         curStreamId = 1;
     }
 
-    ///////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
     // implements H2CommandHandler
-    ///////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
 
     @Override
     public NextSocketAction handlePreface(CmdPreface cmd) throws IOException {
@@ -154,9 +158,9 @@ public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
         return NextSocketAction.Continue;
     }
 
-    ///////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
     // implements WarpHandler
-    ///////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
     @Override
     public int nextWarpId() {
         int cur = curStreamId;
@@ -187,6 +191,20 @@ public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
     @Override
     public void verifyProtocol(String protocol) throws IOException {
     }
+
+    /////////////////////////////////////
+    // Implements ProtocolHandler
+    /////////////////////////////////////
+
+    @Override
+    public boolean onProtocolError(ProtocolException e) throws IOException {
+        throw new Sink();
+    }
+
+
+    /////////////////////////////////////
+    // Custom methods
+    /////////////////////////////////////
 
     void sendReqHeaders(Tour tur) throws IOException {
         Town town = tur.town;

@@ -2,6 +2,7 @@ package yokohama.baykit.bayserver.docker.ajp;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
+import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.docker.warp.WarpData;
@@ -55,9 +56,9 @@ public class AjpWarpHandler extends AjpProtocolHandler implements WarpHandler {
         return ship.toString();
     }
 
-    /////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
     // Implements Reusable
-    /////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
 
     @Override
     public void reset() {
@@ -67,9 +68,9 @@ public class AjpWarpHandler extends AjpProtocolHandler implements WarpHandler {
     }
 
 
-    /////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
     // Implements WarpHandler
-    /////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
     @Override
     public int nextWarpId() {
         return 1;
@@ -100,9 +101,9 @@ public class AjpWarpHandler extends AjpProtocolHandler implements WarpHandler {
     }
 
 
-    /////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
     // Implements AjpCommandHandler
-    /////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
 
     @Override
     public NextSocketAction handleData(CmdData cmd) throws IOException {
@@ -197,9 +198,18 @@ public class AjpWarpHandler extends AjpProtocolHandler implements WarpHandler {
         return false;
     }
 
-    /////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
+    // Implements ProtocolHandler
+    /////////////////////////////////////
+    @Override
+    public boolean onProtocolError(ProtocolException e) throws IOException {
+        throw new Sink();
+    }
+
+
+    /////////////////////////////////////
     // Custom methods
-    /////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
 
     void endResHeader(Tour tur) throws IOException {
         WarpData wdat = WarpData.get(tur);
