@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.docker.warp;
+package yokohama.baykit.bayserver.common.docker;
 
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
@@ -14,7 +14,6 @@ import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
-import yokohama.baykit.bayserver.docker.base.ClubBase;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.SysUtil;
@@ -31,7 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class WarpDocker extends ClubBase implements Warp {
+public abstract class WarpBase extends ClubBase implements Warp {
 
     class AgentListener implements LifecycleListener {
 

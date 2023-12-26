@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.docker.base;
+package yokohama.baykit.bayserver.common.docker;
 
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;

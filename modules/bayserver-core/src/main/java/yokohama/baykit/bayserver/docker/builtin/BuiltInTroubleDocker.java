@@ -6,7 +6,7 @@ import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Trouble;
-import yokohama.baykit.bayserver.docker.base.DockerBase;
+import yokohama.baykit.bayserver.common.docker.DockerBase;
 
 import java.util.HashMap;
 import java.util.Map;
