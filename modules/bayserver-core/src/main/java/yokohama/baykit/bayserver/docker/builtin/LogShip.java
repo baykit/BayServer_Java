@@ -35,6 +35,11 @@ public class LogShip extends WriteOnlyShip {
 
     }
 
+    @Override
+    public boolean checkTimeout(int durationSec) {
+        return false;
+    }
+
     /////////////////////////////////////
     // Custom methods
     /////////////////////////////////////

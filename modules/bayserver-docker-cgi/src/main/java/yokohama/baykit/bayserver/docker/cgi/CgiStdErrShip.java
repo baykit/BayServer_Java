@@ -4,7 +4,6 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.common.ReadOnlyShip;
-import yokohama.baykit.bayserver.util.HttpStatus;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,7 +45,7 @@ public class CgiStdErrShip extends ReadOnlyShip  {
     // Implements ReadOnlyShip
     /////////////////////////////////////
     @Override
-    public NextSocketAction bytesReceived(ByteBuffer buf) throws IOException {
+    public NextSocketAction notifyRead(ByteBuffer buf) throws IOException {
 
         BayLog.debug("%s CGI StdErr: read %d bytes", this, buf.limit());
         String msg = new String(buf.array(), 0, buf.limit());

@@ -4,11 +4,11 @@ import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
 import yokohama.baykit.bayserver.common.ReadFileTaxi;
 import yokohama.baykit.bayserver.common.ReadFileTrain;
+import yokohama.baykit.bayserver.agent.transporter.TcpDataListener;
 import yokohama.baykit.bayserver.docker.Trouble;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.*;
-import yokohama.baykit.bayserver.common.ReadOnlyDataListener;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -401,7 +401,7 @@ public class TourRes implements Reusable {
                         sendFileShip.init(in, tour, tp);
                         tp.init(
                                 tour.ship.agent.spinHandler,
-                                new ReadOnlyDataListener(sendFileShip),
+                                new TcpDataListener(sendFileShip),
                                 new FileInputStream(file),
                                 (int)file.length(),
                                 timeout,

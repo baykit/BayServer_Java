@@ -4,6 +4,7 @@ import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.ParseException;
+import yokohama.baykit.bayserver.agent.transporter.TcpDataListener;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
@@ -15,7 +16,6 @@ import yokohama.baykit.bayserver.util.CGIUtil;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.SysUtil;
-import yokohama.baykit.bayserver.common.ReadOnlyDataListener;
 
 import java.io.File;
 import java.io.IOException;
@@ -159,7 +159,7 @@ public class CgiDocker extends ClubBase {
                 outShip.init(handler.process.getInputStream(), tur.ship.agent, tur, outTp, handler);
                 outTp.init(
                         tur.ship.agent.spinHandler,
-                        new ReadOnlyDataListener(outShip),
+                        new TcpDataListener(outShip),
                         handler.process.getInputStream(),
                         -1,
                         timeoutSec,
@@ -169,7 +169,7 @@ public class CgiDocker extends ClubBase {
                 errSip.init(handler.process.getErrorStream(), tur.ship.agent, handler);
                 errTp.init(
                         tur.ship.agent.spinHandler,
-                        new ReadOnlyDataListener(errSip),
+                        new TcpDataListener(errSip),
                         handler.process.getErrorStream(),
                         -1,
                         timeoutSec,

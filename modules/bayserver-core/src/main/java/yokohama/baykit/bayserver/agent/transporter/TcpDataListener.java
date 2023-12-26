@@ -1,68 +1,62 @@
-package yokohama.baykit.bayserver.common;
+package yokohama.baykit.bayserver.agent.transporter;
 
-import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.agent.transporter.DataListener;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
+import yokohama.baykit.bayserver.ship.Ship;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
-public class ReadOnlyDataListener implements DataListener {
+public class TcpDataListener implements DataListener {
 
-    ReadOnlyShip ship;
+    final Ship ship;
 
-    public ReadOnlyDataListener(ReadOnlyShip ship) {
+    public TcpDataListener(Ship ship) {
         this.ship = ship;
     }
-
 
     @Override
     public String toString() {
         return ship.toString();
     }
 
-    ////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
     // Implements DataListener
-    ////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
+
+    @Override
+    public NextSocketAction notifyHandshakeDone(String pcl) {
+        return NextSocketAction.Continue;
+    }
 
     @Override
     public NextSocketAction notifyConnect() throws IOException {
-        throw new Sink();
+        throw new IllegalStateException();
     }
 
     @Override
     public NextSocketAction notifyRead(ByteBuffer buf, InetSocketAddress adr) throws IOException {
-        return ship.bytesReceived(buf);
+        return ship.notifyRead(buf);
     }
 
     @Override
     public NextSocketAction notifyEof() {
-        BayLog.debug("%s Notify EOF", this);
         return ship.notifyEof();
     }
 
     @Override
-    public NextSocketAction notifyHandshakeDone(String protocol) throws IOException {
-        throw new Sink();
-    }
-
-    @Override
     public boolean notifyProtocolError(ProtocolException e) throws IOException {
-        throw new Sink();
+        return ship.notifyProtocolError(e);
     }
 
     @Override
     public void notifyClose() {
-        BayLog.debug("%s Channel closed", this);
         ship.notifyClose();
     }
 
     @Override
-    public final boolean checkTimeout(int durationSec) {
-        BayLog.debug("%s Check timeout: dur=%d", this, durationSec);
+    public boolean checkTimeout(int durationSec) {
         return ship.checkTimeout(durationSec);
     }
 }

@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.common;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
+import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.ship.Ship;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Postman;
@@ -67,13 +67,25 @@ public abstract class ReadOnlyShip extends Ship {
     }
 
     /////////////////////////////////////
+    // Implements Ship
+    /////////////////////////////////////
+    @Override
+    public final NextSocketAction notifyHandshakeDone(String pcl) throws IOException {
+        throw new Sink();
+    }
+
+    @Override
+    public final NextSocketAction notifyConnect() throws IOException {
+        throw new Sink();
+    }
+
+    @Override
+    public final boolean notifyProtocolError(ProtocolException e) throws IOException {
+        throw new Sink();
+    }
+
+    /////////////////////////////////////
     // Abstract methods
     /////////////////////////////////////
-    public abstract NextSocketAction bytesReceived(ByteBuffer buf) throws IOException;
     public abstract void notifyError(Throwable e);
-    public abstract NextSocketAction notifyEof();
-    public abstract void notifyClose();
-    public abstract boolean checkTimeout(int durationSec);
-
-
 }

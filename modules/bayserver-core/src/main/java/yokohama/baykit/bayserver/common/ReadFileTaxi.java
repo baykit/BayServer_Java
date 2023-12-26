@@ -2,17 +2,12 @@ package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.agent.transporter.DataListener;
-import yokohama.baykit.bayserver.common.ReadOnlyDataListener;
-import yokohama.baykit.bayserver.common.ReadOnlyShip;
 import yokohama.baykit.bayserver.util.Valve;
 import yokohama.baykit.bayserver.taxi.Taxi;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 public class ReadFileTaxi extends Taxi implements Valve {
@@ -69,7 +64,7 @@ public class ReadFileTaxi extends Taxi implements Valve {
             buf.position(readLen);
             buf.flip();
 
-            NextSocketAction act = ship.bytesReceived(buf);
+            NextSocketAction act = ship.notifyRead(buf);
 
             running = false;
             if(act == NextSocketAction.Continue)

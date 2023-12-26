@@ -1,15 +1,23 @@
 package yokohama.baykit.bayserver.docker.base;
 
-import yokohama.baykit.bayserver.*;
+import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.BayServer;
+import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.Port;
+import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
+import yokohama.baykit.bayserver.ship.Ship;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.tour.TourStore;
-import yokohama.baykit.bayserver.util.*;
-import yokohama.baykit.bayserver.ship.Ship;
+import yokohama.baykit.bayserver.util.Counter;
+import yokohama.baykit.bayserver.util.DataConsumeListener;
+import yokohama.baykit.bayserver.util.Headers;
+import yokohama.baykit.bayserver.util.Postman;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectableChannel;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,9 +56,9 @@ public class InboundShip extends Ship {
     }
 
 
-    ////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
     // Implements Reusable
-    ////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
 
     @Override
     public synchronized void reset() {
@@ -63,6 +71,69 @@ public class InboundShip extends Ship {
         needEnd = false;
     }
 
+    /////////////////////////////////////
+    // Implements ship
+    /////////////////////////////////////
+
+    @Override
+    public NextSocketAction notifyHandshakeDone(String pcl) {
+        return NextSocketAction.Continue;
+    }
+
+    @Override
+    public NextSocketAction notifyConnect() throws IOException {
+        throw new IllegalStateException();
+    }
+
+    @Override
+    public NextSocketAction notifyRead(ByteBuffer buf) throws IOException {
+        return protocolHandler.bytesReceived(buf);
+    }
+
+    @Override
+    public NextSocketAction notifyEof() {
+        BayLog.debug("%s EOF detected", this);
+        return NextSocketAction.Close;
+    }
+
+    @Override
+    public boolean notifyProtocolError(ProtocolException e) throws IOException {
+        if(BayLog.isDebugMode()) {
+            BayLog.error(e);
+        }
+        return ((InboundHandler)protocolHandler).sendReqProtocolError(e);
+    }
+
+    @Override
+    public synchronized void notifyClose() {
+        BayLog.debug("%s notifyClose", this);
+
+        abortTours();
+
+        if(!activeTours.isEmpty()) {
+            // cannot close because there are some running tours
+            BayLog.debug(this + " cannot end ship because there are some running tours (ignore)");
+            needEnd = true;
+        }
+        else {
+            endShip();
+        }
+    }
+
+    @Override
+    public boolean checkTimeout(int durationSec) {
+        boolean timeout;
+        if(socketTimeoutSec <= 0)
+            timeout = false;
+        else if(keeping)
+            timeout = durationSec >= BayServer.harbor.keepTimeoutSec();
+        else
+            timeout = durationSec >= socketTimeoutSec;
+
+        BayLog.debug("%s Check timeout: dur=%d, timeout=%b, keeping=%b limit=%d keeplim=%d",
+                this, durationSec, timeout, keeping, socketTimeoutSec, BayServer.harbor.keepTimeoutSec());
+        return timeout;
+    }
 
     ////////////////////////////////////////////////////////////////////////////////
     // Other methods
