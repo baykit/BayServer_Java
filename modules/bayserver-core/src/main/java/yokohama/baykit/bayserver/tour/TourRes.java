@@ -2,8 +2,8 @@ package yokohama.baykit.bayserver.tour;
 
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
-import yokohama.baykit.bayserver.common.ReadFileTaxi;
-import yokohama.baykit.bayserver.common.ReadFileTrain;
+import yokohama.baykit.bayserver.common.ReadStreamTaxi;
+import yokohama.baykit.bayserver.common.ReadStreamTrain;
 import yokohama.baykit.bayserver.agent.transporter.TcpDataListener;
 import yokohama.baykit.bayserver.docker.Trouble;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
@@ -417,7 +417,7 @@ public class TourRes implements Reusable {
                     }
 
                     case Taxi:{
-                        ReadFileTaxi txi = new ReadFileTaxi(tour.ship.agent.agentId, bufsize);
+                        ReadStreamTaxi txi = new ReadStreamTaxi(tour.ship.agent.agentId, bufsize);
                         sendFileShip.init(in, tour, txi);
                         txi.init(sendFileShip);
                         int sid = sendFileShip.id();
@@ -437,7 +437,7 @@ public class TourRes implements Reusable {
                 }
 
             } else {
-                new ReadFileTrain(sendFileShip, tour).depart();
+                new ReadStreamTrain(sendFileShip, tour).depart();
             }
         } catch (IOException e) {
             BayLog.error(e);

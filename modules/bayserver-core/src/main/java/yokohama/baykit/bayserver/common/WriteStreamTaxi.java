@@ -1,17 +1,16 @@
-package yokohama.baykit.bayserver.docker.builtin;
+package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.agent.transporter.DataListener;
-import yokohama.baykit.bayserver.util.Valve;
 import yokohama.baykit.bayserver.taxi.Taxi;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
+import yokohama.baykit.bayserver.util.Valve;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
-public class WriteFileTaxi extends Taxi implements Valve {
+public class WriteStreamTaxi extends Taxi implements Valve {
 
 
     OutputStream out;
@@ -19,7 +18,7 @@ public class WriteFileTaxi extends Taxi implements Valve {
     protected ArrayList<ByteBuffer> writeQueue = new ArrayList<>();
     int agentId;
 
-    public WriteFileTaxi(){
+    public WriteStreamTaxi(){
 
     }
 

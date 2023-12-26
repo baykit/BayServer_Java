@@ -8,7 +8,7 @@ import yokohama.baykit.bayserver.agent.transporter.TcpDataListener;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
-import yokohama.baykit.bayserver.common.ReadFileTaxi;
+import yokohama.baykit.bayserver.common.ReadStreamTaxi;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.common.docker.ClubBase;
@@ -187,14 +187,14 @@ public class CgiDocker extends ClubBase {
             }
 
             case Taxi:{
-                ReadFileTaxi outTxi = new ReadFileTaxi(tur.ship.agent.agentId, bufsize);
+                ReadStreamTaxi outTxi = new ReadStreamTaxi(tur.ship.agent.agentId, bufsize);
                 outShip.init(handler.process.getInputStream(), tur.ship.agent, tur, outTxi, handler);
                 outTxi.init(outShip);
                 if(!TaxiRunner.post(tur.ship.agent.agentId, outTxi)) {
                     throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");
                 }
 
-                ReadFileTaxi errTxi = new ReadFileTaxi(tur.ship.agent.agentId, bufsize);
+                ReadStreamTaxi errTxi = new ReadStreamTaxi(tur.ship.agent.agentId, bufsize);
                 errSip.init(handler.process.getErrorStream(), tur.ship.agent, handler);
                 errTxi.init(errSip);
 
