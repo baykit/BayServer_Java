@@ -47,7 +47,7 @@ public final class WarpShip extends Ship {
             Transporter tp,
             WarpDocker dkr,
             ProtocolHandler protoHandler) {
-        super.init(ch, agent, tp);
+        super.init(ch, agent, tp, tp);
         this.docker = dkr;
         this.socketTimeoutSec = docker.timeoutSec >= 0 ? docker.timeoutSec : BayServer.harbor.socketTimeoutSec();
         setProtocolHandler(protoHandler);
