@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.util;
+package yokohama.baykit.bayserver.common;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

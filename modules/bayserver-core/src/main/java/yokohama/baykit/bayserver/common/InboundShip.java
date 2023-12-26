@@ -13,7 +13,6 @@ import yokohama.baykit.bayserver.ship.Ship;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.tour.TourStore;
 import yokohama.baykit.bayserver.util.Counter;
-import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Headers;
 
 import java.io.IOException;

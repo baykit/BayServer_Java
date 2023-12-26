@@ -7,10 +7,10 @@ import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.NonBlockingHandler;
 import yokohama.baykit.bayserver.agent.UpgradeException;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
-import yokohama.baykit.bayserver.util.DataConsumeListener;
-import yokohama.baykit.bayserver.util.Postman;
-import yokohama.baykit.bayserver.util.Reusable;
-import yokohama.baykit.bayserver.util.Valve;
+import yokohama.baykit.bayserver.common.DataConsumeListener;
+import yokohama.baykit.bayserver.common.Postman;
+import yokohama.baykit.bayserver.common.Reusable;
+import yokohama.baykit.bayserver.common.Valve;
 
 import javax.net.ssl.SSLException;
 import java.io.EOFException;

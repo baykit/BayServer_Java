@@ -8,7 +8,7 @@ import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.ajp.command.*;
-import yokohama.baykit.bayserver.util.DataConsumeListener;
+import yokohama.baykit.bayserver.common.DataConsumeListener;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.HttpUtil;
 import yokohama.baykit.bayserver.util.StringUtil;

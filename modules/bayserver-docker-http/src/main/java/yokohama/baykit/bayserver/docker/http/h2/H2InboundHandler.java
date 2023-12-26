@@ -5,7 +5,7 @@ import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.common.InboundHandler;
 import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.tour.TourReq;
-import yokohama.baykit.bayserver.util.DataConsumeListener;
+import yokohama.baykit.bayserver.common.DataConsumeListener;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.tour.TourStore;

@@ -1,7 +1,7 @@
 package yokohama.baykit.bayserver.protocol;
 
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.util.Reusable;
+import yokohama.baykit.bayserver.common.Reusable;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

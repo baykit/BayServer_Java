@@ -1,7 +1,7 @@
 package yokohama.baykit.bayserver.protocol;
 
 
-import yokohama.baykit.bayserver.util.Reusable;
+import yokohama.baykit.bayserver.common.Reusable;
 
 import java.util.Arrays;
 

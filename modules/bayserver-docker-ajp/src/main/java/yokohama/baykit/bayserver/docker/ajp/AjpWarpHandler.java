@@ -9,7 +9,7 @@ import yokohama.baykit.bayserver.common.WarpHandler;
 import yokohama.baykit.bayserver.common.WarpShip;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.ajp.command.*;
-import yokohama.baykit.bayserver.util.DataConsumeListener;
+import yokohama.baykit.bayserver.common.DataConsumeListener;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
