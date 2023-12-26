@@ -1,15 +1,14 @@
-package yokohama.baykit.bayserver.docker.builtin;
+package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.util.CharUtil;
 import yokohama.baykit.bayserver.util.StringUtil;
-import yokohama.baykit.bayserver.common.WriteOnlyShip;
 
 import java.io.IOException;
 
-public class LogShip extends WriteOnlyShip {
+public class WriteStreamShip extends WriteOnlyShip {
 
-    WriteFileTaxi taxi;
+    WriteStreamTaxi taxi;
 
     @Override
     public String toString() {
@@ -43,7 +42,7 @@ public class LogShip extends WriteOnlyShip {
     /////////////////////////////////////
     // Custom methods
     /////////////////////////////////////
-    public void init(GrandAgent agt, WriteFileTaxi txi) throws IOException{
+    public void init(GrandAgent agt, WriteStreamTaxi txi) throws IOException{
         super.init(agt);
         this.taxi = txi;
     }

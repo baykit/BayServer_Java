@@ -8,12 +8,12 @@ import yokohama.baykit.bayserver.train.Train;
 import java.io.*;
 import java.nio.ByteBuffer;
 
-public class ReadFileTrain extends Train {
+public class ReadStreamTrain extends Train {
 
     ReadOnlyShip ship;
     boolean available;
 
-    public ReadFileTrain(ReadOnlyShip ship, Tour tur) throws FileNotFoundException {
+    public ReadStreamTrain(ReadOnlyShip ship, Tour tur) throws FileNotFoundException {
         super(tur);
         this.ship = ship;
         this.available = true;
