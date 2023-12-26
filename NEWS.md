@@ -1,5 +1,9 @@
 # BayServer for Java
 
+# 2.3.3
+
+- [Core] Fixes the issue encountered when aborting GrandAgent.
+
 # 2.3.2
 
 - [Core] Fixes the issue encountered when aborting GrandAgent.
