@@ -4,6 +4,7 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.common.ReadOnlyShip;
+import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.Valve;
 
@@ -50,7 +51,7 @@ public class SendFileShip extends ReadOnlyShip {
     ////////////////////////////////////////////////////////////////////
 
     @Override
-    public NextSocketAction bytesReceived(ByteBuffer buf) throws IOException {
+    public NextSocketAction notifyRead(ByteBuffer buf) throws IOException {
 
         fileWroteLen += buf.limit();
         BayLog.debug("%s read file %d bytes: total=%d", this, buf.limit(), fileWroteLen);

@@ -63,7 +63,7 @@ public class CgiStdOutShip extends ReadOnlyShip {
     /////////////////////////////////////
 
     @Override
-    public NextSocketAction bytesReceived(ByteBuffer buf) throws IOException {
+    public NextSocketAction notifyRead(ByteBuffer buf) throws IOException {
 
         fileWroteLen += buf.limit();
         BayLog.debug("%s read %s bytes: total=%d", this, buf.limit(), fileWroteLen);

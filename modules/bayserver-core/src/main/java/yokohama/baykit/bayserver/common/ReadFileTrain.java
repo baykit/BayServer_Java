@@ -2,7 +2,6 @@ package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.HttpException;
-import yokohama.baykit.bayserver.common.ReadOnlyShip;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.train.Train;
 
@@ -36,7 +35,7 @@ public class ReadFileTrain extends Train {
                 if (c == -1)
                     break;
 
-                ship.bytesReceived(ByteBuffer.wrap(buf, 0, c));
+                ship.notifyRead(ByteBuffer.wrap(buf, 0, c));
                 while (!available) {
                     try {
                         Thread.sleep(100);

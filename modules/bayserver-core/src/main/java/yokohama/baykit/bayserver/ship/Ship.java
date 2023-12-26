@@ -3,11 +3,15 @@ package yokohama.baykit.bayserver.ship;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.util.Counter;
 import yokohama.baykit.bayserver.util.Postman;
 import yokohama.baykit.bayserver.util.Reusable;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectableChannel;
 
 /**
@@ -35,6 +39,10 @@ public abstract class Ship implements Reusable {
         this.shipId = INVALID_SHIP_ID;
     }
 
+    /////////////////////////////////////
+    // Initialize mthods
+    /////////////////////////////////////
+
     protected void init(SelectableChannel ch, GrandAgent agent, Postman pm){
         if(initialized)
             throw new Sink("Ship already initialized");
@@ -45,6 +53,10 @@ public abstract class Ship implements Reusable {
         this.initialized = true;
         BayLog.debug("%s Initialized", this);
     }
+
+    /////////////////////////////////////
+    // Implements Reusable
+    /////////////////////////////////////
 
     @Override
     public void reset() {
@@ -57,6 +69,10 @@ public abstract class Ship implements Reusable {
         ch = null;
         keeping = false;
     }
+
+    /////////////////////////////////////
+    // Custom methods
+    /////////////////////////////////////
 
     public void setProtocolHandler(ProtocolHandler protoHandler) {
         this.protocolHandler = protoHandler;
@@ -86,4 +102,15 @@ public abstract class Ship implements Reusable {
         }
     }
 
+    /////////////////////////////////////
+    // Abstract methods
+    /////////////////////////////////////
+
+    public abstract NextSocketAction notifyHandshakeDone(String pcl) throws IOException;
+    public abstract NextSocketAction notifyConnect() throws IOException;
+    public abstract NextSocketAction notifyRead(ByteBuffer buf) throws IOException;
+    public abstract NextSocketAction notifyEof();
+    public abstract boolean notifyProtocolError(ProtocolException e) throws IOException;
+    public abstract void notifyClose();
+    public abstract boolean checkTimeout(int durationSec);
 }

@@ -1,9 +1,9 @@
 package yokohama.baykit.bayserver.docker.warp;
 
-import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
+import yokohama.baykit.bayserver.agent.transporter.TcpDataListener;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
 import yokohama.baykit.bayserver.tour.Tour;
@@ -159,7 +159,7 @@ public abstract class WarpDocker extends ClubBase {
                 tp = newTransporter(agt, ch);
                 ProtocolHandler protoHnd = ProtocolHandlerStore.getStore(protocol(), false, agt.agentId).rent();
                 wsip.initWarp(ch, agt, tp, this, protoHnd);
-                tp.init(agt.nonBlockingHandler, ch, new WarpDataListener(wsip));
+                tp.init(agt.nonBlockingHandler, ch, new TcpDataListener(wsip));
                 BayLog.debug("%s init warp ship", wsip);
                 needConnect = true;
             }

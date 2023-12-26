@@ -4,8 +4,10 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.protocol.Command;
+import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
@@ -14,6 +16,8 @@ import yokohama.baykit.bayserver.util.Pair;
 import yokohama.baykit.bayserver.ship.Ship;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,6 +32,15 @@ public final class WarpShip extends Ship {
     int socketTimeoutSec;
     ArrayList<Pair<Command, DataConsumeListener>> cmdBuf = new ArrayList<>();
 
+    @Override
+    public String toString() {
+        return agent + " wsip#" + shipId + "/" + objectId + "[" + protocol() + "]";
+    }
+
+
+    /////////////////////////////////////
+    // Initialize method
+    /////////////////////////////////////
     public void initWarp(
             SocketChannel ch,
             GrandAgent agent,
@@ -41,14 +54,9 @@ public final class WarpShip extends Ship {
     }
 
 
-    @Override
-    public String toString() {
-        return agent + " wsip#" + shipId + "/" + objectId + "[" + protocol() + "]";
-    }
-
-    //////////////////////////////////////////////////////
-    // implements Reusable
-    //////////////////////////////////////////////////////
+    /////////////////////////////////////
+    // Implements Reusable
+    /////////////////////////////////////
 
     @Override
     public void reset() {
@@ -60,9 +68,99 @@ public final class WarpShip extends Ship {
         cmdBuf.clear();
     }
 
-    //////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
+    // Implements Ship
+    /////////////////////////////////////
+    @Override
+    public NextSocketAction notifyHandshakeDone(String protocol) throws IOException {
+
+        ((WarpHandler)protocolHandler).verifyProtocol(protocol);
+
+        //  Send pending packet
+        agent.nonBlockingHandler.askToWrite(ch);
+        return NextSocketAction.Continue;
+    }
+
+    @Override
+    public NextSocketAction notifyConnect() throws IOException {
+        BayLog.debug("%s notifyConnect", this);
+        connected = true;
+        for(Pair<Integer, Tour> pir: tourMap.values()) {
+            Tour tur = pir.b;
+            tur.checkTourId(pir.a);
+            WarpData.get(tur).start();
+        }
+        return NextSocketAction.Continue;
+    }
+
+    @Override
+    public NextSocketAction notifyRead(ByteBuffer buf) throws IOException {
+        return protocolHandler.bytesReceived(buf);
+    }
+
+    @Override
+    public NextSocketAction notifyEof() {
+        BayLog.debug("%s EOF detected", this);
+
+        if(tourMap.isEmpty()) {
+            BayLog.debug("%s No warp tour. only close", this);
+            return NextSocketAction.Close;
+        }
+        for(int warpId: tourMap.keySet()) {
+            Pair<Integer, Tour> pir = tourMap.get(warpId);
+            Tour tur = pir.b;
+            tur.checkTourId(pir.a);
+
+            try {
+                if (!tur.res.headerSent()) {
+                    BayLog.debug("%s Send ServiceUnavailable: tur=%s", this, tur);
+                    tur.res.sendError(Tour.TOUR_ID_NOCHECK, HttpStatus.SERVICE_UNAVAILABLE, "Server closed on reading headers");
+                }
+                else {
+                    // NOT treat EOF as Error
+                    BayLog.debug("%s EOF is not an error: tur=%s", this, tur);
+                    tur.res.endContent(Tour.TOUR_ID_NOCHECK);
+                }
+            }
+            catch(IOException e) {
+                BayLog.debug(e);
+            }
+        }
+        tourMap.clear();
+
+        return NextSocketAction.Close;
+    }
+
+    @Override
+    public boolean notifyProtocolError(ProtocolException e) {
+
+        BayLog.error(e);
+        notifyErrorToOwnerTour(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
+        return true;
+    }
+
+    @Override
+    public boolean checkTimeout(int durationSec) {
+
+        if(isTimeout(durationSec)) {
+            notifyErrorToOwnerTour(HttpStatus.GATEWAY_TIMEOUT, this + " server timeout");
+            return true;
+        }
+        else
+            return false;
+    }
+
+    @Override
+    public void notifyClose() {
+        BayLog.debug(this + " notifyClose");
+        notifyErrorToOwnerTour(HttpStatus.SERVICE_UNAVAILABLE, this + " server closed");
+        endShip();
+    }
+
+
+    /////////////////////////////////////
     // Custom methods
-    //////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////
     public WarpDocker docker() {
         return docker;
     }
@@ -122,12 +220,7 @@ public final class WarpShip extends Ship {
         return getTour(warpId, true);
     }
 
-
-    //////////////////////////////////////////////////////
-    // Other methods
-    //////////////////////////////////////////////////////
-
-    protected void notifyErrorToOwnerTour(int status, String msg) {
+    void notifyErrorToOwnerTour(int status, String msg) {
         synchronized (tourMap) {
             tourMap.keySet().forEach(warpId -> {
                 Tour tur = getTour(warpId);
