@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.util;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
+import yokohama.baykit.bayserver.common.Reusable;
 
 import java.util.ArrayList;
 

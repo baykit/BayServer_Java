@@ -7,7 +7,7 @@ import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.StringUtil;
-import yokohama.baykit.bayserver.util.Valve;
+import yokohama.baykit.bayserver.common.Valve;
 import yokohama.baykit.bayserver.common.ReadOnlyShip;
 
 import java.io.IOException;
