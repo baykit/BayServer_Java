@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.agent;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.docker.Port;
-import yokohama.baykit.bayserver.docker.base.PortBase;
+import yokohama.baykit.bayserver.common.docker.PortBase;
 
 import java.io.IOException;
 import java.nio.channels.*;

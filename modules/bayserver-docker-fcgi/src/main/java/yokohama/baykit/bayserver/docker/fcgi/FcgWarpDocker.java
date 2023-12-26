@@ -10,13 +10,13 @@ import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
-import yokohama.baykit.bayserver.docker.warp.WarpDocker;
+import yokohama.baykit.bayserver.common.docker.WarpBase;
 import yokohama.baykit.bayserver.util.IOUtil;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
-public class FcgWarpDocker extends WarpDocker implements FcgDocker {
+public class FcgWarpDocker extends WarpBase implements FcgDocker {
 
     public String scriptBase;
     public String docRoot;

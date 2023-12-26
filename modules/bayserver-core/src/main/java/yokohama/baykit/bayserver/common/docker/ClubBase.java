@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.docker.base;
+package yokohama.baykit.bayserver.common.docker;
 
 import yokohama.baykit.bayserver.ConfigException;
 import yokohama.baykit.bayserver.bcf.BcfElement;

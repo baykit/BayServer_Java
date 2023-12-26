@@ -11,7 +11,7 @@ import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.common.ReadFileTaxi;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
-import yokohama.baykit.bayserver.docker.base.ClubBase;
+import yokohama.baykit.bayserver.common.docker.ClubBase;
 import yokohama.baykit.bayserver.util.CGIUtil;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.StringUtil;

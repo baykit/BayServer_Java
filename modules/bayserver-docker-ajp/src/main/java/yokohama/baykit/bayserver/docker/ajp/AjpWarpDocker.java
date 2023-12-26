@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.docker.ajp;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
-import yokohama.baykit.bayserver.docker.warp.WarpDocker;
+import yokohama.baykit.bayserver.common.docker.WarpBase;
 import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.util.IOUtil;
@@ -11,7 +11,7 @@ import yokohama.baykit.bayserver.util.IOUtil;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
-public class AjpWarpDocker extends WarpDocker implements AjpDocker {
+public class AjpWarpDocker extends WarpBase implements AjpDocker {
 
 
     //////////////////////////////////////////////////////////////////////////////////////////

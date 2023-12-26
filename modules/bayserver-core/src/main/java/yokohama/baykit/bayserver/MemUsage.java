@@ -8,7 +8,7 @@ import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
 import yokohama.baykit.bayserver.common.InboundShipStore;
 import yokohama.baykit.bayserver.tour.TourStore;
-import yokohama.baykit.bayserver.docker.warp.WarpDocker;
+import yokohama.baykit.bayserver.common.docker.WarpBase;
 import yokohama.baykit.bayserver.util.StringUtil;
 
 import java.util.HashMap;
@@ -62,16 +62,16 @@ public class MemUsage {
     void printCityUsage(Port port, City city, int indent) {
         String pname = port == null ? "" : "@" + port;
         city.clubs().forEach(club -> {
-            if (club instanceof WarpDocker) {
+            if (club instanceof WarpBase) {
                 BayLog.info("%sClub(%s%s) Usage:", StringUtil.indent(indent), club, pname);
-                ((WarpDocker) club).getShipStore(agentId).printUsage(indent+1);
+                ((WarpBase) club).getShipStore(agentId).printUsage(indent+1);
             }
         });
         city.towns().forEach(town -> {
             town.clubs().forEach(club -> {
-                if (club instanceof WarpDocker) {
+                if (club instanceof WarpBase) {
                     BayLog.info("%sClub(%s%s) Usage:", StringUtil.indent(indent), club, pname);
-                    ((WarpDocker) club).getShipStore(agentId).printUsage(indent+1);
+                    ((WarpBase) club).getShipStore(agentId).printUsage(indent+1);
                 }
             });
         });

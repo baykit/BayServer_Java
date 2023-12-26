@@ -1,6 +1,5 @@
 package yokohama.baykit.bayserver.docker.http;
 
-import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.agent.GrandAgent;
@@ -10,9 +9,7 @@ import yokohama.baykit.bayserver.agent.transporter.SecureTransporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
-import yokohama.baykit.bayserver.docker.http.h1.*;
-import yokohama.baykit.bayserver.docker.http.h2.*;
-import yokohama.baykit.bayserver.docker.warp.WarpDocker;
+import yokohama.baykit.bayserver.common.docker.WarpBase;
 import yokohama.baykit.bayserver.util.IOUtil;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.BayLog;
@@ -32,7 +29,7 @@ import java.nio.channels.SocketChannel;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
-public class HtpWarpDocker extends WarpDocker implements HtpDocker {
+public class HtpWarpDocker extends WarpBase implements HtpDocker {
 
     static class DummyTrustManager implements X509TrustManager {
 
