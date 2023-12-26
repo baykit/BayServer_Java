@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.docker.base;
+package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
@@ -7,6 +7,7 @@ import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.docker.Port;
+import yokohama.baykit.bayserver.docker.base.InboundHandler;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.ship.Ship;
@@ -15,7 +16,6 @@ import yokohama.baykit.bayserver.tour.TourStore;
 import yokohama.baykit.bayserver.util.Counter;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Headers;
-import yokohama.baykit.bayserver.util.Postman;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -102,7 +102,7 @@ public class InboundShip extends Ship {
         if(BayLog.isDebugMode()) {
             BayLog.error(e);
         }
-        return ((InboundHandler)protocolHandler).sendReqProtocolError(e);
+        return protocolHandler.onProtocolError(e);
     }
 
     @Override

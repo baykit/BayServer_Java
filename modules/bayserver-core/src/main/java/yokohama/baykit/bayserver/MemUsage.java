@@ -6,7 +6,7 @@ import yokohama.baykit.bayserver.docker.City;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
-import yokohama.baykit.bayserver.docker.base.InboundShipStore;
+import yokohama.baykit.bayserver.common.InboundShipStore;
 import yokohama.baykit.bayserver.tour.TourStore;
 import yokohama.baykit.bayserver.docker.warp.WarpDocker;
 import yokohama.baykit.bayserver.util.StringUtil;

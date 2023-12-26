@@ -5,7 +5,7 @@ import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.UpgradeException;
 import yokohama.baykit.bayserver.docker.base.InboundHandler;
 import yokohama.baykit.bayserver.protocol.*;
-import yokohama.baykit.bayserver.docker.base.InboundShip;
+import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.http.HtpDocker;
@@ -147,7 +147,8 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
     }
 
     @Override
-    public boolean sendReqProtocolError(ProtocolException e) throws IOException {
+    public boolean onProtocolError(ProtocolException e) throws IOException {
+        BayLog.debug(e);
         Tour tur;
         if(curTour == null)
             tur = ship().getErrorTour();

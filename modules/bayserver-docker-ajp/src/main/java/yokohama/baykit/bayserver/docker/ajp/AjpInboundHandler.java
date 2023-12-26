@@ -4,7 +4,7 @@ import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgentMonitor;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.base.InboundHandler;
-import yokohama.baykit.bayserver.docker.base.InboundShip;
+import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.ajp.command.*;
@@ -118,7 +118,8 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
     }
 
     @Override
-    public boolean sendReqProtocolError(ProtocolException e) throws IOException {
+    public boolean onProtocolError(ProtocolException e) throws IOException {
+        BayLog.debug(e);
         InboundShip ibShip = (InboundShip)ship;
         Tour tur = ibShip.getErrorTour();
         tur.res.sendError(Tour.TOUR_ID_NOCHECK, HttpStatus.BAD_REQUEST, e.getMessage(), e);
