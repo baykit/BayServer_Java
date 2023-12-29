@@ -31,8 +31,6 @@ public abstract class Ship implements Reusable {
     public int agentId;
     public Postman postman;
     public Valve valve;
-    public SelectableChannel ch;
-    public ProtocolHandler protocolHandler;
     public boolean initialized;
     public boolean keeping;
 
@@ -45,14 +43,13 @@ public abstract class Ship implements Reusable {
     // Initialize mthods
     /////////////////////////////////////
 
-    protected void init(SelectableChannel ch, int agentId, Postman pm, Valve vlv){
+    protected void init(int agentId, Postman pm, Valve vlv){
         if(initialized)
             throw new Sink("Ship already initialized");
         this.shipId = idCounter.next();
         this.agentId = agentId;
         this.postman = pm;
         this.valve = vlv;
-        this.ch = ch;
         this.initialized = true;
         BayLog.debug("%s Initialized", this);
     }
@@ -68,10 +65,8 @@ public abstract class Ship implements Reusable {
         if(postman != null)
             postman.reset();
         postman = null;  // for reloading certification
-        protocolHandler = null;
         agentId = -1;
         shipId = INVALID_SHIP_ID;
-        ch = null;
         keeping = false;
     }
 
@@ -79,18 +74,10 @@ public abstract class Ship implements Reusable {
     // Custom methods
     /////////////////////////////////////
 
-    public void setProtocolHandler(ProtocolHandler protoHandler) {
-        this.protocolHandler = protoHandler;
-        protoHandler.ship = this;
-        BayLog.debug("%s protocol handler is set", this);
-    }
+
 
     public final int id() {
         return shipId;
-    }
-
-    public String protocol() {
-        return protocolHandler == null ? "unknown" : protocolHandler.protocol();
     }
 
     public void resume(int checkId) {

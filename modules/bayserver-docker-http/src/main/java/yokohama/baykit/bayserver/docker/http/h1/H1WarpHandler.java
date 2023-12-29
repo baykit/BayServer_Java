@@ -221,7 +221,7 @@ public class H1WarpHandler extends H1ProtocolHandler implements WarpHandler {
         CmdEndContent cmd = new CmdEndContent();
         ship().post(cmd, () -> {
             GrandAgent agt = GrandAgent.get(ship.agentId);
-            agt.nonBlockingHandler.askToRead(ship.ch);
+            agt.nonBlockingHandler.askToRead(ship().ch);
         });
     }
 
