@@ -162,6 +162,7 @@ public abstract class WarpBase extends ClubBase implements Warp {
                 tp = newTransporter(agt, ch);
                 ProtocolHandler protoHnd = ProtocolHandlerStore.getStore(protocol(), false, agt.agentId).rent();
                 wsip.initWarp(ch, agt.agentId, tp, this, protoHnd);
+
                 tp.init(agt.nonBlockingHandler, ch, new SimpleDataListener(wsip));
                 BayLog.debug("%s init warp ship", wsip);
                 needConnect = true;

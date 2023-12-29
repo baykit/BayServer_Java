@@ -80,7 +80,7 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
             }
         }
         cmd.setStatus(tur.res.headers.status());
-        commandPacker.post(ship, cmd);
+        post(cmd);
 
         //BayLog.debug(this + " send header: content-length=" + tour.resHeaders.getContentLength());
     }
@@ -88,7 +88,7 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
     @Override
     public void sendResContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
         CmdSendBodyChunk cmd = new CmdSendBodyChunk(bytes, ofs, len);
-        commandPacker.post(ship, cmd, lis);
+        post(cmd, lis);
     }
 
     @Override
@@ -100,11 +100,11 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
 
         Runnable ensureFunc = () -> {
             if (!keepAlive)
-                commandPacker.end(ship);
+                ship.postman.postEnd();
         };
 
         try {
-            commandPacker.post(ship, cmd, () -> {
+            post(cmd, () -> {
                 BayLog.debug(ship + " call back in sendEndTour: tur=" + tur + " keep=" + keepAlive);
                 ensureFunc.run();
                 lis.dataConsumed();
@@ -254,7 +254,7 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
             if(bch.reqLen > AjpPacket.MAX_DATA_LEN) {
                 bch.reqLen = AjpPacket.MAX_DATA_LEN;
             }
-            commandPacker.post(sip, bch);
+            post(bch);
 
             if(!success)
                 return NextSocketAction.Suspend;
