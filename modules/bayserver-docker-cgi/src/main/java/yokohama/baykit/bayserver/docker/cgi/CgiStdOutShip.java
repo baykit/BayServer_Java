@@ -32,14 +32,14 @@ public class CgiStdOutShip extends ReadOnlyShip {
 
     @Override
     public String toString() {
-        return agent + " out_sip#" + shipId + "/" + objectId;
+        return "agt#" + agentId + " out_sip#" + shipId + "/" + objectId;
     }
 
     /////////////////////////////////////
     // Initialize methods
     /////////////////////////////////////
-    public void init(InputStream input, GrandAgent agt, Tour tur, Valve vv, CgiReqContentHandler handler) {
-        super.init(input, agt, vv);
+    public void init(InputStream input, int agentId, Tour tur, Valve vv, CgiReqContentHandler handler) {
+        super.init(input, agentId, vv);
         this.handler = handler;
         this.tour = tur;
         this.tourId = tur.tourId;

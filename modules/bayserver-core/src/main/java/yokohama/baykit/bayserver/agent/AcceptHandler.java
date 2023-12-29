@@ -53,7 +53,7 @@ public class AcceptHandler {
                 }
                 //BayServer.debug(ch + " accepted");
                 ch.configureBlocking(false);
-                ChannelListener lis = p.newTransporter(agent, ch);
+                ChannelListener lis = p.newTransporter(agent.agentId, ch);
 
                 agent.nonBlockingHandler.askToStart(ch);
                 agent.nonBlockingHandler.askToRead(ch);

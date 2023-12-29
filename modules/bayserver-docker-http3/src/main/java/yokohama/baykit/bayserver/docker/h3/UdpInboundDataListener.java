@@ -3,7 +3,6 @@ package yokohama.baykit.bayserver.docker.h3;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.transporter.DataListener;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
@@ -28,7 +27,7 @@ public final class UdpInboundDataListener implements DataListener {
     byte[] connIdSeed = Quiche.newConnectionIdSeed();
     static HashMap<String, QicProtocolHandler> handlers = new HashMap<>();
     Http3Config h3Config = new Http3ConfigBuilder().build();
-    public GrandAgent agent;
+    public int agentId;
     DatagramChannel ch;
     Port portDkr;
     boolean initialized;
@@ -41,16 +40,16 @@ public final class UdpInboundDataListener implements DataListener {
 
     @Override
     public String toString() {
-        return agent + " udp";
+        return "agt#" + agentId + " udp";
     }
 
     public void initUdp(
             DatagramChannel ch,
-            GrandAgent agt,
+            int agentId,
             Transporter tp,
             Port dkr) {
         this.ch = ch;
-        this.agent = agt;
+        this.agentId = agentId;
         this.transporter = tp;
         this.portDkr = dkr;
         this.initialized = true;
@@ -198,7 +197,7 @@ public final class UdpInboundDataListener implements DataListener {
 
         QicProtocolHandler hnd = new QicProtocolHandler(con, adr, h3Config, transporter);
         InboundShip sip = new InboundShip();
-        sip.initInbound(ch, agent, transporter, portDkr, hnd);
+        sip.initInbound(ch, agentId, transporter, portDkr, hnd);
         hnd.setShip(sip);
 
         addHandler(srcConId, hnd);

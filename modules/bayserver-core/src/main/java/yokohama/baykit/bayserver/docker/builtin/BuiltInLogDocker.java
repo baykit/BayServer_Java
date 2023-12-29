@@ -30,7 +30,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
             WriteStreamShip lsip = new WriteStreamShip();
             try {
                 WriteStreamTaxi txi = new WriteStreamTaxi();
-                lsip.init(GrandAgent.get(agentId), txi);
+                lsip.init(agentId, txi);
                 txi.init(agentId, new FileOutputStream(fileName));
             }
             catch(IOException e) {
@@ -204,7 +204,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
 
         // If threre are message to write, write it
         if (sb.length() > 0) {
-            getLogger(tour.ship.agent).log(sb.toString());
+            getLogger(tour.ship.agentId).log(sb.toString());
         }
     }
 
@@ -291,7 +291,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
         compile(str, items, fileName, lineNo);
     }
 
-    private WriteStreamShip getLogger(GrandAgent agt) {
-        return loggers.get(agt.agentId);
+    private WriteStreamShip getLogger(int agentId) {
+        return loggers.get(agentId);
     }
 }
