@@ -21,11 +21,11 @@ import java.util.Arrays;
 import java.util.HashMap;
 
 
-public final class UdpInboundDataListener implements DataListener {
+public final class QicDataListener implements DataListener {
 
     Transporter transporter;
     byte[] connIdSeed = Quiche.newConnectionIdSeed();
-    static HashMap<String, QicProtocolHandler> handlers = new HashMap<>();
+    static HashMap<String, InboundShip> shipMap = new HashMap<>();
     Http3Config h3Config = new Http3ConfigBuilder().build();
     public int agentId;
     DatagramChannel ch;
@@ -89,20 +89,20 @@ public final class UdpInboundDataListener implements DataListener {
         // Sign connection id
         byte[] conId = Quiche.signConnectionId(connIdSeed, hdr.destinationConnectionId());
 
-        // find handler
-        QicProtocolHandler hnd = getHandler(conId, hdr);
-        if (hnd == null) {
+        // find ship
+        InboundShip sip = getShip(conId, hdr);
+        if (sip == null) {
             //BayLog.debug("%s handler not found", this);
             if (hdr.packetType() != PacketType.INITIAL) {
                 BayLog.warn("Client not registered");
             }
             else {
-                hnd = createHandler(conId, hdr, adr);
+                sip = createShip(conId, hdr, adr);
             }
         }
 
-        if (hnd != null) {
-            hnd.bytesReceived(ByteBuffer.wrap(packetBuf));
+        if (sip != null) {
+            sip.notifyRead(ByteBuffer.wrap(packetBuf));
         }
 
         // post packets
@@ -152,17 +152,17 @@ public final class UdpInboundDataListener implements DataListener {
     /**
      * Get client object held in this instance
      */
-    QicProtocolHandler getHandler(byte[] conId, PacketHeader hdr) throws IOException {
+    InboundShip getShip(byte[] conId, PacketHeader hdr) throws IOException {
 
-        QicProtocolHandler hnd = findHandler(hdr.destinationConnectionId());
-        if (hnd == null)
-            hnd = findHandler(conId);
+        InboundShip sip = findShip(hdr.destinationConnectionId());
+        if (sip == null)
+            sip = findShip(conId);
         //BayLog.info("%s search client conid=%s client=%s", this, Utils.asHex(conId), client);
-        return hnd;
+        return sip;
     }
 
 
-    QicProtocolHandler createHandler(byte[] conId, PacketHeader hdr, InetSocketAddress adr) throws IOException {
+    InboundShip createShip(byte[] conId, PacketHeader hdr, InetSocketAddress adr) throws IOException {
 
         if (!Quiche.versionIsSupported(hdr.version())) {
             negotiateVersion(hdr, adr);
@@ -200,19 +200,19 @@ public final class UdpInboundDataListener implements DataListener {
         sip.initInbound(ch, agentId, transporter, portDkr, hnd);
         hnd.setShip(sip);
 
-        addHandler(srcConId, hnd);
+        addShip(srcConId, sip);
 
-        return hnd;
+        return sip;
     }
 
-    synchronized QicProtocolHandler findHandler(byte[] id) {
+    synchronized InboundShip findShip(byte[] id) {
         //BayLog.info("%s getClient: id=%s", this, Utils.asHex(id));
-        return handlers.get(Utils.asHex(id));
+        return shipMap.get(Utils.asHex(id));
     }
 
-    synchronized void addHandler(byte[] id, QicProtocolHandler hnd) {
+    synchronized void addShip(byte[] id, InboundShip ship) {
         //BayLog.info("%s addClient: id=%s, cln=%s", this, Utils.asHex(id), cln);
-        handlers.put(Utils.asHex(id), hnd);
+        shipMap.put(Utils.asHex(id), ship);
     }
 
 
@@ -318,8 +318,8 @@ public final class UdpInboundDataListener implements DataListener {
         }
 
         // Check packets held in protocol handlers
-        for (QicProtocolHandler hnd : handlers.values()) {
-            posted |= hnd.postPackets();
+        for (InboundShip s : shipMap.values()) {
+            posted |= ((QicProtocolHandler)s.protocolHandler).postPackets();
         }
 
         return posted;
@@ -329,14 +329,14 @@ public final class UdpInboundDataListener implements DataListener {
      * Cleanup closed connections
      */
     void cleanupConnections() {
-        for (String connId : handlers.keySet()) {
+        for (String connId : shipMap.keySet()) {
 
-            if (handlers.get(connId).isClosed()) {
+            if (((QicProtocolHandler)shipMap.get(connId).protocolHandler).isClosed()) {
                 System.out.println("> cleaning up " + connId);
 
-                handlers.remove(connId);
+                shipMap.remove(connId);
 
-                System.out.println("! # of clients: " + handlers.size());
+                System.out.println("! # of clients: " + shipMap.size());
             }
         }
     }

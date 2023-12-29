@@ -98,7 +98,7 @@ public class H3PortDocker extends PortBase implements H3Docker {
 
     @Override
     public Transporter newTransporter(int agentId, SelectableChannel ch) throws IOException {
-        UdpInboundDataListener lis = new UdpInboundDataListener();
+        QicDataListener lis = new QicDataListener();
         UdpTransporter tp = new UdpTransporter(true, 8192);
         lis.initUdp((DatagramChannel) ch, agentId, tp, this);
         GrandAgent agt = GrandAgent.get(agentId);
