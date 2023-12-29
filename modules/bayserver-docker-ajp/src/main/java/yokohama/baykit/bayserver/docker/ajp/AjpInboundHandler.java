@@ -316,7 +316,7 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
         HttpUtil.parseHostPort(tur, reqCommand.isSsl ? 443 : 80);
         HttpUtil.parseAuthrization(tur);
 
-        Socket socket = ((SocketChannel)ship.ch).socket();
+        Socket socket = ((SocketChannel)ship().ch).socket();
         tur.req.remotePort = -1;
         tur.req.remoteAddress = reqCommand.remoteAddr;
         tur.req.remoteHostFunc = () ->  reqCommand.remoteHost;

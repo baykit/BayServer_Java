@@ -18,6 +18,7 @@ import yokohama.baykit.bayserver.ship.Ship;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,13 +29,17 @@ public final class WarpShip extends Ship {
     public Warp docker;
     protected Map<Integer, Pair<Integer, Tour>> tourMap = new HashMap<>();
 
+    public SelectableChannel ch;
+    public ProtocolHandler protocolHandler;
+
     boolean connected;
     int socketTimeoutSec;
     ArrayList<Pair<Command, DataConsumeListener>> cmdBuf = new ArrayList<>();
 
     @Override
     public String toString() {
-        return "agt#" + agentId + " wsip#" + shipId + "/" + objectId + "[" + protocol() + "]";
+        return "agt#" + agentId + " wsip#" + shipId + "/" + objectId +
+                (protocolHandler != null ? ("[" + protocolHandler.protocol() + "]") : "");
     }
 
 
@@ -47,8 +52,9 @@ public final class WarpShip extends Ship {
             Transporter tp,
             Warp dkr,
             ProtocolHandler protoHandler) {
-        super.init(ch, agentId, tp, tp);
+        super.init(agentId, tp, tp);
         this.docker = dkr;
+        this.ch = ch;
         this.socketTimeoutSec = dkr.timeoutSec() >= 0 ? dkr.timeoutSec() : BayServer.harbor.socketTimeoutSec();
         setProtocolHandler(protoHandler);
     }
@@ -61,6 +67,8 @@ public final class WarpShip extends Ship {
     @Override
     public void reset() {
         super.reset();
+        ch = null;
+        protocolHandler = null;
         if(!tourMap.isEmpty())
             BayLog.error("BUG: Some tours is active: %s", tourMap);
         tourMap.clear();
@@ -164,6 +172,12 @@ public final class WarpShip extends Ship {
     /////////////////////////////////////
     public Warp docker() {
         return docker;
+    }
+
+    public void setProtocolHandler(ProtocolHandler protoHandler) {
+        this.protocolHandler = protoHandler;
+        protoHandler.ship = this;
+        BayLog.debug("%s protocol handler is set", this);
     }
 
     public WarpHandler warpHandler() {
