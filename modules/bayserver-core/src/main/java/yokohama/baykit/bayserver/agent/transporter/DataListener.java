@@ -8,7 +8,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
 /**
- * This interface absorbs the transport layer such as TCP/IP, UDP
+ * This interface is for delivering received data to InboundShip
  */
 public interface DataListener {
 
