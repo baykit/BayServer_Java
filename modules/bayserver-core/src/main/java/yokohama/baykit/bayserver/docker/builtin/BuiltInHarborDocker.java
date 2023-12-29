@@ -18,7 +18,7 @@ import java.util.Locale;
 public class BuiltInHarborDocker extends DockerBase implements Harbor {
 
     public static final int DEFAULT_MAX_SHIPS = 256;
-    public static final int DEFAULT_SHIP_AGENTS = 0;
+    public static final int DEFAULT_GRAND_AGENTS = 0;
     public static final int DEFAULT_TRAIN_RUNNERS = 8;
     public static final int DEFAULT_TAXI_RUNNERS = 8;
     public static final int DEFAULT_SOCKET_TIMEOUT_SEC = 300;
@@ -38,7 +38,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     Locale locale;
 
     /** Number of grand agents */
-    int grandAgents = DEFAULT_SHIP_AGENTS;
+    int grandAgents = DEFAULT_GRAND_AGENTS;
 
     /** Number of train runners */
     int trainRunners = DEFAULT_TRAIN_RUNNERS;
