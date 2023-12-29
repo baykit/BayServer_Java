@@ -6,7 +6,7 @@ import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
-import yokohama.baykit.bayserver.agent.transporter.TcpDataListener;
+import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
 import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.common.InboundShipStore;
 import yokohama.baykit.bayserver.docker.*;
@@ -235,7 +235,7 @@ public abstract class PortBase extends DockerBase implements Port {
         ProtocolHandler protoHnd = getProtocolHandlerStore(protocol(), agentId).rent();
         sip.initInbound(ch, agentId, tp, this, protoHnd);
         GrandAgent agt = GrandAgent.get(agentId);
-        tp.init(agt.nonBlockingHandler, ch, new TcpDataListener(sip));
+        tp.init(agt.nonBlockingHandler, ch, new SimpleDataListener(sip));
         return tp;
     }
 

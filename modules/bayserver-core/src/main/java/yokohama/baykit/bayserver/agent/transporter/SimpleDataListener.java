@@ -8,11 +8,11 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
-public class TcpDataListener implements DataListener {
+public class SimpleDataListener implements DataListener {
 
     final Ship ship;
 
-    public TcpDataListener(Ship ship) {
+    public SimpleDataListener(Ship ship) {
         this.ship = ship;
     }
 
@@ -22,7 +22,7 @@ public class TcpDataListener implements DataListener {
     }
 
     /////////////////////////////////////
-    // Implements DataListener
+    // Implements DataDispatcher
     /////////////////////////////////////
 
     @Override
