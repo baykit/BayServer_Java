@@ -100,7 +100,7 @@ public class FcgWarpHandler extends FcgProtocolHandler implements WarpHandler {
     public void postWarpEnd(Tour tur) throws IOException {
         sendStdIn(tur, null, 0, 0, () -> {
             GrandAgent agt = GrandAgent.get(ship.agentId);
-            agt.nonBlockingHandler.askToRead(ship.ch);
+            agt.nonBlockingHandler.askToRead(ship().ch);
         });
     }
 

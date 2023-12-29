@@ -31,6 +31,10 @@ public class InboundShip extends Ship {
     protected Port portDkr;
 
     static Counter errCounter = new Counter();
+
+    public SelectableChannel ch;
+    public ProtocolHandler protocolHandler;
+
     boolean needEnd;
     protected int socketTimeoutSec;
 
@@ -43,8 +47,9 @@ public class InboundShip extends Ship {
             Transporter tp,
             Port portDkr,
             ProtocolHandler protoHandler) {
-        super.init(ch, agentId, tp, tp);
+        super.init(agentId, tp, tp);
         this.portDkr = portDkr;
+        this.ch = ch;
         this.socketTimeoutSec = portDkr.timeoutSec() >= 0 ? portDkr.timeoutSec() : BayServer.harbor.socketTimeoutSec();
         this.tourStore = TourStore.getStore(agentId);
         setProtocolHandler(protoHandler);
@@ -52,7 +57,8 @@ public class InboundShip extends Ship {
 
     @Override
     public String toString() {
-        return "agt#" + agentId + " ship#" + shipId + "/" + objectId + "[" + protocol() + "]";
+        return "agt#" + agentId + " ship#" + shipId + "/" + objectId +
+                (protocolHandler != null ? ("[" + protocolHandler.protocol() + "]") : "");
     }
 
 
@@ -68,6 +74,8 @@ public class InboundShip extends Ship {
                 throw new Sink("%s There are some running tours", this);
             }
         }
+        ch = null;
+        protocolHandler = null;
         needEnd = false;
     }
 
@@ -140,6 +148,12 @@ public class InboundShip extends Ship {
     ////////////////////////////////////////////////////////////////////////////////
     public Port portDocker() {
         return portDkr;
+    }
+
+    public void setProtocolHandler(ProtocolHandler protoHandler) {
+        this.protocolHandler = protoHandler;
+        protoHandler.ship = this;
+        BayLog.debug("%s protocol handler is set", this);
     }
 
     public Tour getTour(int turKey) {

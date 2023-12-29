@@ -12,7 +12,7 @@ import java.nio.ByteBuffer;
 public abstract class WriteOnlyShip extends Ship {
 
     protected void init(int agentId) {
-        super.init(null, agentId, null, null);
+        super.init(agentId, null, null);
     }
 
     /////////////////////////////////////

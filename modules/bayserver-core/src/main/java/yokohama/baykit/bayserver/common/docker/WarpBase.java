@@ -219,7 +219,7 @@ public abstract class WarpBase extends ClubBase implements Warp {
     @Override
     public void onEndShip(Ship warpShip) {
         BayLog.debug("%s Return protocol handler: ", warpShip);
-        getProtocolHandlerStore(warpShip.agentId).Return(warpShip.protocolHandler);
+        getProtocolHandlerStore(warpShip.agentId).Return(((WarpShip)warpShip).protocolHandler);
         BayLog.debug("%s return warp ship", warpShip);
         getShipStore(warpShip.agentId).Return((WarpShip) warpShip);
     }
