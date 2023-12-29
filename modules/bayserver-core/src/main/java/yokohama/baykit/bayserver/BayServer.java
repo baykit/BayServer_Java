@@ -51,34 +51,10 @@ public class BayServer {
     /** Configuration file directory name (full path) */
     public static String planDir;
 
-    /** default session timeout */
-    private static int defaultSessionTimeout = Constants.DEFAULT_SESSION_TIMEOUT;
-
-    /** max header length */
-    private static int maxHeaderLength = Constants.DEFAULT_MAX_HEADER_LENGTH;
-
-    /** max header count */
-    private static int maxHeaderCount = Constants.DEFAULT_MAX_HEADER_COUNT;
-
-    /** max content length */
-    private static int maxContentLength = Constants.DEFAULT_MAX_CONTENT_LENGTH;
-
-    /** Socket timeout */
-    private static int socketTimeout = Constants.DEFAULT_SOCKET_TIMEOUT;
-
     /** Decode tilde */
     public static boolean decodeTilde = Constants.DEFAULT_DECODE_TILDE;
 
     private static String softwareName;
-
-    /** Http 1.1 supported */
-    private static boolean http11Supported = true;
-
-    /** Dump thread on exit */
-    private static boolean dumpOnExit = Constants.DEFAULT_DUMP_ON_EXIT;
-
-    /** Consume request buffer */
-    private static boolean consumeRequest = Constants.DEFAULT_CONSUME_REQUEST;
 
     public static Cities cities = new Cities();
 
