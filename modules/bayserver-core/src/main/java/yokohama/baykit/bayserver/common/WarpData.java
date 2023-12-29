@@ -80,7 +80,6 @@ public class WarpData implements ReqContentHandler {
 
     public final void start() throws IOException {
         if(!started) {
-            warpShip.protocolHandler.commandPacker.flush(warpShip);
             BayLog.debug("%s Start Warp tour", this);
             warpShip.flush();
             started = true;

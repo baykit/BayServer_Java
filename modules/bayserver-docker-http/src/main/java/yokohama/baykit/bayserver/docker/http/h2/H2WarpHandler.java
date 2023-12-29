@@ -118,7 +118,7 @@ public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
     public NextSocketAction handleSettings(CmdSettings cmd) throws IOException {
         if(!cmd.flags.ack()){
             CmdSettings res = new CmdSettings(0, new H2Flags(H2Flags.FLAGS_ACK));
-            commandPacker.post(ship(), res);
+            post(res);
         }
         return NextSocketAction.Continue;
     }
@@ -139,7 +139,7 @@ public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
     @Override
     public NextSocketAction handlePing(CmdPing cmd) throws IOException {
         CmdPing res = new CmdPing(cmd.streamId, new H2Flags(H2Flags.FLAGS_ACK), cmd.opaqueData);
-        commandPacker.post(ship(), res);
+        post(res);
         return NextSocketAction.Continue;
     }
 
@@ -238,7 +238,7 @@ public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
         }
 
         cmdHdr.flags = new H2Flags(H2Flags.FLAGS_END_HEADERS);
-        commandPacker.post(ship(), cmdHdr);
+        post(cmdHdr);
     }
 
 
@@ -251,7 +251,7 @@ public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
                         buf,
                         start,
                         len);
-        commandPacker.post(ship, cmd, lis);
+        post(cmd, lis);
     }
 
 

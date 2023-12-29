@@ -1,6 +1,5 @@
 package yokohama.baykit.bayserver.docker.http.h2;
 
-import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.protocol.CommandPacker;
 import yokohama.baykit.bayserver.protocol.PacketPacker;
 import yokohama.baykit.bayserver.protocol.PacketStore;

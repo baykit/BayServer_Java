@@ -24,13 +24,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-public final class WarpShip extends Ship {
+public final class WarpShip extends ProtocolizedShip {
 
     public Warp docker;
     protected Map<Integer, Pair<Integer, Tour>> tourMap = new HashMap<>();
-
-    public SelectableChannel ch;
-    public ProtocolHandler protocolHandler;
 
     boolean connected;
     int socketTimeoutSec;
@@ -52,11 +49,9 @@ public final class WarpShip extends Ship {
             Transporter tp,
             Warp dkr,
             ProtocolHandler protoHandler) {
-        super.init(agentId, tp, tp);
+        initProtocolized(ch, agentId, tp, protoHandler);
         this.docker = dkr;
-        this.ch = ch;
         this.socketTimeoutSec = dkr.timeoutSec() >= 0 ? dkr.timeoutSec() : BayServer.harbor.socketTimeoutSec();
-        setProtocolHandler(protoHandler);
     }
 
 
@@ -67,8 +62,6 @@ public final class WarpShip extends Ship {
     @Override
     public void reset() {
         super.reset();
-        ch = null;
-        protocolHandler = null;
         if(!tourMap.isEmpty())
             BayLog.error("BUG: Some tours is active: %s", tourMap);
         tourMap.clear();
@@ -172,12 +165,6 @@ public final class WarpShip extends Ship {
     /////////////////////////////////////
     public Warp docker() {
         return docker;
-    }
-
-    public void setProtocolHandler(ProtocolHandler protoHandler) {
-        this.protocolHandler = protoHandler;
-        protoHandler.ship = this;
-        BayLog.debug("%s protocol handler is set", this);
     }
 
     public WarpHandler warpHandler() {
@@ -291,13 +278,13 @@ public final class WarpShip extends Ship {
             cmdBuf.add(p);
         }
         else {
-            protocolHandler.commandPacker.post(this, cmd, listener);
+            protocolHandler.post(cmd, listener);
         }
     }
 
     public void flush() throws IOException {
         for(Pair<Command, DataConsumeListener> cmdAndLis: cmdBuf) {
-            protocolHandler.commandPacker.post(this, cmdAndLis.a, cmdAndLis.b);
+            protocolHandler.post(cmdAndLis.a, cmdAndLis.b);
         }
         cmdBuf.clear();
     }

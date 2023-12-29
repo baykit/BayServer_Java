@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.docker.http.h1;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.UpgradeException;
+import yokohama.baykit.bayserver.docker.http.h2.H2InboundHandler;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.common.InboundHandler;
 import yokohama.baykit.bayserver.protocol.*;
@@ -108,13 +109,13 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
         }
 
         CmdHeader cmd = CmdHeader.newResHeader(tur.res.headers, tur.req.protocol);
-        commandPacker.post(ship, cmd);
+        post(cmd);
     }
 
     @Override
     public void sendResContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
         CmdContent cmd = new CmdContent(bytes, ofs, len);
-        commandPacker.post(ship, cmd, lis);
+        post(cmd, lis);
     }
 
     @Override
@@ -130,11 +131,11 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
                 ship.resume(sid);
             }
             else
-                commandPacker.end(ship);
+                ship.postman.postEnd();
         };
 
         try {
-            commandPacker.post(ship, cmd, () -> {
+            post(cmd, () -> {
                 BayLog.debug("%s call back of end content command: tur=%s", ship, tur);
                 ensureFunc.run();
                 lis.dataConsumed();
@@ -187,7 +188,7 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
             HtpPortDocker port = (HtpPortDocker)sip.portDocker();
             if(port.supportH2) {
                 sip.portDocker().returnProtocolHandler(sip.agentId, this);
-                ProtocolHandler newHnd = ProtocolHandlerStore.getStore(HtpDocker.H2_PROTO_NAME, true, sip.agentId).rent();
+                H2InboundHandler newHnd = (H2InboundHandler)ProtocolHandlerStore.getStore(HtpDocker.H2_PROTO_NAME, true, sip.agentId).rent();
                 sip.setProtocolHandler(newHnd);
                 throw new UpgradeException();
             }
