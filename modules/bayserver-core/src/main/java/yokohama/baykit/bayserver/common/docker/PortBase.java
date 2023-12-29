@@ -225,40 +225,41 @@ public abstract class PortBase extends DockerBase implements Port {
     }
 
     @Override
-    public Transporter newTransporter(GrandAgent agent, SelectableChannel ch) throws IOException {
-        InboundShip sip = getShipStore(agent).rent();
+    public Transporter newTransporter(int agentId, SelectableChannel ch) throws IOException {
+        InboundShip sip = getShipStore(agentId).rent();
         Transporter tp;
         if(secure())
             tp = secureDocker.createTransporter();
         else
             tp = new PlainTransporter(true, IOUtil.getSockRecvBufSize((SocketChannel)ch));
-        ProtocolHandler protoHnd = getProtocolHandlerStore(protocol(), agent).rent();
-        sip.initInbound(ch, agent, tp, this, protoHnd);
-        tp.init(agent.nonBlockingHandler, ch, new TcpDataListener(sip));
+        ProtocolHandler protoHnd = getProtocolHandlerStore(protocol(), agentId).rent();
+        sip.initInbound(ch, agentId, tp, this, protoHnd);
+        GrandAgent agt = GrandAgent.get(agentId);
+        tp.init(agt.nonBlockingHandler, ch, new TcpDataListener(sip));
         return tp;
     }
 
 
     @Override
-    public final void returnProtocolHandler(GrandAgent agt, ProtocolHandler protoHnd) {
+    public final void returnProtocolHandler(int agentId, ProtocolHandler protoHnd) {
         BayLog.debug("%s Return protocol handler: ", protoHnd);
-        getProtocolHandlerStore(protoHnd.protocol(), agt).Return(protoHnd);
+        getProtocolHandlerStore(protoHnd.protocol(), agentId).Return(protoHnd);
     }
 
     @Override
     public final void returnShip(InboundShip sip) {
         BayLog.debug("%s Return ship: ", sip);
-        getShipStore(sip.agent).Return(sip);
+        getShipStore(sip.agentId).Return(sip);
     }
 
     ///////////////////////////////////////////////////////////////////////
     // private methods
     ///////////////////////////////////////////////////////////////////////
-    protected static InboundShipStore getShipStore(GrandAgent agt) {
-        return InboundShipStore.getStore(agt.agentId);
+    protected static InboundShipStore getShipStore(int agentId) {
+        return InboundShipStore.getStore(agentId);
     }
 
-    protected static ProtocolHandlerStore getProtocolHandlerStore(String protocol, GrandAgent agt) {
-        return ProtocolHandlerStore.getStore(protocol, true, agt.agentId);
+    protected static ProtocolHandlerStore getProtocolHandlerStore(String protocol, int agentId) {
+        return ProtocolHandlerStore.getStore(protocol, true, agentId);
     }
 }

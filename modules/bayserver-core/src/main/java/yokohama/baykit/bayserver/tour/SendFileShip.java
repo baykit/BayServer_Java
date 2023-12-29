@@ -23,14 +23,14 @@ public class SendFileShip extends ReadOnlyShip {
     }
 
     public void init(InputStream input, Tour tur, Valve vlv) throws IOException {
-        super.init(input, tur.ship.agent, vlv);
+        super.init(input, tur.ship.agentId, vlv);
         this.tour = tur;
         this.tourId = tur.tourId;
     }
 
     @Override
     public String toString() {
-        return agent + " send_file#" + shipId + "/" + objectId;
+        return "agt# " + agentId + " send_file#" + shipId + "/" + objectId;
     }
 
 

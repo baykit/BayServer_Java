@@ -39,20 +39,20 @@ public class InboundShip extends Ship {
 
     public void initInbound(
             SelectableChannel ch,
-            GrandAgent agt,
+            int agentId,
             Transporter tp,
             Port portDkr,
             ProtocolHandler protoHandler) {
-        super.init(ch, agt, tp, tp);
+        super.init(ch, agentId, tp, tp);
         this.portDkr = portDkr;
         this.socketTimeoutSec = portDkr.timeoutSec() >= 0 ? portDkr.timeoutSec() : BayServer.harbor.socketTimeoutSec();
-        this.tourStore = TourStore.getStore(agt.agentId);
+        this.tourStore = TourStore.getStore(agentId);
         setProtocolHandler(protoHandler);
     }
 
     @Override
     public String toString() {
-        return agent + " ship#" + shipId + "/" + objectId + "[" + protocol() + "]";
+        return "agt#" + agentId + " ship#" + shipId + "/" + objectId + "[" + protocol() + "]";
     }
 
 
@@ -230,7 +230,7 @@ public class InboundShip extends Ship {
 
     void endShip() {
         BayLog.debug("%s endShip", this);
-        portDkr.returnProtocolHandler(agent, protocolHandler);
+        portDkr.returnProtocolHandler(agentId, protocolHandler);
         portDkr.returnShip(this);
     }
 

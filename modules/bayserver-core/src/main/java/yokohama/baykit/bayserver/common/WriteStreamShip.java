@@ -12,7 +12,7 @@ public class WriteStreamShip extends WriteOnlyShip {
 
     @Override
     public String toString() {
-        return agent + " log#" + shipId + "/" + objectId;
+        return "agt#" + agentId + " log#" + shipId + "/" + objectId;
     }
 
 
@@ -42,8 +42,8 @@ public class WriteStreamShip extends WriteOnlyShip {
     /////////////////////////////////////
     // Custom methods
     /////////////////////////////////////
-    public void init(GrandAgent agt, WriteStreamTaxi txi) throws IOException{
-        super.init(agt);
+    public void init(int agentId, WriteStreamTaxi txi) throws IOException{
+        super.init(agentId);
         this.taxi = txi;
     }
 

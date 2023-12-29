@@ -139,7 +139,7 @@ public abstract class WarpBase extends ClubBase implements Warp {
     @Override
     public void arrive(Tour tour) throws HttpException {
 
-        GrandAgent agt = tour.ship.agent;
+        GrandAgent agt = GrandAgent.get(tour.ship.agentId);
         WarpShipStore sto = getShipStore(agt.agentId);
 
         WarpShip wsip = sto.rent();
@@ -161,7 +161,7 @@ public abstract class WarpBase extends ClubBase implements Warp {
                 ch.configureBlocking(false);
                 tp = newTransporter(agt, ch);
                 ProtocolHandler protoHnd = ProtocolHandlerStore.getStore(protocol(), false, agt.agentId).rent();
-                wsip.initWarp(ch, agt, tp, this, protoHnd);
+                wsip.initWarp(ch, agt.agentId, tp, this, protoHnd);
                 tp.init(agt.nonBlockingHandler, ch, new TcpDataListener(wsip));
                 BayLog.debug("%s init warp ship", wsip);
                 needConnect = true;
@@ -212,16 +212,16 @@ public abstract class WarpBase extends ClubBase implements Warp {
     @Override
     public void onEndTour(Ship warpShip) {
         BayLog.debug("%s keep warp ship: %s", this, warpShip);
-        getShipStore(warpShip.agent.agentId).keep((WarpShip) warpShip);
+        getShipStore(warpShip.agentId).keep((WarpShip) warpShip);
 
     }
 
     @Override
     public void onEndShip(Ship warpShip) {
         BayLog.debug("%s Return protocol handler: ", warpShip);
-        getProtocolHandlerStore(warpShip.agent.agentId).Return(warpShip.protocolHandler);
+        getProtocolHandlerStore(warpShip.agentId).Return(warpShip.protocolHandler);
         BayLog.debug("%s return warp ship", warpShip);
-        getShipStore(warpShip.agent.agentId).Return((WarpShip) warpShip);
+        getShipStore(warpShip.agentId).Return((WarpShip) warpShip);
     }
 
     /////////////////////////////////////

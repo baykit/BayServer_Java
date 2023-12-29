@@ -85,7 +85,7 @@ public class GrandAgent extends Thread {
             if(!anchorable) {
                 for (DatagramChannel ch : unanchorablePortMap.keySet()) {
                     Port p = unanchorablePortMap.get(ch);
-                    Transporter tp = p.newTransporter(this, ch);
+                    Transporter tp = p.newTransporter(this.agentId, ch);
                     unanchorableTransporters.put(ch, tp);
                     nonBlockingHandler.addChannelListener(ch, tp);
                     nonBlockingHandler.askToStart(ch);

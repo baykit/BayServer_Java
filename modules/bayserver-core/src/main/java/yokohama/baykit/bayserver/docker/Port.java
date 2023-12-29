@@ -39,9 +39,9 @@ public interface Port {
 
     City findCity(String name);
 
-    Transporter newTransporter(GrandAgent agent, SelectableChannel ch) throws IOException;
+    Transporter newTransporter(int agentId, SelectableChannel ch) throws IOException;
 
-    void returnProtocolHandler(GrandAgent agent, ProtocolHandler protoHnd);
+    void returnProtocolHandler(int agentId, ProtocolHandler protoHnd);
 
     void returnShip(InboundShip ship);
 

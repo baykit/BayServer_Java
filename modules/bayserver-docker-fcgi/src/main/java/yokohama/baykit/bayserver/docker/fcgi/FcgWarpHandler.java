@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.docker.fcgi;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
+import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.common.WarpData;
 import yokohama.baykit.bayserver.common.WarpHandler;
@@ -98,7 +99,8 @@ public class FcgWarpHandler extends FcgProtocolHandler implements WarpHandler {
     @Override
     public void postWarpEnd(Tour tur) throws IOException {
         sendStdIn(tur, null, 0, 0, () -> {
-            ship.agent.nonBlockingHandler.askToRead(ship.ch);
+            GrandAgent agt = GrandAgent.get(ship.agentId);
+            agt.nonBlockingHandler.askToRead(ship.ch);
         });
     }
 

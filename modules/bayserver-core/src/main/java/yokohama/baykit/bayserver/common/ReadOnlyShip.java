@@ -13,8 +13,8 @@ public abstract class ReadOnlyShip extends Ship {
 
     public InputStream input;
 
-    protected void init(InputStream input, GrandAgent agt, Valve vlv) {
-        super.init(null, agt, null, vlv);
+    protected void init(InputStream input, int agentId, Valve vlv) {
+        super.init(null, agentId, null, vlv);
         this.input = input;
     }
 

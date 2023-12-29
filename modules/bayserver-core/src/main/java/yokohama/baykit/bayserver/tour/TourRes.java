@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.tour;
 
 import yokohama.baykit.bayserver.*;
+import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.common.ReadStreamTaxi;
@@ -398,11 +399,12 @@ public class TourRes implements Reusable {
                 int bufsize = tour.ship.protocolHandler.maxResPacketDataSize();
                 switch(BayServer.harbor.fileSendMethod()) {
                     case Spin: {
+                        GrandAgent agt = GrandAgent.get(tour.ship.agentId);
                         int timeout = 10;
                         SpinReadTransporter tp = new SpinReadTransporter(bufsize);
                         sendFileShip.init(in, tour, tp);
                         tp.init(
-                                tour.ship.agent.spinHandler,
+                                agt.spinHandler,
                                 new TcpDataListener(sendFileShip),
                                 new FileInputStream(file),
                                 (int)file.length(),
@@ -419,7 +421,7 @@ public class TourRes implements Reusable {
                     }
 
                     case Taxi:{
-                        ReadStreamTaxi txi = new ReadStreamTaxi(tour.ship.agent.agentId, bufsize);
+                        ReadStreamTaxi txi = new ReadStreamTaxi(tour.ship.agentId, bufsize);
                         sendFileShip.init(in, tour, txi);
                         txi.init(in, new TcpDataListener(sendFileShip));
                         int sid = sendFileShip.id();
@@ -428,7 +430,7 @@ public class TourRes implements Reusable {
                                 sendFileShip.resume(sid);
                             }
                         });
-                        if(!TaxiRunner.post(tour.ship.agent.agentId, txi)) {
+                        if(!TaxiRunner.post(tour.ship.agentId, txi)) {
                             throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");
                         }
                         break;
