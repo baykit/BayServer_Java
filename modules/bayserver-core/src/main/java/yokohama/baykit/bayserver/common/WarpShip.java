@@ -34,7 +34,7 @@ public final class WarpShip extends Ship {
 
     @Override
     public String toString() {
-        return agent + " wsip#" + shipId + "/" + objectId + "[" + protocol() + "]";
+        return "agt#" + agentId + " wsip#" + shipId + "/" + objectId + "[" + protocol() + "]";
     }
 
 
@@ -43,11 +43,11 @@ public final class WarpShip extends Ship {
     /////////////////////////////////////
     public void initWarp(
             SocketChannel ch,
-            GrandAgent agent,
+            int agentId,
             Transporter tp,
             Warp dkr,
             ProtocolHandler protoHandler) {
-        super.init(ch, agent, tp, tp);
+        super.init(ch, agentId, tp, tp);
         this.docker = dkr;
         this.socketTimeoutSec = dkr.timeoutSec() >= 0 ? dkr.timeoutSec() : BayServer.harbor.socketTimeoutSec();
         setProtocolHandler(protoHandler);
@@ -77,7 +77,8 @@ public final class WarpShip extends Ship {
         ((WarpHandler)protocolHandler).verifyProtocol(protocol);
 
         //  Send pending packet
-        agent.nonBlockingHandler.askToWrite(ch);
+        GrandAgent agt = GrandAgent.get(agentId);
+        agt.nonBlockingHandler.askToWrite(ch);
         return NextSocketAction.Continue;
     }
 

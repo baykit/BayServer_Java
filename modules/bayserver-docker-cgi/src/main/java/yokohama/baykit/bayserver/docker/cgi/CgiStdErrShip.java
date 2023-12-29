@@ -20,15 +20,15 @@ public class CgiStdErrShip extends ReadOnlyShip  {
 
     @Override
     public String toString() {
-        return agent + " err_sip#" + shipId + "/" + objectId;
+        return "agt# " + agentId + " err_sip#" + shipId + "/" + objectId;
     }
 
 
     /////////////////////////////////////
     // Initialize methods
     /////////////////////////////////////
-    public void init(InputStream input, GrandAgent agt, CgiReqContentHandler handler) {
-        super.init(input, agt, null);
+    public void init(InputStream input, int agentId, CgiReqContentHandler handler) {
+        super.init(input, agentId, null);
         this.handler = handler;
     }
 

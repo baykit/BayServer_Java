@@ -4,6 +4,7 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.Constants;
+import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.Town;
@@ -219,7 +220,8 @@ public class H1WarpHandler extends H1ProtocolHandler implements WarpHandler {
     public void postWarpEnd(Tour tur) throws IOException {
         CmdEndContent cmd = new CmdEndContent();
         ship().post(cmd, () -> {
-            ship.agent.nonBlockingHandler.askToRead(ship.ch);
+            GrandAgent agt = GrandAgent.get(ship.agentId);
+            agt.nonBlockingHandler.askToRead(ship.ch);
         });
     }
 

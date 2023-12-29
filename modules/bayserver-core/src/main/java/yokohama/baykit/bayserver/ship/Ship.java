@@ -28,7 +28,7 @@ public abstract class Ship implements Reusable {
 
     public final int objectId;
     public int shipId;
-    public GrandAgent agent;
+    public int agentId;
     public Postman postman;
     public Valve valve;
     public SelectableChannel ch;
@@ -45,11 +45,11 @@ public abstract class Ship implements Reusable {
     // Initialize mthods
     /////////////////////////////////////
 
-    protected void init(SelectableChannel ch, GrandAgent agent, Postman pm, Valve vlv){
+    protected void init(SelectableChannel ch, int agentId, Postman pm, Valve vlv){
         if(initialized)
             throw new Sink("Ship already initialized");
         this.shipId = idCounter.next();
-        this.agent = agent;
+        this.agentId = agentId;
         this.postman = pm;
         this.valve = vlv;
         this.ch = ch;
@@ -69,7 +69,7 @@ public abstract class Ship implements Reusable {
             postman.reset();
         postman = null;  // for reloading certification
         protocolHandler = null;
-        agent = null;
+        agentId = -1;
         shipId = INVALID_SHIP_ID;
         ch = null;
         keeping = false;
