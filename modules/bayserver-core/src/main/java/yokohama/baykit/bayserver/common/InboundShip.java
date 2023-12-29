@@ -26,14 +26,11 @@ import java.util.List;
 /**
  * Handles TCP/IP connection
  */
-public class InboundShip extends Ship {
+public class InboundShip extends ProtocolizedShip {
 
     protected Port portDkr;
 
     static Counter errCounter = new Counter();
-
-    public SelectableChannel ch;
-    public ProtocolHandler protocolHandler;
 
     boolean needEnd;
     protected int socketTimeoutSec;
@@ -47,12 +44,10 @@ public class InboundShip extends Ship {
             Transporter tp,
             Port portDkr,
             ProtocolHandler protoHandler) {
-        super.init(agentId, tp, tp);
+        initProtocolized(ch, agentId, tp, protoHandler);
         this.portDkr = portDkr;
-        this.ch = ch;
         this.socketTimeoutSec = portDkr.timeoutSec() >= 0 ? portDkr.timeoutSec() : BayServer.harbor.socketTimeoutSec();
         this.tourStore = TourStore.getStore(agentId);
-        setProtocolHandler(protoHandler);
     }
 
     @Override
@@ -74,8 +69,6 @@ public class InboundShip extends Ship {
                 throw new Sink("%s There are some running tours", this);
             }
         }
-        ch = null;
-        protocolHandler = null;
         needEnd = false;
     }
 
@@ -148,12 +141,6 @@ public class InboundShip extends Ship {
     ////////////////////////////////////////////////////////////////////////////////
     public Port portDocker() {
         return portDkr;
-    }
-
-    public void setProtocolHandler(ProtocolHandler protoHandler) {
-        this.protocolHandler = protoHandler;
-        protoHandler.ship = this;
-        BayLog.debug("%s protocol handler is set", this);
     }
 
     public Tour getTour(int turKey) {

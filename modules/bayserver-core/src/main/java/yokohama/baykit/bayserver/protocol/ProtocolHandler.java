@@ -1,7 +1,9 @@
 package yokohama.baykit.bayserver.protocol;
 
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.common.Postman;
 import yokohama.baykit.bayserver.util.ClassUtil;
+import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Reusable;
 import yokohama.baykit.bayserver.ship.Ship;
 
@@ -62,5 +64,13 @@ public abstract class ProtocolHandler<C extends Command<C, P, T, ?>, P extends P
 
     public NextSocketAction bytesReceived(ByteBuffer buf) throws IOException {
         return packetUnpacker.bytesReceived(buf);
+    }
+
+    public final void post(C cmd) throws IOException {
+        post(cmd, null);
+    }
+
+    public void post(C cmd, DataConsumeListener listener) throws IOException {
+        commandPacker.post(ship.postman, cmd, listener);
     }
 }

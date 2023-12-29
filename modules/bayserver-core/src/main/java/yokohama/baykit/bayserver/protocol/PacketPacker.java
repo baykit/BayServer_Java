@@ -20,12 +20,4 @@ public class PacketPacker<P extends Packet<?>> implements Reusable {
 
         pm.post(ByteBuffer.wrap(pkt.buf, 0, pkt.bufLen), null, pkt, () -> listener.dataConsumed());
     }
-
-    public void flush(Postman pm) {
-        pm.flush();
-    }
-
-    public void end(Postman pm) {
-        pm.postEnd();
-    }
 }

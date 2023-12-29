@@ -99,20 +99,20 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
         // cmd.streamDependency = streamId;
         cmd.flags.setPadded(false);
 
-        commandPacker.post(ship, cmd);
+        post(cmd);
     }
 
     @Override
     public void sendResContent(Tour tur, byte[] bytes, int ofs, final int len, DataConsumeListener lis) throws IOException {
         CmdData cmd = new CmdData(tur.req.key, null, bytes, ofs, len);
-        commandPacker.post(ship, cmd, lis);
+        post(cmd, lis);
     }
 
     @Override
     public void sendEndTour(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
         CmdData cmd = new CmdData(tur.req.key, null, new byte[0], 0, 0);
         cmd.flags.setEndStream(true);
-        commandPacker.post(ship, cmd, lis);
+        post(cmd, lis);
     }
 
     @Override
@@ -125,8 +125,8 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
         cmd.errorCode = H2ErrorCode.PROTOCOL_ERROR;
         cmd.debugData = "Thank you!".getBytes(StandardCharsets.UTF_8);
         try {
-            commandPacker.post(ship, cmd);
-            commandPacker.end(ship);
+            post(cmd);
+            ship.postman.postEnd();
         }
         catch(IOException ex) {
             BayLog.error(ex);
@@ -151,7 +151,7 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
         set.streamId = 0;
         set.items.add(new CmdSettings.Item(CmdSettings.MAX_CONCURRENT_STREAMS, TourStore.MAX_TOURS));
         set.items.add(new CmdSettings.Item(CmdSettings.INITIAL_WINDOW_SIZE, windowSize));
-        commandPacker.post(sip, set);
+        post(set);
 
         set = new CmdSettings(CTL_STREAM_ID);
         set.streamId = 0;
@@ -270,8 +270,8 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
                                     upd2.windowSizeIncrement = len;
                                     CommandPacker cmdPacker = commandPacker;
                                     try {
-                                        cmdPacker.post(tur.ship, upd);
-                                        cmdPacker.post(tur.ship, upd2);
+                                        post(upd);
+                                        post(upd2);
                                     }
                                     catch(IOException e) {
                                         BayLog.error(e);
@@ -348,7 +348,7 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
         }
 
         CmdSettings res = new CmdSettings(0, new H2Flags(H2Flags.FLAGS_ACK));
-        commandPacker.post(sip, res);
+        post(res);
         return NextSocketAction.Continue;
     }
 
@@ -386,7 +386,7 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
         BayLog.debug("%s handle_ping: stm=%d", sip, cmd.streamId);
 
         CmdPing res = new CmdPing(cmd.streamId, new H2Flags(H2Flags.FLAGS_ACK), cmd.opaqueData);
-        commandPacker.post(sip, res);
+        post(res);
         return NextSocketAction.Continue;
     }
 

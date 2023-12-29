@@ -1,7 +1,7 @@
 package yokohama.baykit.bayserver.protocol;
 
 
-import yokohama.baykit.bayserver.ship.Ship;
+import yokohama.baykit.bayserver.common.Postman;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Reusable;
 
@@ -26,16 +26,16 @@ public class CommandPacker<C extends Command<C, P, T, H>, P extends Packet<T>, T
     public void reset() {
     }
 
-    public void post(Ship ship, C cmd) throws IOException {
-        post(ship, cmd, null);
+    public void post(Postman pm, C cmd) throws IOException {
+        post(pm, cmd, null);
     }
 
-    public void post(Ship sip, C cmd, DataConsumeListener listener) throws IOException {
+    public void post(Postman pm, C cmd, DataConsumeListener listener) throws IOException {
         P pkt = pktStore.rent(cmd.type);
 
         try {
             cmd.pack(pkt);
-            pktPacker.post(sip.postman, pkt, () -> {
+            pktPacker.post(pm, pkt, () -> {
                 pktStore.Return(pkt);
                 if (listener != null)
                     listener.dataConsumed();
@@ -45,13 +45,5 @@ public class CommandPacker<C extends Command<C, P, T, H>, P extends Packet<T>, T
             pktStore.Return(pkt);
             throw e;
         }
-    }
-
-    public void flush(Ship ship) {
-        pktPacker.flush(ship.postman);
-    }
-
-    public void end(Ship ship) {
-        pktPacker.end(ship.postman);
     }
 }
