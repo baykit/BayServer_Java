@@ -148,9 +148,8 @@ public class GrandAgentMonitor {
         Pipe sendPipe = Pipe.open();
         Pipe recvPipe = Pipe.open();
 
-        GrandAgent.add(agtId, anchorablePortMap, unanchorablePortMap, anchorable);
+        GrandAgent agt = GrandAgent.add(agtId, anchorablePortMap, unanchorablePortMap, anchorable);
 
-        GrandAgent agt = GrandAgent.get(agtId);
         Thread t = new Thread(agt);
         agt.runCommandReceiver(sendPipe.source(), recvPipe.sink());
         t.start();

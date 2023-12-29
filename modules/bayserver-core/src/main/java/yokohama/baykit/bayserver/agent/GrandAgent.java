@@ -31,7 +31,7 @@ public class GrandAgent extends Thread {
     Map<ServerSocketChannel, Port> anchorablePortMap;
     Map<DatagramChannel, Port> unanchorablePortMap;
     public boolean anchorable;
-    final Selector selector;
+    Selector selector;
     public SpinHandler spinHandler;
     public NonBlockingHandler nonBlockingHandler;
     public AcceptHandler acceptHandler;
@@ -46,7 +46,7 @@ public class GrandAgent extends Thread {
             int maxShips,
             Map<ServerSocketChannel, Port> anchorablePortMap,
             Map<DatagramChannel, Port> unanchorablePortMap,
-            boolean anchorable) throws IOException {
+            boolean anchorable) {
         super("GrandAgent#" + agentId);
         this.agentId = agentId;
         this.anchorable = anchorable;
@@ -61,7 +61,13 @@ public class GrandAgent extends Thread {
 
         this.spinHandler = new SpinHandler(this);
         this.nonBlockingHandler = new NonBlockingHandler(this);
-        this.selector = Selector.open();
+        try {
+            this.selector = Selector.open();
+        }
+        catch(IOException e) {
+            BayLog.fatal(e);
+            System.exit(1);
+        }
         this.maxInboundShips = maxShips > 0 ? maxShips : 1;
     }
 
@@ -247,11 +253,11 @@ public class GrandAgent extends Thread {
         return agents.get(id);
     }
 
-    public static void add(
+    public static GrandAgent add(
             int agtId,
             Map<ServerSocketChannel, Port> anchorablePortMap,
             Map<DatagramChannel, Port> unanchorablePortMap,
-            boolean anchorable) throws IOException {
+            boolean anchorable) {
         if(agtId == -1)
             agtId = ++maxAgentId;
         BayLog.debug("Add agent: id=%d", agtId);
@@ -263,6 +269,7 @@ public class GrandAgent extends Thread {
         agents.put(agtId, agt);
 
         listeners.forEach(lis -> lis.add(agt.agentId));
+        return agt;
     }
 
     public static void addLifecycleListener(LifecycleListener lis) {
