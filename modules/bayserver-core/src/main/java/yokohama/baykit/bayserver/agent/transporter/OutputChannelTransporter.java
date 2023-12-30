@@ -11,37 +11,38 @@ import yokohama.baykit.bayserver.util.Reusable;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
+import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 
 /**
  * Transporter for InputStream/OutputStream
  */
-public class OutputStreamTransporter implements ChannelListener<OutputStream>, Reusable, Postman {
+public class OutputChannelTransporter implements ChannelListener, Reusable, Postman {
 
     int agentId;
     DataListener dataListener;
-    OutputStream stream;
+    Channel channel;
     Valve valve;
-    protected ArrayList<ByteBuffer> writeQueue = new ArrayList<>();
+    protected final ArrayList<ByteBuffer> writeQueue = new ArrayList<>();
     boolean initialized = false;
 
-    public OutputStreamTransporter(int agtId) {
+    public OutputChannelTransporter(int agtId) {
         this.agentId = agtId;
     }
 
-    public void init(OutputStream stm, DataListener lis, Valve vlv) {
+    public void init(Channel ch, DataListener lis, Valve vlv) {
 
         if(initialized)
-            throw new Sink(this + " This transporter is already in use by channel: " + stream);
+            throw new Sink(this + " This transporter is already in use by channel: " + channel);
         if(!writeQueue.isEmpty())
             throw new Sink();
 
         this.dataListener = lis;
-        this.stream = stm;
+        this.channel = ch;
         this.valve = vlv;
         this.initialized = true;
     }
@@ -53,7 +54,7 @@ public class OutputStreamTransporter implements ChannelListener<OutputStream>, R
     @Override
     public void reset() {
         dataListener = null;
-        stream = null;
+        channel = null;
         writeQueue.clear();
         initialized = false;
     }
@@ -64,12 +65,12 @@ public class OutputStreamTransporter implements ChannelListener<OutputStream>, R
     /////////////////////////////////////
 
     @Override
-    public NextSocketAction onReadable(OutputStream chkCh) throws IOException {
+    public NextSocketAction onReadable(Channel chkCh) throws IOException {
         throw new Sink();
     }
 
     @Override
-    public NextSocketAction onWritable(OutputStream chkCh) throws IOException {
+    public NextSocketAction onWritable(Channel chkCh) throws IOException {
         checkStream(chkCh);
 
         while(true) {
@@ -79,32 +80,32 @@ public class OutputStreamTransporter implements ChannelListener<OutputStream>, R
                     break;
                 buf = writeQueue.remove(0);
             }
-            stream.write(buf.array(), 0, buf.limit());
+            ((WritableByteChannel)channel).write(buf);
         }
         return NextSocketAction.Continue;
     }
 
     @Override
-    public NextSocketAction onConnectable(OutputStream chkCh) throws IOException {
+    public NextSocketAction onConnectable(Channel chkCh) throws IOException {
         throw new Sink();
     }
 
     @Override
-    public void onError(OutputStream chkCh, Throwable e) {
+    public void onError(Channel chkCh, Throwable e) {
         checkStream(chkCh);
 
         BayLog.debug(e);
     }
 
     @Override
-    public void onClosed(OutputStream chkCh) {
+    public void onClosed(Channel chkCh) {
         checkStream(chkCh);
 
         dataListener.notifyClose();
     }
 
     @Override
-    public boolean checkTimeout(OutputStream chkCh, int durationSec) {
+    public boolean checkTimeout(Channel chkCh, int durationSec) {
         return dataListener.checkTimeout(durationSec);
     }
 
@@ -147,7 +148,7 @@ public class OutputStreamTransporter implements ChannelListener<OutputStream>, R
     /////////////////////////////////////
 
     private void checkStream(Closeable chkCh) {
-        if(chkCh != stream)
+        if(chkCh != channel)
             throw new Sink("Invalid transporter instance (ship was returned?)");
     }
 }

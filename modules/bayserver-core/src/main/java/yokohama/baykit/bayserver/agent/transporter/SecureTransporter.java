@@ -11,7 +11,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectableChannel;
+import java.nio.channels.Channel;
 import java.nio.channels.SocketChannel;
 
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
@@ -35,7 +35,7 @@ public class SecureTransporter extends Transporter {
     }
 
     @Override
-    public void init(NonBlockingHandler nbHnd, SelectableChannel ch, DataListener lis) {
+    public void init(NonBlockingHandler nbHnd, Channel ch, DataListener lis) {
         super.init(nbHnd, ch, lis);
         sslh = new SSLHandler(ctx, appProtocols, serverMode);
         if (netIn == null)

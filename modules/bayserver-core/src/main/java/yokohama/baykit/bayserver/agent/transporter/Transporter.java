@@ -22,7 +22,7 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 
-public abstract class Transporter implements ChannelListener<Channel>, Reusable, Postman, Valve {
+public abstract class Transporter implements ChannelListener, Reusable, Postman, Valve {
     
     protected static class WaitReadableException extends IOException {
 
@@ -51,7 +51,7 @@ public abstract class Transporter implements ChannelListener<Channel>, Reusable,
     protected final boolean serverMode;
     protected final boolean traceSSL;
     protected final boolean writeOnly;
-    protected SelectableChannel ch;
+    protected Channel ch;
     protected ArrayList<WriteUnit> writeQueue = new ArrayList<>();
     protected boolean finale;
     protected boolean initialized;
@@ -80,7 +80,7 @@ public abstract class Transporter implements ChannelListener<Channel>, Reusable,
         this(serverMode, traceSSL, false);
     }
 
-    public void init(NonBlockingHandler chHnd, SelectableChannel ch, DataListener lis) {
+    public void init(NonBlockingHandler chHnd, Channel ch, DataListener lis) {
 
         if(initialized)
             throw new Sink(this + " This transporter is already in use by channel: " + ch);
@@ -130,7 +130,7 @@ public abstract class Transporter implements ChannelListener<Channel>, Reusable,
                 writeQueue.add(unt);
             }
             BayLog.trace("%s sendBytes->askToWrite", this);
-            nonBlockingHandler.askToWrite(ch);
+            nonBlockingHandler.askToWrite((SelectableChannel) ch);
         }
     }
 
@@ -140,12 +140,12 @@ public abstract class Transporter implements ChannelListener<Channel>, Reusable,
 
     public void openValve() {
         BayLog.debug("%s open valve", this);
-        nonBlockingHandler.askToRead(ch);
+        nonBlockingHandler.askToRead((SelectableChannel) ch);
     }
 
     public void abort() {
         BayLog.debug("%s abort", this);
-        nonBlockingHandler.askToClose(ch);
+        nonBlockingHandler.askToClose((SelectableChannel) ch);
     }
 
     public boolean isZombie() {
@@ -346,7 +346,7 @@ public abstract class Transporter implements ChannelListener<Channel>, Reusable,
         if(chValid) {
             if (!writeQueue.isEmpty()) {
                 BayLog.debug("%s flush->askToWrite", this);
-                nonBlockingHandler.askToWrite(ch);
+                nonBlockingHandler.askToWrite((SelectableChannel) ch);
             }
         }
     }
@@ -362,7 +362,7 @@ public abstract class Transporter implements ChannelListener<Channel>, Reusable,
         if(chValid) {
             if (!writeQueue.isEmpty()) {
                 BayLog.debug("%s postEnd->askToWrite len=%d", this, writeQueue.size());
-                nonBlockingHandler.askToWrite(ch);
+                nonBlockingHandler.askToWrite((SelectableChannel) ch);
             }
         }
     }

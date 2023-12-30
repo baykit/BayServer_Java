@@ -1,21 +1,11 @@
 package yokohama.baykit.bayserver.tour;
 
 import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.transporter.InputStreamTransporter;
-import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
-import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
-import yokohama.baykit.bayserver.common.ReadStreamTaxi;
-import yokohama.baykit.bayserver.common.ReadStreamTrain;
 import yokohama.baykit.bayserver.docker.Trouble;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
-import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.util.*;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.StringTokenizer;
 
 public class TourRes implements Reusable {

@@ -3,16 +3,17 @@ package yokohama.baykit.bayserver.docker.builtin;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
+import yokohama.baykit.bayserver.agent.transporter.OutputChannelTransporter;
+import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
 import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
-import yokohama.baykit.bayserver.agent.transporter.OutputStreamTransporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.common.Postman;
 import yokohama.baykit.bayserver.common.WriteOnlyShip;
 import yokohama.baykit.bayserver.common.WriteStreamTaxi;
+import yokohama.baykit.bayserver.common.docker.DockerBase;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Log;
-import yokohama.baykit.bayserver.common.docker.DockerBase;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.CharUtil;
 import yokohama.baykit.bayserver.util.StringUtil;
@@ -21,8 +22,8 @@ import yokohama.baykit.bayserver.util.SysUtil;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -36,8 +37,8 @@ public class BuiltInLogDocker extends DockerBase implements Log {
             String fileName = filePrefix + "_" + agentId + "." + fileExt;
             try {
                 WriteStreamTaxi txi = new WriteStreamTaxi(agentId);
-                OutputStreamTransporter tp = new OutputStreamTransporter(agentId);
-                OutputStream output = new FileOutputStream(fileName);
+                OutputChannelTransporter tp = new OutputChannelTransporter(agentId);
+                Channel output = new FileOutputStream(fileName).getChannel();
                 tp.init(output, new SimpleDataListener(new WriteOnlyShip() {
                     @Override
                     public void notifyClose() {

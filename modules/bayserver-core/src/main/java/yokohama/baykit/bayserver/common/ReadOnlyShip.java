@@ -1,21 +1,20 @@
 package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.ship.Ship;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.channels.Channel;
 
 public abstract class ReadOnlyShip extends Ship {
 
-    public InputStream input;
+    public Channel channel;
 
-    protected void init(InputStream input, int agentId, Valve vlv) {
+    protected void init(Channel ch, int agentId, Valve vlv) {
         super.init(agentId, null, vlv);
-        this.input = input;
+        this.channel = ch;
     }
 
     /////////////////////////////////////
@@ -23,7 +22,7 @@ public abstract class ReadOnlyShip extends Ship {
     /////////////////////////////////////
     public void reset() {
         super.reset();
-        this.input = null;
+        this.channel = null;
     }
 
     /////////////////////////////////////
