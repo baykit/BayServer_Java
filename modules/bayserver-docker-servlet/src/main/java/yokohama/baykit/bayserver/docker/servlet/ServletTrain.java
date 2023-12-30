@@ -19,6 +19,7 @@ import java.util.EventListener;
 class ServletTrain extends Train implements ReqContentHandler {
 
     private final ServletDocker docker;
+    final Tour tour;
     final HttpServletRequestDuck req;
     final HttpServletResponseDuck res;
     final FilterChainDuck chain;
@@ -26,8 +27,8 @@ class ServletTrain extends Train implements ReqContentHandler {
     final PipedInputStream pipeIn;
 
     public ServletTrain(ServletDocker docker, Tour tour, HttpServletRequestDuck req, HttpServletResponseDuck res, FilterChainDuck chain) {
-        super(tour);
         this.docker = docker;
+        this.tour = tour;
         this.req = req;
         this.res = res;
         this.chain = chain;
@@ -41,7 +42,7 @@ class ServletTrain extends Train implements ReqContentHandler {
     }
 
     @Override
-    public void depart() throws HttpException {
+    public void depart() {
 
         docker.setContextLoader();
         BayLog.debug(tour + " Run chain asyncSupported=" + req.isAsyncSupported() + " on " + Thread.currentThread());
@@ -81,8 +82,8 @@ class ServletTrain extends Train implements ReqContentHandler {
             try {
                 if (!asyncSupported || !asyncStarted) {
                     if(!tour.res.headerSent())
-                        tour.res.sendHeaders(tourId);
-                    tour.res.endContent(tourId);
+                        tour.res.sendHeaders(tour.tourId);
+                    tour.res.endContent(tour.tourId);
                 }
             } catch (Throwable ex) {
                 BayLog.error(ex);
@@ -91,7 +92,7 @@ class ServletTrain extends Train implements ReqContentHandler {
             BayLog.debug(tour.ship + " End chain");
         } catch (Throwable e) {
             try {
-                tour.res.sendError(tourId, HttpStatus.INTERNAL_SERVER_ERROR, null, e);
+                tour.res.sendError(tour.tourId, HttpStatus.INTERNAL_SERVER_ERROR, null, e);
             } catch (IOException ex) {
                 BayLog.error(ex);
             }
