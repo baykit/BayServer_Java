@@ -2,18 +2,15 @@ package yokohama.baykit.bayserver.ship;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.protocol.ProtocolException;
-import yokohama.baykit.bayserver.protocol.ProtocolHandler;
-import yokohama.baykit.bayserver.util.Counter;
 import yokohama.baykit.bayserver.common.Postman;
-import yokohama.baykit.bayserver.util.Reusable;
 import yokohama.baykit.bayserver.common.Valve;
+import yokohama.baykit.bayserver.protocol.ProtocolException;
+import yokohama.baykit.bayserver.util.Counter;
+import yokohama.baykit.bayserver.util.Reusable;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectableChannel;
 
 /**
  * Ship wraps TCP or UDP connection

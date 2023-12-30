@@ -9,17 +9,16 @@ import yokohama.baykit.bayserver.train.Train;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 
-public class ReadStreamTrain extends Train {
+public class ReadChannelTrain extends Train {
 
-    InputStream input;
-    ChannelListener<InputStream> channelListener;
+    Channel input;
+    ChannelListener channelListener;
     Tour tour;
     boolean available;
 
-    public ReadStreamTrain(InputStream input, ChannelListener<InputStream> channelListener, Tour tur) throws FileNotFoundException {
+    public ReadChannelTrain(Channel input, ChannelListener channelListener, Tour tur) throws FileNotFoundException {
         this.input = input;
         this.channelListener = channelListener;
         this.tour = tur;

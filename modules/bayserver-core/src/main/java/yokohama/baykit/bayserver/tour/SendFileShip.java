@@ -10,6 +10,7 @@ import yokohama.baykit.bayserver.common.Valve;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 
 public class SendFileShip extends ReadOnlyShip {
 
@@ -22,8 +23,8 @@ public class SendFileShip extends ReadOnlyShip {
         reset();
     }
 
-    public void init(InputStream input, Tour tur, Valve vlv) throws IOException {
-        super.init(input, tur.ship.agentId, vlv);
+    public void init(Channel ch, Tour tur, Valve vlv) throws IOException {
+        super.init(ch, tur.ship.agentId, vlv);
         this.tour = tur;
         this.tourId = tur.tourId;
     }

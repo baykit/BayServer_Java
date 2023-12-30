@@ -7,8 +7,8 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.WritableByteChannel;
 
 public class PlainTransporter extends Transporter {
@@ -24,8 +24,8 @@ public class PlainTransporter extends Transporter {
         this(serverMode, bufsiz, false);
     }
 
-        @Override
-    public void init(NonBlockingHandler nbHnd, SelectableChannel ch, DataListener lis) {
+    @Override
+    public void init(NonBlockingHandler nbHnd, Channel ch, DataListener lis) {
         super.init(nbHnd, ch, lis);
         needHandshake = false;
     }

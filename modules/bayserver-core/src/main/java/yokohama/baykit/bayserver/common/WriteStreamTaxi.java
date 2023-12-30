@@ -6,21 +6,21 @@ import yokohama.baykit.bayserver.taxi.Taxi;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.nio.channels.Channel;
 
 public class WriteStreamTaxi extends Taxi implements Valve {
 
 
     int agentId;
-    OutputStream output;
-    ChannelListener<OutputStream> channelListener;
+    Channel output;
+    ChannelListener channelListener;
     boolean chValid;
 
     public WriteStreamTaxi(int agentId){
         this.agentId = agentId;
     }
 
-    public void init(OutputStream out, ChannelListener<OutputStream> lis) throws IOException {
+    public void init(Channel out, ChannelListener lis) throws IOException {
         this.output = out;
         this.channelListener = lis;
         this.chValid = true;

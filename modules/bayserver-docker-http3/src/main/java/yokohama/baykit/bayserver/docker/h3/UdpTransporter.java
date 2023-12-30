@@ -8,8 +8,8 @@ import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.nio.channels.DatagramChannel;
-import java.nio.channels.SelectableChannel;
 
 public class UdpTransporter extends Transporter {
 
@@ -21,7 +21,7 @@ public class UdpTransporter extends Transporter {
     }
 
     @Override
-    public void init(NonBlockingHandler nbHnd, SelectableChannel ch, DataListener lis) {
+    public void init(NonBlockingHandler nbHnd, Channel ch, DataListener lis) {
         super.init(nbHnd, ch, lis);
         needHandshake = false;
     }

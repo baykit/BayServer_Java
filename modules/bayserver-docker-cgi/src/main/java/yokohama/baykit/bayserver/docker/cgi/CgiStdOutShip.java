@@ -13,6 +13,7 @@ import yokohama.baykit.bayserver.common.ReadOnlyShip;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.util.StringTokenizer;
 
 public class CgiStdOutShip extends ReadOnlyShip {
@@ -38,8 +39,8 @@ public class CgiStdOutShip extends ReadOnlyShip {
     /////////////////////////////////////
     // Initialize methods
     /////////////////////////////////////
-    public void init(InputStream input, int agentId, Tour tur, Valve vv, CgiReqContentHandler handler) {
-        super.init(input, agentId, vv);
+    public void init(Channel ch, int agentId, Tour tur, Valve vv, CgiReqContentHandler handler) {
+        super.init(ch, agentId, vv);
         this.handler = handler;
         this.tour = tur;
         this.tourId = tur.tourId;
