@@ -106,7 +106,7 @@ public class InboundShip extends ProtocolizedShip {
     }
 
     @Override
-    public synchronized void notifyClose() {
+    public void notifyClose() {
         BayLog.debug("%s notifyClose", this);
 
         abortTours();
@@ -235,7 +235,13 @@ public class InboundShip extends ProtocolizedShip {
         portDkr.returnShip(this);
     }
 
-    public void abortTours() {
+    private void abortTours() {
+        BayLog.debug("%s abort tours", this);
+        try {
+            throw new Exception("Abort Tours");
+        } catch (Exception e) {
+            BayLog.error(e);
+        }
         ArrayList<Tour> returnList = new ArrayList<>();
 
         // Abort tours

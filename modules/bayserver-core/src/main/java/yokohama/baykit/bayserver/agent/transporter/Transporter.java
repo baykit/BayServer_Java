@@ -22,7 +22,7 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 
-public abstract class Transporter implements ChannelListener, Reusable, Postman, Valve {
+public abstract class Transporter implements ChannelListener<Channel>, Reusable, Postman, Valve {
     
     protected static class WaitReadableException extends IOException {
 
@@ -171,8 +171,8 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
     }
 
     @Override
-    public final NextSocketAction onReadable(Channel ch) throws IOException {
-        checkChannel(ch);
+    public final NextSocketAction onReadable(Channel chkCh) throws IOException {
+        checkChannel(chkCh);
         BayLog.trace("%s onReadable", this);
 
         if(needHandshake) {
@@ -223,7 +223,7 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
             catch (IOException e) {
                 // IOException which occur in notifyRead must be distinguished from
                 // IOException which occur in handshake or readNonBlock.
-                onError(ch, e);
+                onError(chkCh, e);
                 return NextSocketAction.Close;
             }
         }
@@ -231,8 +231,8 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
 
 
     @Override
-    public NextSocketAction onWritable(Channel ch) throws IOException {
-        checkChannel(ch);
+    public NextSocketAction onWritable(Channel chkCh) throws IOException {
+        checkChannel(chkCh);
         BayLog.trace("%s onWritable", this);
 
         if(needHandshake) {

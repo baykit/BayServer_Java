@@ -3,19 +3,26 @@ package yokohama.baykit.bayserver.docker.builtin;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
+import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
+import yokohama.baykit.bayserver.agent.transporter.OutputStreamTransporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
-import yokohama.baykit.bayserver.common.WriteStreamShip;
+import yokohama.baykit.bayserver.common.Postman;
+import yokohama.baykit.bayserver.common.WriteOnlyShip;
 import yokohama.baykit.bayserver.common.WriteStreamTaxi;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Log;
 import yokohama.baykit.bayserver.common.docker.DockerBase;
 import yokohama.baykit.bayserver.tour.Tour;
+import yokohama.baykit.bayserver.util.CharUtil;
+import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.SysUtil;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,17 +34,28 @@ public class BuiltInLogDocker extends DockerBase implements Log {
         @Override
         public void add(int agentId) {
             String fileName = filePrefix + "_" + agentId + "." + fileExt;
-            WriteStreamShip lsip = new WriteStreamShip();
             try {
-                WriteStreamTaxi txi = new WriteStreamTaxi();
-                lsip.init(agentId, txi);
-                txi.init(agentId, new FileOutputStream(fileName));
+                WriteStreamTaxi txi = new WriteStreamTaxi(agentId);
+                OutputStreamTransporter tp = new OutputStreamTransporter(agentId);
+                OutputStream output = new FileOutputStream(fileName);
+                tp.init(output, new SimpleDataListener(new WriteOnlyShip() {
+                    @Override
+                    public void notifyClose() {
+
+                    }
+
+                    @Override
+                    public boolean checkTimeout(int durationSec) {
+                        return false;
+                    }
+                }), txi);
+                txi.init(output, tp);
+                loggers.put(agentId, tp);
             }
             catch(IOException e) {
                 BayLog.fatal(BayMessage.get(Symbol.INT_CANNOT_OPEN_LOG_FILE, fileName));
                 BayLog.fatal(e);
             }
-            loggers.put(agentId, lsip);
         }
 
         @Override
@@ -64,7 +82,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
      *  Logger for each agent.
      *  Map of Agent ID => LogBoat
      */
-    Map<Integer, WriteStreamShip> loggers = new HashMap<>();
+    Map<Integer, Postman> loggers = new HashMap<>();
 
     /** Log format */
     String format;
@@ -204,7 +222,9 @@ public class BuiltInLogDocker extends DockerBase implements Log {
 
         // If threre are message to write, write it
         if (sb.length() > 0) {
-            getLogger(tour.ship.agentId).log(sb.toString());
+            byte[] bytes = StringUtil.toBytes(sb.toString() + CharUtil.LF);
+            ByteBuffer buf = ByteBuffer.wrap(bytes, 0, bytes.length);
+            getPostman(tour.ship.agentId).post(buf, null, this, null);
         }
     }
 
@@ -291,7 +311,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
         compile(str, items, fileName, lineNo);
     }
 
-    private WriteStreamShip getLogger(int agentId) {
+    private Postman getPostman(int agentId) {
         return loggers.get(agentId);
     }
 }
