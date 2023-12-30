@@ -2,17 +2,18 @@ package yokohama.baykit.bayserver.docker.cgi;
 
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.transporter.InputStreamTransporter;
+import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
 import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
+import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.bcf.ParseException;
-import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
+import yokohama.baykit.bayserver.common.ReadStreamTaxi;
+import yokohama.baykit.bayserver.common.docker.ClubBase;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
-import yokohama.baykit.bayserver.common.ReadStreamTaxi;
 import yokohama.baykit.bayserver.tour.Tour;
-import yokohama.baykit.bayserver.bcf.BcfKeyVal;
-import yokohama.baykit.bayserver.common.docker.ClubBase;
 import yokohama.baykit.bayserver.util.CGIUtil;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.StringUtil;
@@ -143,7 +144,7 @@ public class CgiDocker extends ClubBase {
         handler.startTour(env);
 
         CgiStdOutShip outShip = new CgiStdOutShip();
-        CgiStdErrShip errSip = new CgiStdErrShip();
+        CgiStdErrShip errShip = new CgiStdErrShip();
 
         switch(procReadMethod) {
             case Spin: {
@@ -168,10 +169,10 @@ public class CgiDocker extends ClubBase {
                         ch);
 
                 SpinReadTransporter errTp = new SpinReadTransporter(bufsize);
-                errSip.init(handler.process.getErrorStream(), tur.ship.agentId, handler);
+                errShip.init(handler.process.getErrorStream(), tur.ship.agentId, handler);
                 errTp.init(
                         agt.spinHandler,
-                        new SimpleDataListener(errSip),
+                        new SimpleDataListener(errShip),
                         handler.process.getErrorStream(),
                         -1,
                         timeoutSec,
@@ -189,23 +190,28 @@ public class CgiDocker extends ClubBase {
             }
 
             case Taxi:{
-                ReadStreamTaxi outTxi = new ReadStreamTaxi(tur.ship.agentId, bufsize);
+                InputStreamTransporter outTp = new InputStreamTransporter(tur.ship.agentId, bufsize);
+                ReadStreamTaxi outTxi = new ReadStreamTaxi(tur.ship.agentId);
                 outShip.init(handler.process.getInputStream(), tur.ship.agentId, tur, outTxi, handler);
-                outTxi.init(handler.process.getInputStream(), new SimpleDataListener(outShip));
-                if(!TaxiRunner.post(tur.ship.agentId, outTxi)) {
-                    throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");
-                }
-
-                ReadStreamTaxi errTxi = new ReadStreamTaxi(tur.ship.agentId, bufsize);
-                errSip.init(handler.process.getErrorStream(), tur.ship.agentId, handler);
-                errTxi.init(handler.process.getErrorStream(), new SimpleDataListener(errSip));
-
+                outTxi.setChannelListener(handler.process.getInputStream(), outTp);
+                outTp.init(handler.process.getInputStream(), new SimpleDataListener(outShip));
                 int sipId = tur.ship.shipId;
                 tur.res.setConsumeListener((len, resume) -> {
                     if(resume) {
                         outShip.resume(sipId);
                     }
                 });
+
+                if(!TaxiRunner.post(tur.ship.agentId, outTxi)) {
+                    throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");
+                }
+
+
+                InputStreamTransporter errTp = new InputStreamTransporter(tur.ship.agentId, bufsize);
+                ReadStreamTaxi errTxi = new ReadStreamTaxi(tur.ship.agentId);
+                errShip.init(handler.process.getErrorStream(), tur.ship.agentId, handler);
+                errTxi.setChannelListener(handler.process.getErrorStream(), errTp);
+                errTp.init(handler.process.getErrorStream(), new SimpleDataListener(errShip));
 
                 if(!TaxiRunner.post(tur.ship.agentId, errTxi)) {
                     throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");

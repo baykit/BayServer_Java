@@ -2,15 +2,14 @@ package yokohama.baykit.bayserver.tour;
 
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.transporter.InputStreamTransporter;
+import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
 import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
-import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.common.ReadStreamTaxi;
 import yokohama.baykit.bayserver.common.ReadStreamTrain;
-import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
-import yokohama.baykit.bayserver.util.Reusable;
 import yokohama.baykit.bayserver.docker.Trouble;
-import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
+import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.util.*;
 
 import java.io.File;
@@ -410,6 +409,7 @@ public class TourRes implements Reusable {
                                 (int)file.length(),
                                 timeout,
                                 null);
+
                         int sid = sendFileShip.id();
                         tour.res.setConsumeListener((len, resume) -> {
                             if(resume) {
@@ -421,9 +421,12 @@ public class TourRes implements Reusable {
                     }
 
                     case Taxi:{
-                        ReadStreamTaxi txi = new ReadStreamTaxi(tour.ship.agentId, bufsize);
+                        ReadStreamTaxi txi = new ReadStreamTaxi(tour.ship.agentId);
                         sendFileShip.init(in, tour, txi);
-                        txi.init(in, new SimpleDataListener(sendFileShip));
+                        InputStreamTransporter tp = new InputStreamTransporter(tour.ship.agentId, bufsize);
+                        tp.init(in, new SimpleDataListener(sendFileShip));
+                        txi.setChannelListener(in, tp);
+
                         int sid = sendFileShip.id();
                         tour.res.setConsumeListener((len, resume) -> {
                             if(resume) {

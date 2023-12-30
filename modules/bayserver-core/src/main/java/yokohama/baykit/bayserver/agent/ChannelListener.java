@@ -1,19 +1,18 @@
 package yokohama.baykit.bayserver.agent;
 
 import java.io.IOException;
-import java.nio.channels.Channel;
 
-public interface ChannelListener {
+public interface ChannelListener<T> {
 
-    NextSocketAction onReadable(Channel ch) throws IOException;
+    NextSocketAction onReadable(T chkCh) throws IOException;
 
-    NextSocketAction onWritable(Channel ch) throws IOException;
+    NextSocketAction onWritable(T chkCh) throws IOException;
 
-    NextSocketAction onConnectable(Channel ch) throws IOException;
+    NextSocketAction onConnectable(T chkCh) throws IOException;
 
-    void onError(Channel ch, Throwable e);
+    void onError(T chkCh, Throwable e);
 
-    void onClosed(Channel ch);
+    void onClosed(T chkCh);
 
-    boolean checkTimeout(Channel ch, int durationSec);
+    boolean checkTimeout(T chkCh, int durationSec);
 }

@@ -1,29 +1,28 @@
 package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.agent.ChannelListener;
 import yokohama.baykit.bayserver.taxi.Taxi;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
 
 public class WriteStreamTaxi extends Taxi implements Valve {
 
 
-    OutputStream out;
-    boolean chValid;
-    protected ArrayList<ByteBuffer> writeQueue = new ArrayList<>();
     int agentId;
+    OutputStream output;
+    ChannelListener<OutputStream> channelListener;
+    boolean chValid;
 
-    public WriteStreamTaxi(){
-
+    public WriteStreamTaxi(int agentId){
+        this.agentId = agentId;
     }
 
-    public void init(int agtId, OutputStream out) throws IOException {
-        this.agentId = agtId;
-        this.out = out;
+    public void init(OutputStream out, ChannelListener<OutputStream> lis) throws IOException {
+        this.output = out;
+        this.channelListener = lis;
         this.chValid = true;
     }
 
@@ -42,26 +41,16 @@ public class WriteStreamTaxi extends Taxi implements Valve {
     @Override
     protected void depart() {
         try {
-            while(true) {
-                ByteBuffer buf;
-                synchronized (writeQueue) {
-                    if(writeQueue.isEmpty())
-                        break;
-                    buf = writeQueue.remove(0);
-                }
-                out.write(buf.array(), 0, buf.limit());
-
-                boolean empty;
-                synchronized (writeQueue) {
-                    empty = writeQueue.isEmpty();
-                }
-
-                if (!empty)
-                    nextRun();
-            }
+            channelListener.onWritable(output);
         }
-        catch(Throwable e) {
+        catch(IOException e) {
+            channelListener.onError(output, e);
+            close();
+        }
+        catch(RuntimeException | Error e) {
             BayLog.error(e);
+            close();
+            throw e;
         }
     }
 
@@ -70,16 +59,23 @@ public class WriteStreamTaxi extends Taxi implements Valve {
 
     }
 
-    public void post(byte[] data, int ofs, int len) {
-        synchronized (writeQueue) {
-            boolean empty = writeQueue.isEmpty();
-            writeQueue.add(ByteBuffer.wrap(data, ofs, len));
-            if(empty)
-                openValve();
-        }
-    }
-
     private void nextRun() {
         TaxiRunner.post(agentId, this);
+    }
+
+    private synchronized void close() {
+        BayLog.debug("%s Close taxi", this);
+        if(!chValid)
+            return;
+
+        try {
+            output.close();
+        }
+        catch (IOException e) {
+            BayLog.error(e, "%s Cannot close", this);
+        }
+
+        chValid = false;
+        channelListener.onClosed(output);
     }
 }
