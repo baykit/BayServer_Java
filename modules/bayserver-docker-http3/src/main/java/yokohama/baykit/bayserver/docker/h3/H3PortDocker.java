@@ -4,8 +4,8 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayMessage;
 import yokohama.baykit.bayserver.ConfigException;
 import yokohama.baykit.bayserver.Symbol;
+import yokohama.baykit.bayserver.agent.ChannelListener;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.common.docker.PortBase;
@@ -97,7 +97,7 @@ public class H3PortDocker extends PortBase implements H3Docker {
     }
 
     @Override
-    public Transporter newTransporter(int agentId, SelectableChannel ch) throws IOException {
+    public ChannelListener newChannelListener(int agentId, SelectableChannel ch) {
         QicDataListener lis = new QicDataListener();
         UdpTransporter tp = new UdpTransporter(true, 8192);
         lis.initUdp((DatagramChannel) ch, agentId, tp, this);
