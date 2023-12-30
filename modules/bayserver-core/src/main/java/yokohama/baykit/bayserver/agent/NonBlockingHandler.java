@@ -373,7 +373,7 @@ public class NonBlockingHandler implements TimerHandler{
 
     public void closeAll() {
 
-        for (SelectableChannel ch : channels.keySet()) {
+        for (SelectableChannel ch : new ArrayList<>(channels.keySet())) {
             ChannelState st = findChannelState(ch);
             closeChannel(ch, st);
         }
