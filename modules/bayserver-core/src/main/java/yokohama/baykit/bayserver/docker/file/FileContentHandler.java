@@ -13,7 +13,6 @@ import yokohama.baykit.bayserver.common.ReadChannelTrain;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.tour.ContentConsumeListener;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
-import yokohama.baykit.bayserver.tour.SendFileShip;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.train.Train;
 import yokohama.baykit.bayserver.train.TrainRunner;
