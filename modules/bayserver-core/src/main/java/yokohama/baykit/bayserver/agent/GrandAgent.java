@@ -1,7 +1,6 @@
 package yokohama.baykit.bayserver.agent;
 
 import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.common.docker.PortBase;
 
@@ -37,7 +36,6 @@ public class GrandAgent extends Thread {
     public AcceptHandler acceptHandler;
     public final int maxInboundShips;
     public boolean aborted;
-    public Map<DatagramChannel, Transporter> unanchorableTransporters = new HashMap<>();
     public CommandReceiver commandReceiver;
     ArrayList<TimerHandler> timerHandlers = new ArrayList<>();
 
@@ -91,8 +89,7 @@ public class GrandAgent extends Thread {
             if(!anchorable) {
                 for (DatagramChannel ch : unanchorablePortMap.keySet()) {
                     Port p = unanchorablePortMap.get(ch);
-                    Transporter tp = p.newTransporter(this.agentId, ch);
-                    unanchorableTransporters.put(ch, tp);
+                    ChannelListener tp = p.newChannelListener(this.agentId, ch);
                     nonBlockingHandler.addChannelListener(ch, tp);
                     nonBlockingHandler.askToStart(ch);
                     nonBlockingHandler.askToRead(ch);

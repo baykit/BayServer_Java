@@ -1,8 +1,7 @@
 package yokohama.baykit.bayserver.docker;
 
 import yokohama.baykit.bayserver.HttpException;
-import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.transporter.Transporter;
+import yokohama.baykit.bayserver.agent.ChannelListener;
 import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 
@@ -39,7 +38,7 @@ public interface Port {
 
     City findCity(String name);
 
-    Transporter newTransporter(int agentId, SelectableChannel ch) throws IOException;
+    ChannelListener newChannelListener(int agentId, SelectableChannel ch) throws IOException;
 
     void returnProtocolHandler(int agentId, ProtocolHandler protoHnd);
 
