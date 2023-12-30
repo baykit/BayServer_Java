@@ -223,6 +223,9 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                     case "taxi":
                         fileSendMethod = FileSendMethod.Taxi;
                         break;
+                    case "train":
+                        fileSendMethod = FileSendMethod.Train;
+                        break;
                     default:
                         throw new ConfigException(kv.fileName, kv.lineNo, BayMessage.CFG_INVALID_PARAMETER_VALUE(kv.value));
                 }

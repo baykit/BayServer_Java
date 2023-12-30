@@ -1,63 +1,75 @@
 package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.HttpException;
+import yokohama.baykit.bayserver.Sink;
+import yokohama.baykit.bayserver.agent.ChannelListener;
+import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.train.Train;
 
-import java.io.*;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 public class ReadStreamTrain extends Train {
 
-    ReadOnlyShip ship;
+    InputStream input;
+    ChannelListener<InputStream> channelListener;
+    Tour tour;
     boolean available;
 
-    public ReadStreamTrain(ReadOnlyShip ship, Tour tur) throws FileNotFoundException {
-        super(tur);
-        this.ship = ship;
+    public ReadStreamTrain(InputStream input, ChannelListener<InputStream> channelListener, Tour tur) throws FileNotFoundException {
+        this.input = input;
+        this.channelListener = channelListener;
+        this.tour = tur;
         this.available = true;
 
         tur.res.setConsumeListener((len, resume) -> {
             if(resume)
                 available = true;
         });
-
     }
 
     @Override
-    public void depart() throws HttpException {
+    public void depart() {
 
-        byte[] buf = new byte[tour.ship.protocolHandler.maxReqPacketDataSize()];
         try {
+            while_break:
             while (true) {
-                int c = ship.input.read(buf);
-                if (c == -1)
-                    break;
+                NextSocketAction act = channelListener.onReadable(input);
 
-                ship.notifyRead(ByteBuffer.wrap(buf, 0, c));
-                while (!available) {
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        BayLog.error(e);
-                        break;
-                    }
+                switch(act) {
+                    case Continue:
+                    case Suspend:
+                        while (!available) {
+                            try {
+                                Thread.sleep(100);
+                            } catch (InterruptedException e) {
+                                BayLog.error(e);
+                                break while_break;
+                            }
+                        }
+                        continue;
+
+                    case Close:
+                        break while_break;
+
+                    default:
+                        throw new Sink();
                 }
             }
-            ship.notifyEof();
+        }
+        catch(Throwable e) {
+            channelListener.onError(input, e);
+        }
+
+        try {
+            input.close();
         }
         catch(IOException e) {
-            ship.notifyError(e);
+            BayLog.error(e);
         }
-        finally {
-            try {
-                ship.input.close();
-            }
-            catch(IOException e) {
-                BayLog.error(e);
-            }
-            ship.notifyClose();
-        }
+        channelListener.onClosed(input);
     }
 }

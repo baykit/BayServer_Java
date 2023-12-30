@@ -8,6 +8,7 @@ public interface Harbor {
         Select,
         Spin,
         Taxi,
+        Train,
     };
 
     /** Default charset */

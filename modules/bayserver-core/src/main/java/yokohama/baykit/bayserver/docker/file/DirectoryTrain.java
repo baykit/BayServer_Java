@@ -17,12 +17,12 @@ import java.io.StringWriter;
 public class DirectoryTrain extends Train implements ReqContentHandler {
 
     final File path;
-
+    Tour tour;
     boolean available;
     boolean abortable;
 
     public DirectoryTrain(Tour tur, File path) {
-        super(tur);
+        this.tour = tur;
         this.path = path;
         this.abortable = true;
     }
@@ -36,7 +36,7 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
     ///////////////////////////////////////////////////////////////////
 
     @Override
-    public void depart() throws HttpException {
+    public void depart() {
 
         try {
             tour.res.headers.setContentType("text/html");
@@ -46,7 +46,7 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
                     available = true;
             });
 
-            tour.res.sendHeaders(tourId);
+            tour.res.sendHeaders(tour.tourId);
 
             StringWriter w = new StringWriter();
             w.write("<html><body><br>");
@@ -70,7 +70,7 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
             String s = w.toString();
 
             BayLog.trace("%s Directory: send contents: len=%d", tour, s.length());
-            available = tour.res.sendContent(tourId, s.getBytes(), 0, s.length());
+            available = tour.res.sendContent(tour.tourId, s.getBytes(), 0, s.length());
 
             try {
                 while(!available) {
@@ -81,12 +81,10 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
                 throw new Sink(e.getMessage());
             }
 
-            tour.res.endContent(tourId);
-
+            tour.res.endContent(tour.tourId);
 
         } catch (IOException e) {
             BayLog.error(e);
-            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e.toString());
         }
     }
 
