@@ -7,15 +7,14 @@ import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.taxi.Taxi;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 
-import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.channels.Channel;
 
 public class ReadStreamTaxi extends Taxi implements Valve {
 
     int agentId;
-    InputStream input;
-    ChannelListener<Closeable> channelListener;
+    Channel input;
+    ChannelListener channelListener;
     boolean chValid;
     boolean running;
     long startTime;
@@ -24,7 +23,7 @@ public class ReadStreamTaxi extends Taxi implements Valve {
         this.agentId = agtId;
     }
 
-    public void setChannelListener(InputStream input, ChannelListener lis) {
+    public void setChannelListener(Channel input, ChannelListener lis) {
         this.input = input;
         this.channelListener = lis;
         this.chValid = true;

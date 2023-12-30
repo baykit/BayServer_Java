@@ -1,26 +1,18 @@
 package yokohama.baykit.bayserver.docker.cgi;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.agent.ChannelListener;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.agent.transporter.InputStreamTransporter;
+import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
 import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
-import yokohama.baykit.bayserver.tour.ContentConsumeListener;
-import yokohama.baykit.bayserver.train.Train;
-import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
-import yokohama.baykit.bayserver.train.TrainRunner;
-import yokohama.baykit.bayserver.util.HttpStatus;
-import yokohama.baykit.bayserver.util.HttpUtil;
-import yokohama.baykit.bayserver.util.StringUtil;
+import yokohama.baykit.bayserver.train.Train;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
-import java.util.StringTokenizer;
+import java.nio.channels.Channel;
+import java.nio.channels.Channels;
 
 public class CgiTrain extends Train {
 
@@ -46,26 +38,30 @@ public class CgiTrain extends Train {
         // Handle StdOut
         int bufsize = tour.ship.protocolHandler.maxResPacketDataSize();
         InputStream outIn = handler.process.getInputStream();
-        InputStreamTransporter outTp = new InputStreamTransporter(tour.ship.agentId, bufsize);
+        Channel outCh = Channels.newChannel(outIn);
+        PlainTransporter outTp = new PlainTransporter(true, bufsize, false);
         CgiStdOutShip outShip = new CgiStdOutShip();
-        outShip.init(outIn, tour.ship.agentId, tour, null, handler);
-        outTp.init(outIn, new SimpleDataListener(outShip));
+        outShip.init(outCh, tour.ship.agentId, tour, null, handler);
+        outTp.init(null, outCh, new SimpleDataListener(outShip));
 
         tour.res.setConsumeListener((len, resume) -> {
             if(resume)
                 available = true;
         });
 
-        readAll(outIn, outTp);
+        readAll(outCh, outTp);
 
         // Handle StdErr
         InputStream errIn = handler.process.getErrorStream();
-        InputStreamTransporter errTp = new InputStreamTransporter(tour.ship.agentId, bufsize);
+        Channel errCh = Channels.newChannel(errIn);
         CgiStdErrShip errShip = new CgiStdErrShip();
-        errShip.init(errIn, tour.ship.agentId, handler);
-        errTp.init(errIn, new SimpleDataListener(errShip));
+        PlainTransporter errTp = new PlainTransporter(false, bufsize, false);
 
-        readAll(errIn, errTp);
+        errTp.init(null, errCh, new SimpleDataListener(errShip));
+
+        errShip.init(errCh, tour.ship.agentId, handler);
+
+        readAll(errCh, errTp);
 
     }
 
@@ -73,7 +69,7 @@ public class CgiTrain extends Train {
     // Private methods
     ///////////////////////////////////////////////////////////////////
 
-    private void readAll(InputStream input, ChannelListener lis) {
+    private void readAll(Channel input, ChannelListener lis) {
         while_break:
         try {
             while (true) {

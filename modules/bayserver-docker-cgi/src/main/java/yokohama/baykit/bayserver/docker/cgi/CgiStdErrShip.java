@@ -8,6 +8,7 @@ import yokohama.baykit.bayserver.common.ReadOnlyShip;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 
 public class CgiStdErrShip extends ReadOnlyShip  {
 
@@ -27,8 +28,8 @@ public class CgiStdErrShip extends ReadOnlyShip  {
     /////////////////////////////////////
     // Initialize methods
     /////////////////////////////////////
-    public void init(InputStream input, int agentId, CgiReqContentHandler handler) {
-        super.init(input, agentId, null);
+    public void init(Channel ch, int agentId, CgiReqContentHandler handler) {
+        super.init(ch, agentId, null);
         this.handler = handler;
     }
 
