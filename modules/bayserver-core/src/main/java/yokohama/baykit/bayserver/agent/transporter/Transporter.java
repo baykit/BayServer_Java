@@ -92,7 +92,6 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
         this.ch = ch;
         setValid(true);
         this.initialized = true;
-        nonBlockingHandler.addChannelListener(ch, this);
     }
 
     /////////////////////////////////////////////////////////////////////////////////

@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.common.docker;
 
 import yokohama.baykit.bayserver.*;
+import yokohama.baykit.bayserver.agent.ChannelListener;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
@@ -225,13 +226,21 @@ public abstract class PortBase extends DockerBase implements Port {
     }
 
     @Override
-    public Transporter newTransporter(int agentId, SelectableChannel ch) throws IOException {
+    public ChannelListener newChannelListener(int agentId, SelectableChannel ch) {
         InboundShip sip = getShipStore(agentId).rent();
         Transporter tp;
         if(secure())
             tp = secureDocker.createTransporter();
-        else
-            tp = new PlainTransporter(true, IOUtil.getSockRecvBufSize((SocketChannel)ch));
+        else {
+            int size;
+            try {
+                size = IOUtil.getSockRecvBufSize((SocketChannel) ch);
+            }
+            catch(IOException e) {
+                size = 8192;
+            }
+            tp = new PlainTransporter(true, size);
+        }
         ProtocolHandler protoHnd = getProtocolHandlerStore(protocol(), agentId).rent();
         sip.initInbound(ch, agentId, tp, this, protoHnd);
         GrandAgent agt = GrandAgent.get(agentId);
