@@ -38,7 +38,6 @@ public class TourRes implements Reusable {
     public ContentConsumeListener resConsumeListener;
     boolean canCompress;
     GzipCompressor compressor;
-    SendFileShip sendFileShip;
 
     public TourRes(Tour tour) {
         this.tour = tour;
@@ -50,7 +49,7 @@ public class TourRes implements Reusable {
     }
 
     void init() {
-        this.sendFileShip = new SendFileShip();
+
     }
 
     @Override
@@ -62,7 +61,6 @@ public class TourRes implements Reusable {
 
         charset = null;
         headerSent = false;
-        sendFileShip.reset();
         available = false;
         resConsumeListener = null;
         canCompress = false;
@@ -356,101 +354,6 @@ public class TourRes implements Reusable {
         endContent(checkId);
     }
 
-
-    ////////////////////////////////////////////////////////////////////////////////
-    // Sending file methods
-    ////////////////////////////////////////////////////////////////////////////////
-    public void sendFile(int checkId, File file, String charset, boolean async) throws HttpException {
-        tour.checkTourId(checkId);
-
-        if (tour.isZombie())
-            return;
-
-        if (file.isDirectory()) {
-            throw new HttpException(HttpStatus.FORBIDDEN, file.getPath());
-        } else if (!file.exists()) {
-            throw new HttpException(HttpStatus.NOT_FOUND, file.getPath());
-        }
-
-        String mimeType = null;
-
-        String rname = file.getName();
-        int pos = rname.lastIndexOf('.');
-        if (pos >= 0) {
-            String ext = rname.substring(pos + 1).toLowerCase();
-            mimeType = Mimes.getType(ext);
-        }
-
-        if (mimeType == null)
-            mimeType = "application/octet-stream";
-
-        if (mimeType.startsWith("text/") && charset() != null)
-            mimeType = mimeType + "; charset=" + charset;
-
-        //resHeaders.setStatus(HttpStatus.OK);
-        headers.setContentType(mimeType);
-        headers.setContentLength(file.length());
-        try {
-            sendHeaders(Tour.TOUR_ID_NOCHECK);
-
-            InputStream in = new FileInputStream(file);
-            if (async) {
-                int bufsize = tour.ship.protocolHandler.maxResPacketDataSize();
-                switch(BayServer.harbor.fileSendMethod()) {
-                    case Spin: {
-                        GrandAgent agt = GrandAgent.get(tour.ship.agentId);
-                        int timeout = 10;
-                        SpinReadTransporter tp = new SpinReadTransporter(bufsize);
-                        sendFileShip.init(in, tour, tp);
-                        tp.init(
-                                agt.spinHandler,
-                                new SimpleDataListener(sendFileShip),
-                                new FileInputStream(file),
-                                (int)file.length(),
-                                timeout,
-                                null);
-
-                        int sid = sendFileShip.id();
-                        tour.res.setConsumeListener((len, resume) -> {
-                            if(resume) {
-                                sendFileShip.resume(sid);
-                            }
-                        });
-                        tp.openValve();
-                        break;
-                    }
-
-                    case Taxi:{
-                        ReadStreamTaxi txi = new ReadStreamTaxi(tour.ship.agentId);
-                        sendFileShip.init(in, tour, txi);
-                        InputStreamTransporter tp = new InputStreamTransporter(tour.ship.agentId, bufsize);
-                        tp.init(in, new SimpleDataListener(sendFileShip));
-                        txi.setChannelListener(in, tp);
-
-                        int sid = sendFileShip.id();
-                        tour.res.setConsumeListener((len, resume) -> {
-                            if(resume) {
-                                sendFileShip.resume(sid);
-                            }
-                        });
-                        if(!TaxiRunner.post(tour.ship.agentId, txi)) {
-                            throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");
-                        }
-                        break;
-                    }
-
-                    default:
-                        throw new Sink();
-                }
-
-            } else {
-                new ReadStreamTrain(sendFileShip, tour).depart();
-            }
-        } catch (IOException e) {
-            BayLog.error(e);
-            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, file.getPath());
-        }
-    }
 
     private void sendRedirect(int checkId, int status, String location) throws IOException {
         tour.checkTourId(checkId);

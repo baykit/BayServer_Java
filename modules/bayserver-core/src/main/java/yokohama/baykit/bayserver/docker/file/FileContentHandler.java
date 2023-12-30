@@ -1,13 +1,29 @@
 package yokohama.baykit.bayserver.docker.file;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.HttpException;
+import yokohama.baykit.bayserver.Sink;
+import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.transporter.InputStreamTransporter;
+import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
+import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
+import yokohama.baykit.bayserver.common.ReadStreamTaxi;
+import yokohama.baykit.bayserver.common.ReadStreamTrain;
+import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.tour.ContentConsumeListener;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
+import yokohama.baykit.bayserver.tour.SendFileShip;
 import yokohama.baykit.bayserver.tour.Tour;
+import yokohama.baykit.bayserver.train.Train;
+import yokohama.baykit.bayserver.train.TrainRunner;
+import yokohama.baykit.bayserver.util.HttpStatus;
+import yokohama.baykit.bayserver.util.Mimes;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 public class FileContentHandler implements ReqContentHandler {
 
@@ -32,7 +48,7 @@ public class FileContentHandler implements ReqContentHandler {
     @Override
     public void onEndContent(Tour tur) throws IOException, HttpException {
         BayLog.debug("%s endContent", tur);
-        tur.res.sendFile(Tour.TOUR_ID_NOCHECK, path, tur.res.charset(), true);
+        sendFileAsync(tur, path, tur.res.charset());
         abortable = false;
     }
 
@@ -41,4 +57,107 @@ public class FileContentHandler implements ReqContentHandler {
         BayLog.debug("%s onAbort aborted=%s", tur, abortable);
         return abortable;
     }
+
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Sending file methods
+    ////////////////////////////////////////////////////////////////////////////////
+    public void sendFileAsync(Tour tur, File file, String charset) throws HttpException {
+        if (file.isDirectory()) {
+            throw new HttpException(HttpStatus.FORBIDDEN, file.getPath());
+        } else if (!file.exists()) {
+            throw new HttpException(HttpStatus.NOT_FOUND, file.getPath());
+        }
+
+        SendFileShip sendFileShip = new SendFileShip();
+
+        String mimeType = null;
+
+        String rname = file.getName();
+        int pos = rname.lastIndexOf('.');
+        if (pos >= 0) {
+            String ext = rname.substring(pos + 1).toLowerCase();
+            mimeType = Mimes.getType(ext);
+        }
+
+        if (mimeType == null)
+            mimeType = "application/octet-stream";
+
+        if (mimeType.startsWith("text/") && charset != null)
+            mimeType = mimeType + "; charset=" + charset;
+
+        //resHeaders.setStatus(HttpStatus.OK);
+        tur.res.headers.setContentType(mimeType);
+        tur.res.headers.setContentLength(file.length());
+        try {
+            tur.res.sendHeaders(Tour.TOUR_ID_NOCHECK);
+
+            InputStream in = new FileInputStream(file);
+            int bufsize = tur.ship.protocolHandler.maxResPacketDataSize();
+
+            switch(BayServer.harbor.fileSendMethod()) {
+                case Spin: {
+                    GrandAgent agt = GrandAgent.get(tur.ship.agentId);
+                    int timeout = 10;
+                    SpinReadTransporter tp = new SpinReadTransporter(bufsize);
+                    sendFileShip.init(in, tur, tp);
+                    tp.init(
+                            agt.spinHandler,
+                            new SimpleDataListener(sendFileShip),
+                            new FileInputStream(file),
+                            (int)file.length(),
+                            timeout,
+                            null);
+
+                    int sid = sendFileShip.id();
+                    tur.res.setConsumeListener((len, resume) -> {
+                        if(resume) {
+                            sendFileShip.resume(sid);
+                        }
+                    });
+                    tp.openValve();
+                    break;
+                }
+
+                case Taxi:{
+                    ReadStreamTaxi txi = new ReadStreamTaxi(tur.ship.agentId);
+                    sendFileShip.init(in, tur, txi);
+                    InputStreamTransporter tp = new InputStreamTransporter(tur.ship.agentId, bufsize);
+                    tp.init(in, new SimpleDataListener(sendFileShip));
+                    txi.setChannelListener(in, tp);
+
+                    int sid = sendFileShip.id();
+                    tur.res.setConsumeListener((len, resume) -> {
+                        if(resume) {
+                            sendFileShip.resume(sid);
+                        }
+                    });
+                    if(!TaxiRunner.post(tur.ship.agentId, txi)) {
+                        throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");
+                    }
+                    break;
+                }
+
+                case Train:
+                    InputStreamTransporter tp = new InputStreamTransporter(tur.ship.agentId, bufsize);
+                    sendFileShip.init(in, tur, null);
+                    tp.init(in, new SimpleDataListener(sendFileShip));
+
+                    Train tr = new ReadStreamTrain(in, tp, tur);
+                    if(!TrainRunner.post(tr)) {
+                        throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Train is busy");
+                    }
+                    break;
+
+                default:
+                    throw new Sink();
+            }
+
+        } catch (IOException e) {
+            BayLog.error(e);
+            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, file.getPath());
+        }
+    }
+
+
 }

@@ -14,6 +14,7 @@ import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.tour.Tour;
+import yokohama.baykit.bayserver.train.TrainRunner;
 import yokohama.baykit.bayserver.util.CGIUtil;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.StringUtil;
@@ -26,7 +27,14 @@ import java.util.concurrent.TimeUnit;
 
 public class CgiDocker extends ClubBase {
 
-    public static final Harbor.FileSendMethod DEFAULT_PROC_READ_METHOD = Harbor.FileSendMethod.Taxi;
+    enum ProcReadMethod {
+        Select,
+        Spin,
+        Taxi,
+        Train
+    };
+
+    public static final ProcReadMethod DEFAULT_PROC_READ_METHOD = ProcReadMethod.Taxi;
     public static final int DEFAULT_TIMEOUT_SEC = 60;
 
     public String interpreter;
@@ -35,7 +43,7 @@ public class CgiDocker extends ClubBase {
     public int timeoutSec = DEFAULT_TIMEOUT_SEC;
 
     /** Method to read stdin/stderr */
-    public Harbor.FileSendMethod procReadMethod = DEFAULT_PROC_READ_METHOD;
+    public ProcReadMethod procReadMethod = DEFAULT_PROC_READ_METHOD;
 
     ///////////////////////////////////////////////////////////////////////
     // Implements Docker
@@ -45,14 +53,14 @@ public class CgiDocker extends ClubBase {
     public void init(BcfElement elm, Docker parent) throws ConfigException {
         super.init(elm, parent);
 
-        if(procReadMethod == Harbor.FileSendMethod.Select && !SysUtil.supportSelectPipe()) {
+        if(procReadMethod == ProcReadMethod.Select && !SysUtil.supportSelectPipe()) {
             BayLog.warn(ConfigException.createMessage(CgiMessage.get(CgiSymbol.CGI_PROC_READ_METHOD_SELECT_NOT_SUPPORTED), elm.fileName, elm.lineNo));
-            procReadMethod = Harbor.FileSendMethod.Taxi;
+            procReadMethod = ProcReadMethod.Taxi;
         }
 
-        if(procReadMethod == Harbor.FileSendMethod.Spin && !SysUtil.supportNonblockPipeRead()) {
+        if(procReadMethod == ProcReadMethod.Spin && !SysUtil.supportNonblockPipeRead()) {
             BayLog.warn(ConfigException.createMessage(CgiMessage.get(CgiSymbol.CGI_PROC_READ_METHOD_SPIN_NOT_SUPPORTED), elm.fileName, elm.lineNo));
-            procReadMethod = Harbor.FileSendMethod.Taxi;
+            procReadMethod = ProcReadMethod.Taxi;
         }
     }
 
@@ -82,13 +90,16 @@ public class CgiDocker extends ClubBase {
             case "processreadmethod":
                 switch(kv.value.toLowerCase()) {
                     case "select":
-                        procReadMethod = Harbor.FileSendMethod.Select;
+                        procReadMethod = ProcReadMethod.Select;
                         break;
                     case "spin":
-                        procReadMethod = Harbor.FileSendMethod.Spin;
+                        procReadMethod = ProcReadMethod.Spin;
                         break;
                     case "taxi":
-                        procReadMethod = Harbor.FileSendMethod.Taxi;
+                        procReadMethod = ProcReadMethod.Taxi;
+                        break;
+                    case "train":
+                        procReadMethod = ProcReadMethod.Train;
                         break;
                     default:
                         throw new ConfigException(kv.fileName, kv.lineNo, BayMessage.CFG_INVALID_PARAMETER_VALUE(kv.value));
@@ -219,6 +230,13 @@ public class CgiDocker extends ClubBase {
 
                 break;
             }
+
+            case Train:
+                CgiTrain tran = new CgiTrain(tur, this, handler);
+                if(!TrainRunner.post(tran)) {
+                    throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Train is busy");
+                }
+                break;
 
             default:
                 throw new Sink();

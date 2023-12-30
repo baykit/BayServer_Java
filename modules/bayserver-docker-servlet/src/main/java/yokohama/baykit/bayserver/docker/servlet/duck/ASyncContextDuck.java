@@ -119,9 +119,9 @@ public abstract class ASyncContextDuck {
         }
         Tour tur = (Tour) docker.reqHelper.getAttribute(req, ServletDocker.ATTR_TOUR);
         started = true;
-        TrainRunner.post(new Train(tur) {
+        TrainRunner.post(new Train() {
             @Override
-            protected void depart() throws HttpException {
+            protected void depart() {
                 run.run();
             }
         });
