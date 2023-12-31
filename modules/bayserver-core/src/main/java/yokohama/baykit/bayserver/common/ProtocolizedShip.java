@@ -15,10 +15,11 @@ public abstract class ProtocolizedShip extends Ship {
     protected void initProtocolized(
             SelectableChannel ch,
             int agentId,
-            Transporter tp,
+            Postman pm,
+            Valve vlv,
             ProtocolHandler protoHandler
     ) {
-        super.init(agentId, tp, tp);
+        super.init(agentId, pm, vlv);
         this.ch = ch;
         this.protocolHandler = protoHandler;
         setProtocolHandler(protoHandler);

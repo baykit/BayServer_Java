@@ -2,6 +2,7 @@ package yokohama.baykit.bayserver.agent.transporter;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.NonBlockingHandler;
+import yokohama.baykit.bayserver.common.Valve;
 import yokohama.baykit.bayserver.util.SSLHandler;
 import yokohama.baykit.bayserver.util.SSLUtil;
 
@@ -35,8 +36,8 @@ public class SecureTransporter extends Transporter {
     }
 
     @Override
-    public void init(NonBlockingHandler nbHnd, Channel ch, DataListener lis) {
-        super.init(nbHnd, ch, lis);
+    public void init(Channel ch, DataListener lis, Valve vlv) {
+        super.init(ch, lis, vlv);
         sslh = new SSLHandler(ctx, appProtocols, serverMode);
         if (netIn == null)
             netIn = ByteBuffer.allocate(sslh.engine.getSession().getPacketBufferSize());

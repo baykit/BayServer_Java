@@ -4,6 +4,7 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.agent.NonBlockingValve;
 import yokohama.baykit.bayserver.agent.transporter.DataListener;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.docker.Port;
@@ -197,7 +198,7 @@ public final class QicDataListener implements DataListener {
 
         QicProtocolHandler hnd = new QicProtocolHandler(con, adr, h3Config, transporter);
         InboundShip sip = new InboundShip();
-        sip.initInbound(ch, agentId, transporter, portDkr, hnd);
+        sip.initInbound(ch, agentId, transporter, new QicValve(), portDkr, hnd);
         hnd.setShip(sip);
 
         addShip(srcConId, sip);

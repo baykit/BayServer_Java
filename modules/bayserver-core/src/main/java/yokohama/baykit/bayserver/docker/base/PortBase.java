@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.docker.base;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.ChannelListener;
 import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.NonBlockingValve;
 import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
@@ -10,6 +11,7 @@ import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
 import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.common.InboundShipStore;
+import yokohama.baykit.bayserver.common.Valve;
 import yokohama.baykit.bayserver.docker.*;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
@@ -242,9 +244,10 @@ public abstract class PortBase extends DockerBase implements Port {
             tp = new PlainTransporter(true, size);
         }
         ProtocolHandler protoHnd = getProtocolHandlerStore(protocol(), agentId).rent();
-        sip.initInbound(ch, agentId, tp, this, protoHnd);
         GrandAgent agt = GrandAgent.get(agentId);
-        tp.init(agt.nonBlockingHandler, ch, new SimpleDataListener(sip));
+        Valve v = new NonBlockingValve(agt.nonBlockingHandler, ch);
+        sip.initInbound(ch, agentId, tp, v, this, protoHnd);
+        tp.init(ch, new SimpleDataListener(sip), v);
         return tp;
     }
 

@@ -8,7 +8,7 @@ import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.bcf.ParseException;
-import yokohama.baykit.bayserver.common.ReadStreamTaxi;
+import yokohama.baykit.bayserver.common.ReadChannelTaxi;
 import yokohama.baykit.bayserver.docker.base.ClubBase;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
@@ -205,10 +205,10 @@ public class CgiDocker extends ClubBase {
 
             case Taxi:{
                 PlainTransporter outTp = new PlainTransporter(true, bufsize, false);
-                ReadStreamTaxi outTxi = new ReadStreamTaxi(tur.ship.agentId);
+                ReadChannelTaxi outTxi = new ReadChannelTaxi(tur.ship.agentId);
                 outShip.init(outCh, tur.ship.agentId, tur, outTxi, handler);
                 outTxi.setChannelListener(outCh, outTp);
-                outTp.init(null, outCh, new SimpleDataListener(outShip));
+                outTp.init(null, new SimpleDataListener(outShip), outTxi);
                 int sipId = tur.ship.shipId;
                 tur.res.setConsumeListener((len, resume) -> {
                     if(resume) {
@@ -222,10 +222,10 @@ public class CgiDocker extends ClubBase {
 
 
                 PlainTransporter errTp = new PlainTransporter(true, bufsize, false);
-                ReadStreamTaxi errTxi = new ReadStreamTaxi(tur.ship.agentId);
+                ReadChannelTaxi errTxi = new ReadChannelTaxi(tur.ship.agentId);
                 errShip.init(errCh, tur.ship.agentId, handler);
                 errTxi.setChannelListener(errCh, errTp);
-                errTp.init(null, errCh, new SimpleDataListener(errShip));
+                errTp.init(errCh, new SimpleDataListener(errShip), errTxi);
 
                 if(!TaxiRunner.post(tur.ship.agentId, errTxi)) {
                     throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");

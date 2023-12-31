@@ -46,10 +46,11 @@ public final class WarpShip extends ProtocolizedShip {
     public void initWarp(
             SocketChannel ch,
             int agentId,
-            Transporter tp,
+            Postman pm,
+            Valve vlv,
             Warp dkr,
             ProtocolHandler protoHandler) {
-        initProtocolized(ch, agentId, tp, protoHandler);
+        initProtocolized(ch, agentId, pm, vlv, protoHandler);
         this.docker = dkr;
         this.socketTimeoutSec = dkr.timeoutSec() >= 0 ? dkr.timeoutSec() : BayServer.harbor.socketTimeoutSec();
     }

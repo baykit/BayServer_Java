@@ -41,10 +41,11 @@ public class InboundShip extends ProtocolizedShip {
     public void initInbound(
             SelectableChannel ch,
             int agentId,
-            Transporter tp,
+            Postman pm,
+            Valve vlv,
             Port portDkr,
             ProtocolHandler protoHandler) {
-        initProtocolized(ch, agentId, tp, protoHandler);
+        initProtocolized(ch, agentId, pm, vlv, protoHandler);
         this.portDkr = portDkr;
         this.socketTimeoutSec = portDkr.timeoutSec() >= 0 ? portDkr.timeoutSec() : BayServer.harbor.socketTimeoutSec();
         this.tourStore = TourStore.getStore(agentId);
