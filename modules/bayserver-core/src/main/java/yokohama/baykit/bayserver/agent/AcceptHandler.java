@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.agent;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.docker.Port;
 
@@ -14,14 +15,12 @@ import java.util.Map;
 public class AcceptHandler {
 
     final GrandAgent agent;
-    final Map<ServerSocketChannel, Port> portMap;
 
     boolean isShutdown;
     int chCount;
 
-    public AcceptHandler(GrandAgent agent, Map<ServerSocketChannel, Port> portMap) {
+    public AcceptHandler(GrandAgent agent) {
         this.agent = agent;
-        this.portMap = portMap;
         this.chCount = 0;
     }
 
@@ -29,7 +28,7 @@ public class AcceptHandler {
     public void onAcceptable(SelectionKey key) {
         // get channel from server socket
         ServerSocketChannel sch = (ServerSocketChannel) key.channel();
-        Port p = portMap.get(sch);
+        Port p = BayServer.anchorablePortMap.get(sch);
 
         //BayLog.debug(this + " onAcceptable");
         SocketChannel ch = null;
@@ -78,7 +77,7 @@ public class AcceptHandler {
 
     public synchronized void onBusy() {
         BayLog.debug("%s AcceptHandler:onBusy", agent);
-        for(ServerSocketChannel ch: portMap.keySet()) {
+        for(ServerSocketChannel ch: BayServer.anchorablePortMap.keySet()) {
             SelectionKey key = ch.keyFor(agent.selector);
             if(key != null)
                 key.cancel();
@@ -90,7 +89,7 @@ public class AcceptHandler {
         if(isShutdown)
             return;
 
-        for(ServerSocketChannel ch: portMap.keySet()) {
+        for(ServerSocketChannel ch: BayServer.anchorablePortMap.keySet()) {
             try {
                 ch.register(agent.selector, SelectionKey.OP_ACCEPT);
             }

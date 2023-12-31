@@ -67,6 +67,9 @@ public class BayServer {
     /** BayAgent */
     public static SignalAgent signalAgent;
 
+    public static final Map<ServerSocketChannel, Port> anchorablePortMap = new HashMap<>();
+
+    public static final Map<DatagramChannel, Port> unanchorablePortMap = new HashMap<>();
 
     /**
      * Date format for debug
@@ -202,10 +205,7 @@ public class BayServer {
             TourStore.init(TourStore.MAX_TOURS);
             MemUsage.init();
 
-
-            Map<ServerSocketChannel, Port> anchoredPortMap = new HashMap<>();   // TCP server port map
-            Map<DatagramChannel, Port> unanchoredPortMap = new HashMap<>();    // UDB server port map
-            openPorts(anchoredPortMap, unanchoredPortMap);
+            openPorts();
 
             GrandAgent.init(
                     IntStream.rangeClosed(1, harbor.grandAgents()).toArray(),
@@ -213,7 +213,7 @@ public class BayServer {
 
             invokeRunners();
 
-            GrandAgentMonitor.init(harbor.grandAgents(), anchoredPortMap, unanchoredPortMap);
+            GrandAgentMonitor.init(harbor.grandAgents());
             SignalAgent.init(harbor.controlPort());
             createPidFile(SysUtil.pid());
 
@@ -256,9 +256,7 @@ public class BayServer {
         }
     }
 
-    public static void openPorts(
-            Map<ServerSocketChannel, Port> anchoredPortMap,
-            Map<DatagramChannel, Port> unanchoredPortMap) throws IOException {
+    public static void openPorts() throws IOException {
 
         for (Port portDkr : ports) {
             // Open TCP port
@@ -283,7 +281,7 @@ public class BayServer {
                     BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
                     return;
                 }
-                anchoredPortMap.put(ch, portDkr);
+                anchorablePortMap.put(ch, portDkr);
             }
             else {
                 BayLog.info(BayMessage.get(Symbol.MSG_OPENING_UDP_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), portDkr.protocol()));
@@ -295,7 +293,7 @@ public class BayServer {
                     BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
                     return;
                 }
-                unanchoredPortMap.put(ch, portDkr);
+                unanchorablePortMap.put(ch, portDkr);
             }
         }
 
