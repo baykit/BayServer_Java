@@ -210,7 +210,7 @@ public class FcgWarpHandler extends FcgProtocolHandler implements WarpHandler {
             int sid = sip.id();
             tur.res.setConsumeListener((len, resume) -> {
                 if(resume) {
-                    sip.resume(sid);
+                    sip.resumeRead(sid);
                 }
             });
 

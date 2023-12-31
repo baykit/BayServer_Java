@@ -469,7 +469,7 @@ public class QicProtocolHandler
                                     nRead,
                                     (len, resume) -> {
                                         if (resume)
-                                            tur.ship.resume(sid);
+                                            tur.ship.resumeRead(sid);
                                     });
                 }
             }

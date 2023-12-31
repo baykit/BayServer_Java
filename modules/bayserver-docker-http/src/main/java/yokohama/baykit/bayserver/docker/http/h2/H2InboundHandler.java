@@ -279,7 +279,7 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
                                 }
 
                                 if (resume)
-                                    tur.ship.resume(tur.shipId);
+                                    tur.ship.resumeRead(tur.shipId);
                             });
 
             if (tur.req.bytesPosted >= tur.req.headers.contentLength()) {

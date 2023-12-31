@@ -119,7 +119,7 @@ public class OutputChannelTransporter implements ChannelListener, Reusable, Post
             boolean empty = writeQueue.isEmpty();
             writeQueue.add(buf);
             if(empty)
-                valve.openValve();
+                valve.openWriteValve();
         }
     }
 

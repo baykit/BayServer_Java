@@ -196,11 +196,10 @@ public class CgiDocker extends ClubBase {
                 int sipId = tur.ship.shipId;
                 tur.res.setConsumeListener((len, resume) -> {
                     if(resume) {
-                        outShip.resume(sipId);
+                        outShip.resumeRead(sipId);
                     }
                 });
-                outTp.openValve();
-                errTp.openValve();
+                outTp.openReadValve();
                 break;
             }
 
@@ -213,7 +212,7 @@ public class CgiDocker extends ClubBase {
                 int sipId = tur.ship.shipId;
                 tur.res.setConsumeListener((len, resume) -> {
                     if(resume) {
-                        outShip.resume(sipId);
+                        outShip.resumeRead(sipId);
                     }
                 });
 
