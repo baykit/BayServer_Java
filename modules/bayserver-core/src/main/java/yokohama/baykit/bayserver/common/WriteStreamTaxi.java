@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.ChannelListener;
 import yokohama.baykit.bayserver.taxi.Taxi;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
@@ -31,7 +32,12 @@ public class WriteStreamTaxi extends Taxi implements Valve {
     /////////////////////////////////////////
 
     @Override
-    public void openValve() {
+    public void openReadValve() {
+        throw new Sink();
+    }
+
+    @Override
+    public void openWriteValve() {
         nextRun();
     }
 

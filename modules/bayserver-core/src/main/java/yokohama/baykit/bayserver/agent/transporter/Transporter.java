@@ -129,8 +129,7 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
             synchronized (this) {
                 writeQueue.add(unt);
             }
-            BayLog.trace("%s sendBytes->askToWrite", this);
-            nonBlockingHandler.askToWrite((SelectableChannel) ch);
+            openWriteValve();
         }
     }
 
@@ -138,9 +137,14 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
     // implements Valve
     /////////////////////////////////////////////////////////////////////////////////
 
-    public void openValve() {
-        BayLog.debug("%s open valve", this);
+    @Override
+    public void openReadValve() {
         nonBlockingHandler.askToRead((SelectableChannel) ch);
+    }
+
+    @Override
+    public void openWriteValve() {
+        nonBlockingHandler.askToWrite((SelectableChannel) ch);
     }
 
     public void abort() {

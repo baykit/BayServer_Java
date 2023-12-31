@@ -128,7 +128,7 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
         Runnable ensureFunc = () -> {
             if(keepAlive && !ship.postman.isZombie()) {
                 ship.keeping = true;
-                ship.resume(sid);
+                ship.resumeRead(sid);
             }
             else
                 ship.postman.postEnd();
@@ -298,7 +298,7 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
                         cmd.len,
                         (len, resume) -> {
                             if (resume)
-                                tur.ship.resume(sid);
+                                tur.ship.resumeRead(sid);
                         });
 
         if (tur.req.bytesPosted == tur.req.bytesLimit) {

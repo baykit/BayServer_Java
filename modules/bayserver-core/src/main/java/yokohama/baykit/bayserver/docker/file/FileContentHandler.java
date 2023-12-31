@@ -114,10 +114,10 @@ public class FileContentHandler implements ReqContentHandler {
                     int sid = sendFileShip.id();
                     tur.res.setConsumeListener((len, resume) -> {
                         if(resume) {
-                            sendFileShip.resume(sid);
+                            sendFileShip.resumeRead(sid);
                         }
                     });
-                    tp.openValve();
+                    tp.openReadValve();
                     break;
                 }
 
@@ -132,7 +132,7 @@ public class FileContentHandler implements ReqContentHandler {
                     int sid = sendFileShip.id();
                     tur.res.setConsumeListener((len, resume) -> {
                         if(resume) {
-                            sendFileShip.resume(sid);
+                            sendFileShip.resumeRead(sid);
                         }
                     });
                     if(!TaxiRunner.post(tur.ship.agentId, txi)) {

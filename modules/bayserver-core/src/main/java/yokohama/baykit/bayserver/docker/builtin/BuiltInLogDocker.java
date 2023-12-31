@@ -38,17 +38,9 @@ public class BuiltInLogDocker extends DockerBase implements Log {
                 WriteStreamTaxi txi = new WriteStreamTaxi(agentId);
                 OutputChannelTransporter tp = new OutputChannelTransporter(agentId);
                 Channel output = new FileOutputStream(fileName).getChannel();
-                tp.init(output, new SimpleDataListener(new WriteOnlyShip() {
-                    @Override
-                    public void notifyClose() {
-
-                    }
-
-                    @Override
-                    public boolean checkTimeout(int durationSec) {
-                        return false;
-                    }
-                }), txi);
+                LogShip sip = new LogShip();
+                sip.init(agentId, txi);
+                tp.init(output, new SimpleDataListener(sip), txi);
                 txi.init(output, tp);
                 loggers.put(agentId, tp);
             }

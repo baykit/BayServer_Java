@@ -71,15 +71,20 @@ public abstract class Ship implements Reusable {
     // Custom methods
     /////////////////////////////////////
 
-
-
     public final int id() {
         return shipId;
     }
 
-    public void resume(int checkId) {
-        checkShipId(checkId);
-        valve.openValve();
+    public void resumeRead(int chkId) {
+        checkShipId(chkId);
+        BayLog.debug("%s open write valve", this);
+        valve.openReadValve();
+    }
+
+    public void resumeWrite(int chkId) {
+        checkShipId(chkId);
+        BayLog.debug("%s open write valve", this);
+        valve.openWriteValve();
     }
 
     public final void checkShipId(int shipId) {

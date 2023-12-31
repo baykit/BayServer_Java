@@ -39,9 +39,14 @@ public class ReadStreamTaxi extends Taxi implements Valve {
     ////////////////////////////////////////////////////////////////////////////////
 
     @Override
-    public synchronized void openValve() {
-        //BayLog.debug("*** RESUME ******  %s", this);
+    public synchronized void openReadValve() {
+        BayLog.debug("%s Open read valve", this);
         nextRun();
+    }
+
+    @Override
+    public synchronized void openWriteValve() {
+        throw new Sink();
     }
 
     ////////////////////////////////////////////////////////////////////////////////
