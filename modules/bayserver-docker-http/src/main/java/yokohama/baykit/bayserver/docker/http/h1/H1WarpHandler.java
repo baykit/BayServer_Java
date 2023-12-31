@@ -101,7 +101,7 @@ public class H1WarpHandler extends H1ProtocolHandler implements WarpHandler {
             int sid = wsip.id();
             tur.res.setConsumeListener((len, resume) -> {
                 if(resume) {
-                    wsip.resume(sid);
+                    wsip.resumeRead(sid);
                 }
             });
         }

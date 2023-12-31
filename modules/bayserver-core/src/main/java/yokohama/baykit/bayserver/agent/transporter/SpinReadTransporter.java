@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.agent.transporter;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.SpinHandler;
 import yokohama.baykit.bayserver.common.Valve;
@@ -143,9 +144,14 @@ public class SpinReadTransporter implements SpinHandler.SpinListener, Reusable, 
     ////////////////////////////////////////////////////////////////////
 
     @Override
-    public void openValve() {
+    public void openReadValve() {
         if(!isClosed)
             spinHandler.askToCallBack(this);
+    }
+
+    @Override
+    public void openWriteValve() {
+        throw new Sink();
     }
 
     ////////////////////////////////////////////////////////////////////

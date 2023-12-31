@@ -139,7 +139,7 @@ public class AjpWarpHandler extends AjpProtocolHandler implements WarpHandler {
             int sid = wsip.id();
             tur.res.setConsumeListener((len, resume) -> {
                 if(resume) {
-                    wsip.resume(sid);
+                    wsip.resumeRead(sid);
                 }
             });
 

@@ -328,7 +328,7 @@ public class FcgInboundHandler extends FcgProtocolHandler implements InboundHand
                             cmd.length,
                             (len, resume) -> {
                                 if (resume)
-                                    sip.resume(sid);
+                                    sip.resumeRead(sid);
                             });
 
             if (!success)

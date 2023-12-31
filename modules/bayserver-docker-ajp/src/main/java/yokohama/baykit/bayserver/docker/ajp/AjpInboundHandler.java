@@ -224,7 +224,7 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
                         cmd.length,
                         (len, resume) -> {
                             if (resume)
-                                sip.resume(sid);
+                                sip.resumeRead(sid);
                         });
 
         if(tur.req.bytesPosted == tur.req.bytesLimit) {
