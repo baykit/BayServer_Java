@@ -22,7 +22,7 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 
-public abstract class Transporter implements ChannelListener, Reusable, Postman, Valve {
+public abstract class Transporter implements ChannelListener, Reusable, Postman {
     
     protected static class WaitReadableException extends IOException {
 
@@ -57,8 +57,8 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
     protected boolean initialized;
     protected boolean chValid = false;
     protected boolean needHandshake = true;
-    NonBlockingHandler nonBlockingHandler;
-    InetSocketAddress[] tmpAddress = new InetSocketAddress[1];
+    protected InetSocketAddress[] tmpAddress = new InetSocketAddress[1];
+    protected Valve valve;
 
     /////////////////////////////////////////////////////////////////////////////////
     // abstract methods
@@ -80,17 +80,17 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
         this(serverMode, traceSSL, false);
     }
 
-    public void init(NonBlockingHandler chHnd, Channel ch, DataListener lis) {
+    public void init(Channel ch, DataListener lis, Valve vlv) {
 
         if(initialized)
             throw new Sink(this + " This transporter is already in use by channel: " + ch);
         if(!writeQueue.isEmpty())
             throw new Sink();
 
-        this.nonBlockingHandler = chHnd;
         this.dataListener = lis;
         this.ch = ch;
         setValid(true);
+        this.valve = vlv;
         this.initialized = true;
     }
 
@@ -110,12 +110,13 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
         ch = null;
         setValid(false);
         needHandshake = true;
+        valve = null;
     }
 
     /////////////////////////////////////////////////////////////////////////////////
     // implements Postman
     /////////////////////////////////////////////////////////////////////////////////
-
+    @Override
     public final void post(ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) throws IOException {
         checkInitialized();
 
@@ -129,32 +130,53 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
             synchronized (this) {
                 writeQueue.add(unt);
             }
-            openWriteValve();
+            BayLog.debug("%s post->openWriteValve", this);
+            valve.openWriteValve();
         }
     }
 
-    /////////////////////////////////////////////////////////////////////////////////
-    // implements Valve
-    /////////////////////////////////////////////////////////////////////////////////
-
     @Override
-    public void openReadValve() {
-        nonBlockingHandler.askToRead((SelectableChannel) ch);
+    public final void flush() {
+        checkInitialized();
+
+        BayLog.debug("%s flush", this);
+
+        if(chValid) {
+            if (!writeQueue.isEmpty()) {
+                BayLog.debug("%s flush->openWriteValve", this);
+                valve.openWriteValve();
+            }
+        }
     }
 
     @Override
-    public void openWriteValve() {
-        nonBlockingHandler.askToWrite((SelectableChannel) ch);
+    public final void postEnd() {
+        checkInitialized();
+
+        BayLog.debug("%s postEnd vld=%s", this, chValid);
+
+        // setting order is QUITE important  finalState->finale
+        this.finale = true;
+
+        if(chValid) {
+            if (!writeQueue.isEmpty()) {
+                BayLog.debug("%s postEnd->openWriteValve len=%d", this, writeQueue.size());
+                valve.openWriteValve();
+            }
+        }
     }
 
+    @Override
     public void abort() {
         BayLog.debug("%s abort", this);
-        nonBlockingHandler.askToClose((SelectableChannel) ch);
+        valve.destroy();
     }
 
+    @Override
     public boolean isZombie() {
         return ch != null && !chValid;
     }
+
 
     /////////////////////////////////////////////////////////////////////////////////
     // implements NonBlockingHandler.ChannelListener
@@ -341,35 +363,6 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman,
     /////////////////////////////////////////////////////////////////////////////////
     // other methods
     /////////////////////////////////////////////////////////////////////////////////
-
-    public final void flush() {
-        checkInitialized();
-
-        BayLog.debug("%s flush", this);
-
-        if(chValid) {
-            if (!writeQueue.isEmpty()) {
-                BayLog.debug("%s flush->askToWrite", this);
-                nonBlockingHandler.askToWrite((SelectableChannel) ch);
-            }
-        }
-    }
-
-    public final void postEnd() {
-        checkInitialized();
-
-        BayLog.debug("%s postEnd vld=%s", this, chValid);
-
-        // setting order is QUITE important  finalState->finale
-        this.finale = true;
-
-        if(chValid) {
-            if (!writeQueue.isEmpty()) {
-                BayLog.debug("%s postEnd->askToWrite len=%d", this, writeQueue.size());
-                nonBlockingHandler.askToWrite((SelectableChannel) ch);
-            }
-        }
-    }
 
     private void checkChannel(Channel chkCh) {
         if(chkCh != this.ch)

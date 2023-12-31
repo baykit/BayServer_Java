@@ -5,10 +5,11 @@ import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.NonBlockingValve;
 import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
 import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
 import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
-import yokohama.baykit.bayserver.common.ReadStreamTaxi;
+import yokohama.baykit.bayserver.common.ReadChannelTaxi;
 import yokohama.baykit.bayserver.common.ReadChannelTrain;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.tour.ContentConsumeListener;
@@ -122,11 +123,11 @@ public class FileContentHandler implements ReqContentHandler {
                 }
 
                 case Taxi:{
-                    ReadStreamTaxi txi = new ReadStreamTaxi(tur.ship.agentId);
+                    ReadChannelTaxi txi = new ReadChannelTaxi(tur.ship.agentId);
                     sendFileShip.init(ch, tur, txi);
                     PlainTransporter tp = new PlainTransporter(false, bufsize, false);
                     GrandAgent agt = GrandAgent.get(tur.ship.agentId);
-                    tp.init(agt.nonBlockingHandler, ch, new SimpleDataListener(sendFileShip));
+                    tp.init(ch, new SimpleDataListener(sendFileShip), new NonBlockingValve(agt.nonBlockingHandler, ch));
                     txi.setChannelListener(ch, tp);
 
                     int sid = sendFileShip.id();
@@ -145,7 +146,7 @@ public class FileContentHandler implements ReqContentHandler {
                     sendFileShip.init(ch, tur, null);
                     PlainTransporter tp = new PlainTransporter(false, bufsize, false);
                     GrandAgent agt = GrandAgent.get(tur.ship.agentId);
-                    tp.init(agt.nonBlockingHandler, ch, new SimpleDataListener(sendFileShip));
+                    tp.init(ch, new SimpleDataListener(sendFileShip), new NonBlockingValve(agt.nonBlockingHandler, ch));
 
                     Train tr = new ReadChannelTrain(ch, tp, tur);
                     if(!TrainRunner.post(tr)) {

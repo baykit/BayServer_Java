@@ -67,6 +67,10 @@ public class SpinReadTransporter implements SpinHandler.SpinListener, Reusable, 
     public NextSocketAction lap(boolean[] spun) {
         spun[0] = false;
 
+        if(isClosed) {
+            return NextSocketAction.Close;
+        }
+
         try {
             boolean eof = false;
             int len = in.available();
@@ -152,6 +156,11 @@ public class SpinReadTransporter implements SpinHandler.SpinListener, Reusable, 
     @Override
     public void openWriteValve() {
         throw new Sink();
+    }
+
+    @Override
+    public void destroy() {
+        close();
     }
 
     ////////////////////////////////////////////////////////////////////
