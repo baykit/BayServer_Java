@@ -27,8 +27,6 @@ public class GrandAgent extends Thread {
 
     int selectTimeoutSec = SELECT_TIMEOUT_SEC;
     public final int agentId;
-    Map<ServerSocketChannel, Port> anchorablePortMap;
-    Map<DatagramChannel, Port> unanchorablePortMap;
     public boolean anchorable;
     Selector selector;
     public SpinHandler spinHandler;
@@ -42,19 +40,15 @@ public class GrandAgent extends Thread {
     public GrandAgent(
             int agentId,
             int maxShips,
-            Map<ServerSocketChannel, Port> anchorablePortMap,
-            Map<DatagramChannel, Port> unanchorablePortMap,
             boolean anchorable) {
         super("GrandAgent#" + agentId);
         this.agentId = agentId;
         this.anchorable = anchorable;
 
         if(anchorable) {
-            this.anchorablePortMap = anchorablePortMap;
-            this.acceptHandler = new AcceptHandler(this, anchorablePortMap);
+            this.acceptHandler = new AcceptHandler(this);
         }
         else {
-            this.unanchorablePortMap = unanchorablePortMap != null ? unanchorablePortMap : new HashMap<>();
         }
 
         this.spinHandler = new SpinHandler(this);
@@ -87,8 +81,8 @@ public class GrandAgent extends Thread {
 
             // Set up unanchorable channel
             if(!anchorable) {
-                for (DatagramChannel ch : unanchorablePortMap.keySet()) {
-                    Port p = unanchorablePortMap.get(ch);
+                for (DatagramChannel ch : BayServer.unanchorablePortMap.keySet()) {
+                    Port p = BayServer.unanchorablePortMap.get(ch);
                     ChannelListener tp = p.newChannelListener(this.agentId, ch);
                     nonBlockingHandler.addChannelListener(ch, tp);
                     nonBlockingHandler.askToStart(ch);
@@ -202,7 +196,7 @@ public class GrandAgent extends Thread {
 
 
     public void reloadCert() {
-        for(Port port : anchorablePortMap.values()) {
+        for(Port port : BayServer.anchorablePortMap.values()) {
             if(port.secure()) {
                 PortBase pbase = (PortBase)port;
                 try {
@@ -252,8 +246,6 @@ public class GrandAgent extends Thread {
 
     public static GrandAgent add(
             int agtId,
-            Map<ServerSocketChannel, Port> anchorablePortMap,
-            Map<DatagramChannel, Port> unanchorablePortMap,
             boolean anchorable) {
         if(agtId == -1)
             agtId = ++maxAgentId;
@@ -262,7 +254,7 @@ public class GrandAgent extends Thread {
         if(agtId > maxAgentId)
             maxAgentId = agtId;
 
-        GrandAgent agt = new GrandAgent(agtId, maxShips, anchorablePortMap, unanchorablePortMap, anchorable);
+        GrandAgent agt = new GrandAgent(agtId, maxShips, anchorable);
         agents.put(agtId, agt);
 
         listeners.forEach(lis -> lis.add(agt.agentId));

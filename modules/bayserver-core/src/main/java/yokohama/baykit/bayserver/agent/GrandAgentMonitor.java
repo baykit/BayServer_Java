@@ -2,16 +2,13 @@ package yokohama.baykit.bayserver.agent;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayMessage;
-import yokohama.baykit.bayserver.MemUsage;
+import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Symbol;
-import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.util.BlockingIOException;
 import yokohama.baykit.bayserver.util.IOUtil;
 
 import java.io.IOException;
-import java.nio.channels.DatagramChannel;
 import java.nio.channels.Pipe;
-import java.nio.channels.ServerSocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -21,8 +18,6 @@ public class GrandAgentMonitor {
 
     static int numAgents;
     static int curId;
-    static Map<ServerSocketChannel, Port> anchorablePortMap;
-    static Map<DatagramChannel, Port> unanchorablePortMap;
     public static Map<Integer, GrandAgentMonitor> monitors = new HashMap<>();
     static boolean finale;
 
@@ -119,15 +114,11 @@ public class GrandAgentMonitor {
     // static methods                              //
     /////////////////////////////////////////////////
     public static void init(
-            int numAgents,
-            Map<ServerSocketChannel, Port> anchorablePortMap,
-            Map<DatagramChannel, Port> unanchorablePortMap) throws IOException
+            int numAgents) throws IOException
     {
         GrandAgentMonitor.numAgents = numAgents;
-        GrandAgentMonitor.anchorablePortMap = anchorablePortMap;
-        GrandAgentMonitor.unanchorablePortMap = unanchorablePortMap;
 
-        if(!unanchorablePortMap.isEmpty()) {
+        if(!BayServer.unanchorablePortMap.isEmpty()) {
             add(false);
             GrandAgentMonitor.numAgents++;
         }
@@ -148,7 +139,7 @@ public class GrandAgentMonitor {
         Pipe sendPipe = Pipe.open();
         Pipe recvPipe = Pipe.open();
 
-        GrandAgent agt = GrandAgent.add(agtId, anchorablePortMap, unanchorablePortMap, anchorable);
+        GrandAgent agt = GrandAgent.add(agtId, anchorable);
 
         Thread t = new Thread(agt);
         agt.runCommandReceiver(sendPipe.source(), recvPipe.sink());
@@ -172,7 +163,7 @@ public class GrandAgentMonitor {
         if(!finale) {
             if (monitors.size() < numAgents) {
                 try {
-                    GrandAgent.add(-1, anchorablePortMap, unanchorablePortMap, anchorable);
+                    GrandAgent.add(-1, anchorable);
                     add(anchorable);
                 }
                 catch (IOException e) {
