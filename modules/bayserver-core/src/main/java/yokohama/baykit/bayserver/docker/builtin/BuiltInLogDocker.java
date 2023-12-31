@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.docker.builtin;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
-import yokohama.baykit.bayserver.agent.transporter.OutputChannelTransporter;
+import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
 import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
@@ -35,7 +35,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
             String fileName = filePrefix + "_" + agentId + "." + fileExt;
             try {
                 WriteChannelTaxi txi = new WriteChannelTaxi(agentId);
-                OutputChannelTransporter tp = new OutputChannelTransporter(agentId);
+                PlainTransporter tp = new PlainTransporter(false, 0, true);
                 Channel output = new FileOutputStream(fileName).getChannel();
                 LogShip sip = new LogShip();
                 sip.init(agentId, txi);
