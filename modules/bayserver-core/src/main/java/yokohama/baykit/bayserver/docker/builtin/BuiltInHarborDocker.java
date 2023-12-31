@@ -6,7 +6,7 @@ import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Trouble;
-import yokohama.baykit.bayserver.common.docker.DockerBase;
+import yokohama.baykit.bayserver.docker.base.DockerBase;
 import yokohama.baykit.bayserver.util.Groups;
 import yokohama.baykit.bayserver.util.LocaleUtil;
 import yokohama.baykit.bayserver.util.StringUtil;

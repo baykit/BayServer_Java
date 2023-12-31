@@ -4,7 +4,7 @@ import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.*;
-import yokohama.baykit.bayserver.common.docker.DockerBase;
+import yokohama.baykit.bayserver.docker.base.DockerBase;
 import yokohama.baykit.bayserver.BayMessage;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.ConfigException;

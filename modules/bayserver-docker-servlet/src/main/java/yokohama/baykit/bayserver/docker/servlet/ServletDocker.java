@@ -8,7 +8,7 @@ import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Town;
-import yokohama.baykit.bayserver.common.docker.ClubBase;
+import yokohama.baykit.bayserver.docker.base.ClubBase;
 import yokohama.baykit.bayserver.docker.servlet.duck.*;
 import yokohama.baykit.bayserver.docker.servlet.jakarta.*;
 import yokohama.baykit.bayserver.docker.servlet.javax.*;
