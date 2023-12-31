@@ -7,7 +7,7 @@ import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.agent.transporter.SecureTransporter;
 import yokohama.baykit.bayserver.docker.Secure;
-import yokohama.baykit.bayserver.common.docker.DockerBase;
+import yokohama.baykit.bayserver.docker.base.DockerBase;
 import yokohama.baykit.bayserver.util.StringUtil;
 
 import javax.net.ssl.*;

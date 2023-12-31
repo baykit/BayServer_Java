@@ -5,7 +5,7 @@ import yokohama.baykit.bayserver.ConfigException;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
-import yokohama.baykit.bayserver.common.docker.PortBase;
+import yokohama.baykit.bayserver.docker.base.PortBase;
 import yokohama.baykit.bayserver.docker.http.h1.H1InboundHandler;
 import yokohama.baykit.bayserver.docker.http.h1.H1PacketFactory;
 import yokohama.baykit.bayserver.docker.http.h2.H2ErrorCode;

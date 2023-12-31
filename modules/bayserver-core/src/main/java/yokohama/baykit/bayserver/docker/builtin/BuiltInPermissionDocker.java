@@ -5,7 +5,7 @@ import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Permission;
-import yokohama.baykit.bayserver.common.docker.DockerBase;
+import yokohama.baykit.bayserver.docker.base.DockerBase;
 import yokohama.baykit.bayserver.util.*;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayMessage;

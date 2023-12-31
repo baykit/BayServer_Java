@@ -9,7 +9,7 @@ import yokohama.baykit.bayserver.agent.transporter.SecureTransporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
-import yokohama.baykit.bayserver.common.docker.WarpBase;
+import yokohama.baykit.bayserver.docker.base.WarpBase;
 import yokohama.baykit.bayserver.util.IOUtil;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.BayLog;

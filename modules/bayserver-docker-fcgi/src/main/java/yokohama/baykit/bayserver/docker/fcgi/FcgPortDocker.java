@@ -1,6 +1,6 @@
 package yokohama.baykit.bayserver.docker.fcgi;
 
-import yokohama.baykit.bayserver.common.docker.PortBase;
+import yokohama.baykit.bayserver.docker.base.PortBase;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
 
