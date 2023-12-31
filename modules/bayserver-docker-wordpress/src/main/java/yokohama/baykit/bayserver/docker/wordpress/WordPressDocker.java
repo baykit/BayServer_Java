@@ -4,7 +4,7 @@ import yokohama.baykit.bayserver.ConfigException;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Town;
-import yokohama.baykit.bayserver.common.docker.RerouteBase;
+import yokohama.baykit.bayserver.docker.base.RerouteBase;
 import yokohama.baykit.bayserver.util.StringUtil;
 
 import java.io.File;

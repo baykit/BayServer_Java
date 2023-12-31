@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.docker.ajp;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
-import yokohama.baykit.bayserver.common.docker.WarpBase;
+import yokohama.baykit.bayserver.docker.base.WarpBase;
 import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.util.IOUtil;

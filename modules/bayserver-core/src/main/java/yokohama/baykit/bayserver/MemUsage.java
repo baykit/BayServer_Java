@@ -8,7 +8,7 @@ import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
 import yokohama.baykit.bayserver.common.InboundShipStore;
 import yokohama.baykit.bayserver.tour.TourStore;
-import yokohama.baykit.bayserver.common.docker.WarpBase;
+import yokohama.baykit.bayserver.docker.base.WarpBase;
 import yokohama.baykit.bayserver.util.StringUtil;
 
 import java.util.HashMap;
