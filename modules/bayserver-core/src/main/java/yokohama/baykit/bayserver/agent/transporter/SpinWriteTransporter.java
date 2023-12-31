@@ -61,6 +61,11 @@ public class SpinWriteTransporter implements SpinHandler.SpinListener, Reusable,
     public void openWriteValve() {
     }
 
+    @Override
+    public synchronized void destroy() {
+        close();
+    }
+
     ////////////////////////////////////////////////////////////////////
     // Custom methods
     ////////////////////////////////////////////////////////////////////

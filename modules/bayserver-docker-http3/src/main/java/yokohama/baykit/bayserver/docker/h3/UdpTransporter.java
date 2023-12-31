@@ -4,6 +4,7 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.NonBlockingHandler;
 import yokohama.baykit.bayserver.agent.transporter.DataListener;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
+import yokohama.baykit.bayserver.common.Valve;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -21,8 +22,8 @@ public class UdpTransporter extends Transporter {
     }
 
     @Override
-    public void init(NonBlockingHandler nbHnd, Channel ch, DataListener lis) {
-        super.init(nbHnd, ch, lis);
+    public void init(Channel ch, DataListener lis, Valve vlv) {
+        super.init(ch, lis, vlv);
         needHandshake = false;
     }
 

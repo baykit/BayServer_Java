@@ -6,6 +6,7 @@ import yokohama.baykit.bayserver.agent.ChannelListener;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
 import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
+import yokohama.baykit.bayserver.common.Valve;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.train.Train;
 
@@ -14,7 +15,7 @@ import java.io.InputStream;
 import java.nio.channels.Channel;
 import java.nio.channels.Channels;
 
-public class CgiTrain extends Train {
+public class CgiTrain extends Train implements Valve {
 
     final CgiDocker cgiDocker;
     CgiReqContentHandler handler;
@@ -42,11 +43,11 @@ public class CgiTrain extends Train {
         PlainTransporter outTp = new PlainTransporter(true, bufsize, false);
         CgiStdOutShip outShip = new CgiStdOutShip();
         outShip.init(outCh, tour.ship.agentId, tour, null, handler);
-        outTp.init(null, outCh, new SimpleDataListener(outShip));
+        outTp.init(outCh, new SimpleDataListener(outShip), this);
 
         tour.res.setConsumeListener((len, resume) -> {
             if(resume)
-                available = true;
+                openReadValve();
         });
 
         readAll(outCh, outTp);
@@ -57,11 +58,30 @@ public class CgiTrain extends Train {
         CgiStdErrShip errShip = new CgiStdErrShip();
         PlainTransporter errTp = new PlainTransporter(false, bufsize, false);
 
-        errTp.init(null, errCh, new SimpleDataListener(errShip));
+        errTp.init(errCh, new SimpleDataListener(errShip), this);
 
         errShip.init(errCh, tour.ship.agentId, handler);
 
         readAll(errCh, errTp);
+
+    }
+
+    ///////////////////////////////////////////////////////////////////
+    // implements Valve
+    ///////////////////////////////////////////////////////////////////
+
+    @Override
+    public void openReadValve() {
+        available = true;
+    }
+
+    @Override
+    public void openWriteValve() {
+        throw new Sink();
+    }
+
+    @Override
+    public void destroy() {
 
     }
 
@@ -107,4 +127,5 @@ public class CgiTrain extends Train {
         }
         lis.onClosed(input);
     }
+
 }

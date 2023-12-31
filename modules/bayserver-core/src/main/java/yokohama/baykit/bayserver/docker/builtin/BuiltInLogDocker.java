@@ -8,8 +8,7 @@ import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.common.Postman;
-import yokohama.baykit.bayserver.common.WriteOnlyShip;
-import yokohama.baykit.bayserver.common.WriteStreamTaxi;
+import yokohama.baykit.bayserver.common.WriteChannelTaxi;
 import yokohama.baykit.bayserver.docker.base.DockerBase;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Log;
@@ -35,7 +34,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
         public void add(int agentId) {
             String fileName = filePrefix + "_" + agentId + "." + fileExt;
             try {
-                WriteStreamTaxi txi = new WriteStreamTaxi(agentId);
+                WriteChannelTaxi txi = new WriteChannelTaxi(agentId);
                 OutputChannelTransporter tp = new OutputChannelTransporter(agentId);
                 Channel output = new FileOutputStream(fileName).getChannel();
                 LogShip sip = new LogShip();

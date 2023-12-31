@@ -10,7 +10,7 @@ import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import java.io.IOException;
 import java.nio.channels.Channel;
 
-public class ReadStreamTaxi extends Taxi implements Valve {
+public class ReadChannelTaxi extends Taxi implements Valve {
 
     int agentId;
     Channel input;
@@ -19,7 +19,7 @@ public class ReadStreamTaxi extends Taxi implements Valve {
     boolean running;
     long startTime;
 
-    public ReadStreamTaxi(int agtId) {
+    public ReadChannelTaxi(int agtId) {
         this.agentId = agtId;
     }
 
@@ -47,6 +47,11 @@ public class ReadStreamTaxi extends Taxi implements Valve {
     @Override
     public synchronized void openWriteValve() {
         throw new Sink();
+    }
+
+    @Override
+    public synchronized void destroy() {
+        close();
     }
 
     ////////////////////////////////////////////////////////////////////////////////
