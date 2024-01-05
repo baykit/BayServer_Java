@@ -100,9 +100,7 @@ public class InboundShip extends ProtocolizedShip {
 
     @Override
     public boolean notifyProtocolError(ProtocolException e) throws IOException {
-        if(BayLog.isDebugMode()) {
-            BayLog.error(e);
-        }
+        BayLog.debug(e);
         return protocolHandler.onProtocolError(e);
     }
 
