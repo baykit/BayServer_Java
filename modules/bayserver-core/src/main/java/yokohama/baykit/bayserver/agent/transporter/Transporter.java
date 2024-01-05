@@ -179,7 +179,7 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman 
 
 
     /////////////////////////////////////////////////////////////////////////////////
-    // implements NonBlockingHandler.ChannelListener
+    // implements ChannelListener
     /////////////////////////////////////////////////////////////////////////////////
     @Override
     public NextSocketAction onConnectable(Channel chkCh) throws IOException {
