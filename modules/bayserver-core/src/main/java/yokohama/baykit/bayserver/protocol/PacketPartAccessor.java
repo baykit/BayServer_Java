@@ -18,15 +18,15 @@ public class PacketPartAccessor {
         this.pos = 0;
     }
 
-    public void putByte(int b) throws IOException {
+    public void putByte(int b) {
         putBytes(new byte[]{(byte) b}, 0, 1);
     }
 
-    public void putBytes(byte[] buf) throws IOException {
+    public void putBytes(byte[] buf) {
         putBytes(buf, 0, buf.length);
     }
 
-    public void putBytes(byte[] buf, int ofs, int len) throws IOException {
+    public void putBytes(byte[] buf, int ofs, int len) {
         if(len > 0) {
             checkWrite(len);
             while(start + pos + len > packet.buf.length) {
@@ -37,13 +37,13 @@ public class PacketPartAccessor {
         }
     }
 
-    public void putShort(int val) throws IOException {
+    public void putShort(int val) {
         byte h = (byte)(val >> 8 & 0xFF);
         byte l = (byte)(val & 0xFF);
         putBytes(new byte[]{h, l});
     }
 
-    public void putInt(int val) throws IOException {
+    public void putInt(int val) {
         byte b1 = (byte)(val >> 24 & 0xFF);
         byte b2 = (byte)(val >> 16 & 0xFF);
         byte b3 = (byte)(val >> 8 & 0xFF);
@@ -51,23 +51,23 @@ public class PacketPartAccessor {
         putBytes(new byte[]{b1, b2, b3, b4});
     }
 
-    public void putString(String s) throws IOException {
+    public void putString(String s) {
         if (s == null)
             throw new NullPointerException();
         putBytes(StringUtil.toBytes(s));
     }
 
-    public int getByte() throws IOException {
+    public int getByte() {
         byte[] buf = new byte[1];
         getBytes(buf);
         return buf[0] & 0xFF;
     }
 
-    public void getBytes(byte[] buf) throws IOException {
+    public void getBytes(byte[] buf) {
         getBytes(buf, 0, buf.length);
     }
 
-    public void getBytes(byte[] buf, int ofs, int len) throws IOException {
+    public void getBytes(byte[] buf, int ofs, int len) {
         if(buf == null)
             throw new NullPointerException();
         checkRead(len);
@@ -75,13 +75,13 @@ public class PacketPartAccessor {
         pos += len;
     }
 
-    public int getShort() throws IOException {
+    public int getShort() {
         int h = getByte();
         int l = getByte();
         return h << 8 | l;
     }
 
-    public int getInt() throws IOException {
+    public int getInt() {
         int b1 = getByte();
         int b2 = getByte();
         int b3 = getByte();
