@@ -35,8 +35,7 @@ public class H1CommandUnPacker extends CommandUnPacker<H1Packet> {
     @Override
     public NextSocketAction packetReceived(H1Packet pac) throws IOException {
 
-        if(BayLog.isDebugMode())
-            BayLog.debug("h1: read packet type=" + pac.type() + " length=" + pac.dataLen());
+        BayLog.debug("h1: read packet type=%d length=%d", pac.type(), pac.dataLen());
 
         H1Command cmd;
         switch(pac.type()) {
