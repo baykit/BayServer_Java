@@ -49,7 +49,7 @@ public class AjpPacket extends Packet<AjpType> {
         }
 
         @Override
-        public void putString(String str) throws IOException {
+        public void putString(String str) {
             if (StringUtil.empty(str)) {
                 putShort(0xffff);
             } else {
@@ -63,7 +63,7 @@ public class AjpPacket extends Packet<AjpType> {
             return getString(getShort());
         }
 
-        public String getString(int len) throws IOException {
+        public String getString(int len) {
 
             if (len == 0xffff) {
                 return "";
