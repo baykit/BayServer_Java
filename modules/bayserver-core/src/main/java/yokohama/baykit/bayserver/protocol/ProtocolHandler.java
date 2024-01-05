@@ -17,7 +17,6 @@ public abstract class ProtocolHandler<C extends Command<C, P, T, ?>, P extends P
     public PacketPacker<P> packetPacker;
     public CommandUnPacker<P> commandUnpacker;
     public CommandPacker<C, P, T, ?> commandPacker;
-    public PacketStore<P, T> packetStore;
     public boolean serverMode;
     public Ship ship;
 
