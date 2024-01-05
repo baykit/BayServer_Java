@@ -14,7 +14,7 @@ import java.util.Map;
 /**
  * Protocol handler pool
  */
-public class ProtocolHandlerStore extends ObjectStore<ProtocolHandler> {
+public class    ProtocolHandlerStore extends ObjectStore<ProtocolHandler> {
 
     static class AgentListener implements LifecycleListener {
 
@@ -100,8 +100,9 @@ public class ProtocolHandlerStore extends ObjectStore<ProtocolHandler> {
             String protocol,
             boolean svrMode,
             ProtocolHandlerFactory pHndFactory) {
-        if(!protoMap.containsKey(protocol)) {
-            protoMap.put(constructProtocol(protocol, svrMode), new ProtocolInfo(protocol, svrMode, pHndFactory));
+        String key = constructProtocol(protocol, svrMode);
+        if(!protoMap.containsKey(key)) {
+            protoMap.put(key, new ProtocolInfo(protocol, svrMode, pHndFactory));
         }
     }
 
