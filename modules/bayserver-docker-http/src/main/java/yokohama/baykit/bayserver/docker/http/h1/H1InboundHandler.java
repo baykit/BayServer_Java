@@ -189,7 +189,7 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
             if(port.supportH2) {
                 sip.portDocker().returnProtocolHandler(sip.agentId, this);
                 H2InboundHandler newHnd = (H2InboundHandler)ProtocolHandlerStore.getStore(HtpDocker.H2_PROTO_NAME, true, sip.agentId).rent();
-                sip.setProtocolHandler(newHnd);
+                ((InboundShip)sip).setProtocolHandler(newHnd);
                 throw new UpgradeException();
             }
             else {

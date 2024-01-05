@@ -24,11 +24,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-public final class WarpShip extends ProtocolizedShip {
+public final class WarpShip extends Ship {
 
     public Warp docker;
     protected Map<Integer, Pair<Integer, Tour>> tourMap = new HashMap<>();
 
+    public SelectableChannel ch;
+    public ProtocolHandler protocolHandler;
     boolean connected;
     int socketTimeoutSec;
     ArrayList<Pair<Command, DataConsumeListener>> cmdBuf = new ArrayList<>();
@@ -50,9 +52,12 @@ public final class WarpShip extends ProtocolizedShip {
             Valve vlv,
             Warp dkr,
             ProtocolHandler protoHandler) {
-        initProtocolized(ch, agentId, pm, vlv, protoHandler);
+        init(agentId, pm, vlv);
+        this.ch = ch;
         this.docker = dkr;
         this.socketTimeoutSec = dkr.timeoutSec() >= 0 ? dkr.timeoutSec() : BayServer.harbor.socketTimeoutSec();
+        this.protocolHandler = protoHandler;
+        protoHandler.ship = this;
     }
 
 
@@ -68,6 +73,8 @@ public final class WarpShip extends ProtocolizedShip {
         tourMap.clear();
         connected = false;
         cmdBuf.clear();
+        ch = null;
+        protocolHandler = null;
     }
 
     /////////////////////////////////////
