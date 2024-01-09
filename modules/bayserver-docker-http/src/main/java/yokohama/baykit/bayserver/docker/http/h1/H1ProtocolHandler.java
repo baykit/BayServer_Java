@@ -1,27 +1,28 @@
 package yokohama.baykit.bayserver.docker.http.h1;
 
-import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.docker.http.HtpDocker;
-import yokohama.baykit.bayserver.util.*;
-import yokohama.baykit.bayserver.protocol.PacketStore;
-import yokohama.baykit.bayserver.protocol.CommandPacker;
-import yokohama.baykit.bayserver.protocol.PacketPacker;
-import yokohama.baykit.bayserver.protocol.ProtocolHandler;
+import yokohama.baykit.bayserver.protocol.*;
+import yokohama.baykit.bayserver.ship.Ship;
 
-public abstract class H1ProtocolHandler extends ProtocolHandler<H1Command, H1Packet, H1Type> implements H1CommandHandler{
+public class H1ProtocolHandler extends ProtocolHandler<H1Command, H1Packet, H1Type> {
 
     boolean keeping;
 
-    protected H1ProtocolHandler(
-            PacketStore<H1Packet, H1Type> pktStore,
-            boolean svrMode) {
-        commandUnpacker = new H1CommandUnPacker(this, svrMode);
-        packetUnpacker = new H1PacketUnpacker((H1CommandUnPacker) commandUnpacker, pktStore);
-        packetPacker = new PacketPacker<>();
-        commandPacker = new CommandPacker<>(packetPacker, pktStore);
-        serverMode = svrMode;
+    public H1ProtocolHandler(
+            H1Handler h1Handler,
+            PacketUnpacker<H1Packet> packetUnpacker,
+            PacketPacker<H1Packet> packetPacker,
+            CommandUnPacker<H1Packet> commandUnpacker,
+            CommandPacker<H1Command, H1Packet, H1Type, ?> commandPacker,
+            boolean serverMode) {
+        super(packetUnpacker, packetPacker, commandUnpacker, commandPacker, h1Handler, serverMode);
     }
+
+
+    public void init(Ship ship) {
+        super.init(ship);
+    }
+
 
     /////////////////////////////////////
     // Implements Reusable

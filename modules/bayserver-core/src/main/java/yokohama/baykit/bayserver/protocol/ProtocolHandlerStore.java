@@ -14,7 +14,7 @@ import java.util.Map;
 /**
  * Protocol handler pool
  */
-public class    ProtocolHandlerStore extends ObjectStore<ProtocolHandler> {
+public class ProtocolHandlerStore extends ObjectStore<ProtocolHandler> {
 
     static class AgentListener implements LifecycleListener {
 

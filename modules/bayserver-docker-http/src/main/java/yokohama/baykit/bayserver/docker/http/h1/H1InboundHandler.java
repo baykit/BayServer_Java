@@ -4,6 +4,7 @@ import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.UpgradeException;
 import yokohama.baykit.bayserver.docker.http.h2.H2InboundHandler;
+import yokohama.baykit.bayserver.docker.http.h2.H2ProtocolHandler;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.common.InboundHandler;
 import yokohama.baykit.bayserver.protocol.*;
@@ -24,16 +25,31 @@ import java.nio.channels.SocketChannel;
 
 import static yokohama.baykit.bayserver.docker.http.h1.H1InboundHandler.CommandState.*;
 
-public class H1InboundHandler extends H1ProtocolHandler implements InboundHandler {
+public class H1InboundHandler implements H1Handler, InboundHandler {
 
     public static class InboundProtocolHandlerFactory implements ProtocolHandlerFactory<H1Command, H1Packet, H1Type> {
 
         @Override
         public ProtocolHandler<H1Command, H1Packet, H1Type> createProtocolHandler(
                 PacketStore<H1Packet, H1Type> pktStore) {
-            return new H1InboundHandler(pktStore);
+            H1InboundHandler inboundHandler = new H1InboundHandler();
+            H1CommandUnPacker commandUnpacker = new H1CommandUnPacker(inboundHandler, true);
+            H1PacketUnpacker packetUnpacker = new H1PacketUnpacker(commandUnpacker, pktStore);
+            PacketPacker packetPacker = new PacketPacker<>();
+            CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
+            H1ProtocolHandler protocolHandler =
+                    new H1ProtocolHandler(
+                            inboundHandler,
+                            packetUnpacker,
+                            packetPacker,
+                            commandUnpacker,
+                            commandPacker,
+                            true);
+            inboundHandler.init(protocolHandler);
+            return protocolHandler;
         }
     }
+
 
     enum CommandState {
         ReadHeader,
@@ -41,7 +57,7 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
         Finished
     }
 
-
+    H1ProtocolHandler protocolHandler;
     boolean headerRead;
     String httpProtocol;
 
@@ -50,9 +66,12 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
     Tour curTour;
     int curTourId;
 
-    public H1InboundHandler(PacketStore<H1Packet, H1Type> pktStore) {
-        super(pktStore, true);
+    public H1InboundHandler() {
         resetState();
+    }
+
+    public void init(H1ProtocolHandler protocolHandler) {
+        this.protocolHandler = protocolHandler;
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -61,7 +80,6 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
 
     @Override
     public void reset() {
-        super.reset();
         resetState();
         headerRead = false;
         httpProtocol = null;
@@ -75,7 +93,7 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
     ////////////////////////////////////////////////////////////////////////////////
 
     @Override
-    public void sendResHeaders(Tour tur) throws IOException {
+    public void sendHeaders(Tour tur) throws IOException {
 
         String resCon;
 
@@ -109,17 +127,18 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
         }
 
         CmdHeader cmd = CmdHeader.newResHeader(tur.res.headers, tur.req.protocol);
-        post(cmd);
+        protocolHandler.post(cmd);
     }
 
     @Override
-    public void sendResContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
+    public void sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
         CmdContent cmd = new CmdContent(bytes, ofs, len);
-        post(cmd, lis);
+        protocolHandler.post(cmd, lis);
     }
 
     @Override
-    public void sendEndTour(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+    public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+        InboundShip ship = ship();
         BayLog.trace("%s sendEndTour: tur=%s keep=%s", ship, tur, keepAlive);
 
         // Send end request command
@@ -135,7 +154,7 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
         };
 
         try {
-            post(cmd, () -> {
+            protocolHandler.post(cmd, () -> {
                 BayLog.debug("%s call back of end content command: tur=%s", ship, tur);
                 ensureFunc.run();
                 lis.dataConsumed();
@@ -187,9 +206,10 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
         if (protocol.equals("HTTP/2.0")) {
             HtpPortDocker port = (HtpPortDocker)sip.portDocker();
             if(port.supportH2) {
-                sip.portDocker().returnProtocolHandler(sip.agentId, this);
-                H2InboundHandler newHnd = (H2InboundHandler)ProtocolHandlerStore.getStore(HtpDocker.H2_PROTO_NAME, true, sip.agentId).rent();
-                ((InboundShip)sip).setProtocolHandler(newHnd);
+                sip.portDocker().returnProtocolHandler(sip.agentId, protocolHandler);
+                H2InboundHandler inboundHandler = new H2InboundHandler();
+                H2ProtocolHandler protocolHandler = (H2ProtocolHandler)ProtocolHandlerStore.getStore(HtpDocker.H2_PROTO_NAME, true, sip.agentId).rent();
+                sip.setProtocolHandler(protocolHandler);
                 throw new UpgradeException();
             }
             else {
@@ -336,6 +356,10 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
         return state == Finished;
     }
 
+    InboundShip ship() {
+        return (InboundShip) protocolHandler.ship;
+    }
+
     void endReqContent(int chkTurId, Tour tur) throws IOException, HttpException {
         tur.req.endContent(chkTurId);
         resetState();
@@ -383,9 +407,5 @@ public class H1InboundHandler extends H1ProtocolHandler implements InboundHandle
         headerRead = false;
         changeState(Finished);
         curTour = null;
-    }
-
-    InboundShip ship() {
-        return (InboundShip)ship;
     }
 }

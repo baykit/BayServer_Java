@@ -1,7 +1,6 @@
 package yokohama.baykit.bayserver.protocol;
 
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.common.Postman;
 import yokohama.baykit.bayserver.util.ClassUtil;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Reusable;
@@ -13,16 +12,35 @@ import java.nio.ByteBuffer;
 public abstract class ProtocolHandler<C extends Command<C, P, T, ?>, P extends Packet<T>, T>
         implements Reusable {
 
-    public PacketUnpacker<P> packetUnpacker;
-    public PacketPacker<P> packetPacker;
-    public CommandUnPacker<P> commandUnpacker;
-    public CommandPacker<C, P, T, ?> commandPacker;
-    public boolean serverMode;
+    public final PacketUnpacker<P> packetUnpacker;
+    public final PacketPacker<P> packetPacker;
+    public final CommandUnPacker<P> commandUnpacker;
+    public final CommandPacker<C, P, T, ?> commandPacker;
+    public final CommandHandler<C>  commandHandler;
+    public final boolean serverMode;
     public Ship ship;
+
+    public ProtocolHandler(
+            PacketUnpacker<P> packetUnpacker,
+            PacketPacker<P> packetPacker,
+            CommandUnPacker<P> commandUnpacker,
+            CommandPacker<C, P, T, ?> commandPacker,
+            CommandHandler<C> commandHandler, boolean serverMode) {
+        this.packetUnpacker = packetUnpacker;
+        this.packetPacker = packetPacker;
+        this.commandUnpacker = commandUnpacker;
+        this.commandPacker = commandPacker;
+        this.commandHandler = commandHandler;
+        this.serverMode = serverMode;
+    }
 
     @Override
     public String toString() {
         return ClassUtil.getLocalName(getClass()) + " ship=" + ship;
+    }
+
+    public void init(Ship ship) {
+        this.ship = ship;
     }
 
     /////////////////////////////////////
@@ -35,6 +53,7 @@ public abstract class ProtocolHandler<C extends Command<C, P, T, ?>, P extends P
         commandPacker.reset();
         packetPacker.reset();
         packetUnpacker.reset();
+        commandHandler.reset();
     }
 
     /////////////////////////////////////
@@ -51,11 +70,6 @@ public abstract class ProtocolHandler<C extends Command<C, P, T, ?>, P extends P
      * Get max of response data size (maybe not packet size)
      */
     public abstract int maxResPacketDataSize();
-
-    /**
-     * Send protocol error to client
-     */
-    public abstract boolean onProtocolError(ProtocolException e) throws IOException;
 
     /////////////////////////////////////
     // Other methods

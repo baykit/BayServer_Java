@@ -5,6 +5,7 @@ import yokohama.baykit.bayserver.agent.GrandAgentMonitor;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.common.InboundHandler;
 import yokohama.baykit.bayserver.common.InboundShip;
+import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.ajp.command.*;
@@ -12,24 +13,34 @@ import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.HttpUtil;
 import yokohama.baykit.bayserver.util.StringUtil;
-import yokohama.baykit.bayserver.protocol.PacketStore;
-import yokohama.baykit.bayserver.protocol.ProtocolException;
-import yokohama.baykit.bayserver.protocol.ProtocolHandler;
-import yokohama.baykit.bayserver.protocol.ProtocolHandlerFactory;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.channels.SocketChannel;
 
 
-public class AjpInboundHandler extends AjpProtocolHandler implements InboundHandler {
+public class AjpInboundHandler implements InboundHandler, AjpHandler {
 
     static class InboundProtocolHandlerFactory implements ProtocolHandlerFactory<AjpCommand, AjpPacket, AjpType> {
 
         @Override
         public ProtocolHandler<AjpCommand, AjpPacket, AjpType> createProtocolHandler(
                 PacketStore<AjpPacket, AjpType> pktStore) {
-            return new AjpInboundHandler(pktStore);
+            AjpInboundHandler inboundHandler = new AjpInboundHandler();
+            AjpCommandUnPacker commandUnpacker = new AjpCommandUnPacker(inboundHandler);
+            AjpPacketUnPacker packetUnpacker = new AjpPacketUnPacker(pktStore, commandUnpacker);
+            PacketPacker packetPacker = new PacketPacker<>();
+            CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
+            AjpProtocolHandler protocolHandler =
+                    new AjpProtocolHandler(
+                            inboundHandler,
+                            packetUnpacker,
+                            packetPacker,
+                            commandUnpacker,
+                            commandPacker,
+                            true);
+            inboundHandler.init(protocolHandler);
+            return protocolHandler;
         }
     }
 
@@ -42,14 +53,20 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
 
     int curTourId;
     CmdForwardRequest reqCommand;
+    AjpProtocolHandler protocolHandler;
 
     CommandState state;
     boolean keeping;
 
-    public AjpInboundHandler(PacketStore<AjpPacket, AjpType> pktStore) {
-        super(pktStore, true);
+    public AjpInboundHandler() {
         resetState();
     }
+
+    private void init(AjpProtocolHandler protocolHandler) {
+        this.protocolHandler = protocolHandler;
+    }
+
+
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // Implements Reusable
@@ -57,7 +74,6 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
 
     @Override
     public void reset() {
-        super.reset();
         resetState();
         reqCommand = null;
         keeping = false;
@@ -70,7 +86,7 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
     @Override
-    public void sendResHeaders(Tour tur) throws IOException {
+    public void sendHeaders(Tour tur) throws IOException {
 
         boolean chunked = false;
         CmdSendHeaders cmd = new CmdSendHeaders();
@@ -80,38 +96,38 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
             }
         }
         cmd.setStatus(tur.res.headers.status());
-        post(cmd);
+        protocolHandler.post(cmd);
 
         //BayLog.debug(this + " send header: content-length=" + tour.resHeaders.getContentLength());
     }
 
     @Override
-    public void sendResContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
+    public void sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
         CmdSendBodyChunk cmd = new CmdSendBodyChunk(bytes, ofs, len);
-        post(cmd, lis);
+        protocolHandler.post(cmd, lis);
     }
 
     @Override
-    public void sendEndTour(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+    public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
 
-        BayLog.debug(ship + " endTour: tur=" + tur + " keep=" + keepAlive);
+        BayLog.debug(ship() + " endTour: tur=" + tur + " keep=" + keepAlive);
         CmdEndResponse cmd = new CmdEndResponse();
         cmd.reuse = keepAlive;
 
         Runnable ensureFunc = () -> {
             if (!keepAlive)
-                ship.postman.postEnd();
+                ship().postman.postEnd();
         };
 
         try {
-            post(cmd, () -> {
-                BayLog.debug(ship + " call back in sendEndTour: tur=" + tur + " keep=" + keepAlive);
+            protocolHandler.post(cmd, () -> {
+                BayLog.debug(ship() + " call back in sendEndTour: tur=" + tur + " keep=" + keepAlive);
                 ensureFunc.run();
                 lis.dataConsumed();
             });
         }
         catch(IOException e) {
-            BayLog.debug(ship + " post failed in sendEndTour: tur=" + tur + " keep=" + keepAlive);
+            BayLog.debug(ship() + " post failed in sendEndTour: tur=" + tur + " keep=" + keepAlive);
             ensureFunc.run();
             throw e;
         }
@@ -120,7 +136,7 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
     @Override
     public boolean onProtocolError(ProtocolException e) throws IOException {
         BayLog.debug(e);
-        InboundShip ibShip = (InboundShip)ship;
+        InboundShip ibShip = ship();
         Tour tur = ibShip.getErrorTour();
         tur.res.sendError(Tour.TOUR_ID_NOCHECK, HttpStatus.BAD_REQUEST, e.getMessage(), e);
         return true;
@@ -254,7 +270,7 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
             if(bch.reqLen > AjpPacket.MAX_DATA_LEN) {
                 bch.reqLen = AjpPacket.MAX_DATA_LEN;
             }
-            post(bch);
+            protocolHandler.post(bch);
 
             if(!success)
                 return NextSocketAction.Suspend;
@@ -330,6 +346,6 @@ public class AjpInboundHandler extends AjpProtocolHandler implements InboundHand
     }
 
     InboundShip ship() {
-        return (InboundShip) ship;
+        return (InboundShip) protocolHandler.ship;
     }
 }

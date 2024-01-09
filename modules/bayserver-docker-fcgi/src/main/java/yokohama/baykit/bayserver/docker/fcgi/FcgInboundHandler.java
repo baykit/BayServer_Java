@@ -2,6 +2,7 @@ package yokohama.baykit.bayserver.docker.fcgi;
 
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.common.InboundHandler;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
@@ -10,10 +11,6 @@ import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.docker.fcgi.command.*;
 import yokohama.baykit.bayserver.tour.TourReq;
 import yokohama.baykit.bayserver.util.*;
-import yokohama.baykit.bayserver.protocol.PacketStore;
-import yokohama.baykit.bayserver.protocol.ProtocolException;
-import yokohama.baykit.bayserver.protocol.ProtocolHandler;
-import yokohama.baykit.bayserver.protocol.ProtocolHandlerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -22,14 +19,28 @@ import java.util.Map;
 
 import static yokohama.baykit.bayserver.docker.fcgi.FcgInboundHandler.CommandState.*;
 
-public class FcgInboundHandler extends FcgProtocolHandler implements InboundHandler {
+public class FcgInboundHandler implements InboundHandler, FcgHandler {
 
     static class InboundProtocolHandlerFactory implements ProtocolHandlerFactory<FcgCommand, FcgPacket, FcgType> {
 
         @Override
         public ProtocolHandler<FcgCommand, FcgPacket, FcgType> createProtocolHandler(
                 PacketStore<FcgPacket, FcgType> pktStore) {
-            return new FcgInboundHandler(pktStore);
+            FcgInboundHandler inboundHandler = new FcgInboundHandler();
+            FcgCommandUnPacker commandUnpacker = new FcgCommandUnPacker(inboundHandler);
+            FcgPacketUnPacker packetUnpacker = new FcgPacketUnPacker(commandUnpacker, pktStore);
+            PacketPacker packetPacker = new PacketPacker<>();
+            CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
+            FcgProtocolHandler protocolHandler =
+                    new FcgProtocolHandler(
+                            inboundHandler,
+                            packetUnpacker,
+                            packetPacker,
+                            commandUnpacker,
+                            commandPacker,
+                            true);
+            inboundHandler.init(protocolHandler);
+            return protocolHandler;
         }
     }
 
@@ -42,15 +53,20 @@ public class FcgInboundHandler extends FcgProtocolHandler implements InboundHand
     }
 
     CommandState state;
+    FcgProtocolHandler protocolHandler;
 
     Map<String, String> env = new HashMap<>();
     int reqId;
     boolean reqKeepAlive;
 
-    public FcgInboundHandler(PacketStore<FcgPacket, FcgType> pktStore) {
-        super(pktStore, true);
+    public FcgInboundHandler() {
         resetState();
     }
+
+    private void init(FcgProtocolHandler protocolHandler) {
+        this.protocolHandler = protocolHandler;
+    }
+
 
     @Override
     public String toString() {
@@ -62,7 +78,6 @@ public class FcgInboundHandler extends FcgProtocolHandler implements InboundHand
     ///////////////////////////////////////////////////////////////////////////////////////////////
     @Override
     public void reset() {
-        super.reset();
         env.clear();
         resetState();
     }
@@ -73,9 +88,9 @@ public class FcgInboundHandler extends FcgProtocolHandler implements InboundHand
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
     @Override
-    public void sendResHeaders(Tour tur) throws IOException {
+    public void sendHeaders(Tour tur) throws IOException {
 
-        BayLog.debug(ship + " PH:sendHeaders: tur=" + tur);
+        BayLog.debug(ship() + " PH:sendHeaders: tur=" + tur);
 
         int scode = tur.res.headers.status();
         String status = scode + " " + HttpStatus.description(scode);
@@ -93,40 +108,40 @@ public class FcgInboundHandler extends FcgProtocolHandler implements InboundHand
         HttpUtil.sendNewLine(hout);
         byte[] data = hout.toByteArray();
         FcgCommand cmd = new CmdStdOut(tur.req.key, data, 0, data.length);
-        post(cmd);
+        protocolHandler.post(cmd);
     }
 
     @Override
-    public void sendResContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
+    public void sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
         CmdStdOut cmd = new CmdStdOut(tur.req.key, bytes, ofs, len);
-        post(cmd, lis);
+        protocolHandler.post(cmd, lis);
     }
 
     @Override
-    public void sendEndTour(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+    public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
 
-        BayLog.debug("%s PH:endTour: tur=%s keep=%s", ship, tur, keepAlive);
+        BayLog.debug("%s PH:endTour: tur=%s keep=%s", ship(), tur, keepAlive);
 
         // Send empty stdout command
         FcgCommand cmd = new CmdStdOut(tur.req.key);
-        post(cmd);
+        protocolHandler.post(cmd);
 
         // Send end request command
         cmd = new CmdEndRequest(tur.req.key);
         Runnable ensureFunc = () -> {
             if(!keepAlive)
-                ship.postman.postEnd();
+                ship().postman.postEnd();
         };
 
         try {
-            post(cmd, () -> {
-                BayLog.debug("%s call back in sendEndTour: tur=%s keep=%b", ship, tur, keepAlive);
+            protocolHandler.post(cmd, () -> {
+                BayLog.debug("%s call back in sendEndTour: tur=%s keep=%b", ship(), tur, keepAlive);
                 ensureFunc.run();
                 lis.dataConsumed();
             });
         }
         catch(IOException e) {
-            BayLog.debug("%s post faile in sendEndTour: tur=%s keep=%b", ship, tur, keepAlive);
+            BayLog.debug("%s post faile in sendEndTour: tur=%s keep=%b", ship(), tur, keepAlive);
             ensureFunc.run();
             throw e;
         }
@@ -135,7 +150,7 @@ public class FcgInboundHandler extends FcgProtocolHandler implements InboundHand
     @Override
     public boolean onProtocolError(ProtocolException e) throws IOException {
         BayLog.debug(e);
-        InboundShip ibShip = (InboundShip)ship;
+        InboundShip ibShip = ship();
         Tour tur = ibShip.getErrorTour();
         tur.res.sendError(Tour.TOUR_ID_NOCHECK, HttpStatus.BAD_REQUEST, e.getMessage(), e);
         return true;
@@ -404,6 +419,6 @@ public class FcgInboundHandler extends FcgProtocolHandler implements InboundHand
     }
 
     InboundShip ship() {
-        return (InboundShip) ship;
+        return (InboundShip)protocolHandler.ship;
     }
 }
