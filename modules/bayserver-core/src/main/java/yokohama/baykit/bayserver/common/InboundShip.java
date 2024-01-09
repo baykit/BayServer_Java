@@ -3,14 +3,13 @@ package yokohama.baykit.bayserver.common;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.ship.Ship;
 import yokohama.baykit.bayserver.tour.Tour;
+import yokohama.baykit.bayserver.tour.TourHandler;
 import yokohama.baykit.bayserver.tour.TourStore;
 import yokohama.baykit.bayserver.util.Counter;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
@@ -107,7 +106,7 @@ public class InboundShip extends Ship {
     @Override
     public boolean notifyProtocolError(ProtocolException e) throws IOException {
         BayLog.debug(e);
-        return protocolHandler.onProtocolError(e);
+        return tourHandler().onProtocolError(e);
     }
 
     @Override
@@ -150,8 +149,12 @@ public class InboundShip extends Ship {
 
     public final void setProtocolHandler(ProtocolHandler protoHandler) {
         this.protocolHandler = protoHandler;
-        protoHandler.ship = this;
+        protoHandler.init(this);
         BayLog.debug("%s protocol handler is set", this);
+    }
+
+    public TourHandler tourHandler() {
+        return (TourHandler)protocolHandler.commandHandler;
     }
 
     public Tour getTour(int turKey) {
@@ -196,7 +199,7 @@ public class InboundShip extends Ship {
         for(String[] nv: portDkr.additionalHeaders()) {
             tur.res.headers.add(nv[0], nv[1]);
         }
-        ((InboundHandler) protocolHandler).sendResHeaders(tur);
+        tourHandler().sendHeaders(tur);
     }
 
     public void sendResContent(int chkId, Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
@@ -208,7 +211,7 @@ public class InboundShip extends Ship {
             sendResContent(Tour.TOUR_ID_NOCHECK, tur, bytes, ofs + maxLen, len - maxLen, lis);
         }
         else {
-            ((InboundHandler) protocolHandler).sendResContent(tur, bytes, ofs, len, lis);
+            tourHandler().sendContent(tur, bytes, ofs, len, lis);
         }
     }
 
@@ -233,7 +236,7 @@ public class InboundShip extends Ship {
             }
         }
 
-        ((InboundHandler)protocolHandler).sendEndTour(tur, keepAlive, lis);
+        tourHandler().sendEnd(tur, keepAlive, lis);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////

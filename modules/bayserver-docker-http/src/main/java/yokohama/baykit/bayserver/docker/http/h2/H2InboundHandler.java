@@ -3,14 +3,14 @@ package yokohama.baykit.bayserver.docker.http.h2;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.common.InboundHandler;
-import yokohama.baykit.bayserver.protocol.*;
-import yokohama.baykit.bayserver.tour.TourReq;
-import yokohama.baykit.bayserver.util.DataConsumeListener;
-import yokohama.baykit.bayserver.tour.ReqContentHandler;
-import yokohama.baykit.bayserver.tour.Tour;
-import yokohama.baykit.bayserver.tour.TourStore;
 import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.docker.http.h2.command.*;
+import yokohama.baykit.bayserver.protocol.*;
+import yokohama.baykit.bayserver.tour.ReqContentHandler;
+import yokohama.baykit.bayserver.tour.Tour;
+import yokohama.baykit.bayserver.tour.TourReq;
+import yokohama.baykit.bayserver.tour.TourStore;
+import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.HttpUtil;
 
@@ -20,17 +20,27 @@ import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
-public class H2InboundHandler extends H2ProtocolHandler implements InboundHandler {
+public class H2InboundHandler implements H2Handler, InboundHandler {
 
     public static class InboundProtocolHandlerFactory implements ProtocolHandlerFactory<H2Command, H2Packet, H2Type> {
 
         @Override
         public ProtocolHandler<H2Command, H2Packet, H2Type> createProtocolHandler(
                 PacketStore<H2Packet, H2Type> pktStore) {
-            return new H2InboundHandler(pktStore);
+
+            H2InboundHandler inboundHandler = new H2InboundHandler();
+            H2CommandUnPacker commandUnpacker = new H2CommandUnPacker(inboundHandler);
+            H2PacketUnPacker packetUnpacker = new H2PacketUnPacker(commandUnpacker, pktStore, true);
+            PacketPacker packetPacker = new PacketPacker<>();
+            CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
+            H2ProtocolHandler protocolHandler =
+                    new H2ProtocolHandler(inboundHandler, packetUnpacker, packetPacker, commandUnpacker, commandPacker, true);
+            inboundHandler.init(protocolHandler);
+            return protocolHandler;
         }
     }
 
+    H2ProtocolHandler protocolHandler;
     boolean headerRead;
     String httpProtocol;
 
@@ -39,22 +49,25 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
     int windowSize = BayServer.harbor.tourBufferSize();
     final H2Settings settings = new H2Settings();
     final HeaderBlockAnalyzer analyzer = new HeaderBlockAnalyzer();
+    public final HeaderTable reqHeaderTbl = HeaderTable.createDynamicTable();
+    public final HeaderTable resHeaderTbl = HeaderTable.createDynamicTable();
 
 
-    public H2InboundHandler(PacketStore<H2Packet, H2Type> pktStore) {
-        super(pktStore, true);
+
+    public H2InboundHandler() {
+
     }
 
-    InboundShip ship() {
-        return (InboundShip) ship;
+    public void init(H2ProtocolHandler protocolHandler) {
+        this.protocolHandler = protocolHandler;
     }
+
 
     ///////////////////////////////////////////////////////////////////////////////////////////
     // implements Reusable
     ///////////////////////////////////////////////////////////////////////////////////////////
 
     public void reset() {
-        super.reset();
         headerRead = false;
 
         reqContLen = 0;
@@ -66,7 +79,7 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
     ///////////////////////////////////////////////////////////////////////////////////////////
 
     @Override
-    public void sendResHeaders(Tour tur) throws IOException {
+    public void sendHeaders(Tour tur) throws IOException {
         CmdHeaders cmd = new CmdHeaders(tur.req.key);
 
         HeaderBlockBuilder bld = new HeaderBlockBuilder();
@@ -99,34 +112,34 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
         // cmd.streamDependency = streamId;
         cmd.flags.setPadded(false);
 
-        post(cmd);
+        protocolHandler.post(cmd);
     }
 
     @Override
-    public void sendResContent(Tour tur, byte[] bytes, int ofs, final int len, DataConsumeListener lis) throws IOException {
+    public void sendContent(Tour tur, byte[] bytes, int ofs, final int len, DataConsumeListener lis) throws IOException {
         CmdData cmd = new CmdData(tur.req.key, null, bytes, ofs, len);
-        post(cmd, lis);
+        protocolHandler.post(cmd, lis);
     }
 
     @Override
-    public void sendEndTour(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+    public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
         CmdData cmd = new CmdData(tur.req.key, null, new byte[0], 0, 0);
         cmd.flags.setEndStream(true);
-        post(cmd, lis);
+        protocolHandler.post(cmd, lis);
     }
 
     @Override
     public boolean onProtocolError(ProtocolException e) {
         BayLog.debug(e);
         BayLog.error(e, e.getMessage());
-        CmdGoAway cmd = new CmdGoAway(CTL_STREAM_ID);
+        CmdGoAway cmd = new CmdGoAway(H2ProtocolHandler.CTL_STREAM_ID);
         cmd.streamId = 0;
         cmd.lastStreamId = 0;
         cmd.errorCode = H2ErrorCode.PROTOCOL_ERROR;
         cmd.debugData = "Thank you!".getBytes(StandardCharsets.UTF_8);
         try {
-            post(cmd);
-            ship.postman.postEnd();
+            protocolHandler.post(cmd);
+            protocolHandler.ship.postman.postEnd();
         }
         catch(IOException ex) {
             BayLog.error(ex);
@@ -147,13 +160,13 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
 
         httpProtocol = cmd.protocol;
 
-        CmdSettings set = new CmdSettings(CTL_STREAM_ID);
+        CmdSettings set = new CmdSettings(H2ProtocolHandler.CTL_STREAM_ID);
         set.streamId = 0;
         set.items.add(new CmdSettings.Item(CmdSettings.MAX_CONCURRENT_STREAMS, TourStore.MAX_TOURS));
         set.items.add(new CmdSettings.Item(CmdSettings.INITIAL_WINDOW_SIZE, windowSize));
-        post(set);
+        protocolHandler.post(set);
 
-        set = new CmdSettings(CTL_STREAM_ID);
+        set = new CmdSettings(H2ProtocolHandler.CTL_STREAM_ID);
         set.streamId = 0;
         set.flags.setAck(true);
         //cmdPacker.send(set);
@@ -163,13 +176,11 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
 
     @Override
     public NextSocketAction handleHeaders(CmdHeaders cmd) throws IOException {
-        InboundShip sip = ship();
-
-        BayLog.debug("%s handle_headers: stm=%d dep=%d weight=%d", sip, cmd.streamId, cmd.streamDependency, cmd.weight);
+        BayLog.debug("%s handle_headers: stm=%d dep=%d weight=%d", ship(), cmd.streamId, cmd.streamDependency, cmd.weight);
         Tour tur = getTour(cmd.streamId);
         if(tur == null) {
             BayLog.error(BayMessage.get(Symbol.INT_NO_MORE_TOURS));
-            tur = sip.getTour(cmd.streamId, true);
+            tur = ship().getTour(cmd.streamId, true);
             tur.res.sendError(Tour.TOUR_ID_NOCHECK, HttpStatus.SERVICE_UNAVAILABLE, "No available tours");
             //sip.agent.shutdown(false);
             return NextSocketAction.Continue;
@@ -208,7 +219,7 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
         if (cmd.flags.endHeaders()) {
             tur.req.protocol = "HTTP/2.0";
             BayLog.debug("%s H2 read header method=%s protocol=%s uri=%s contlen=%d",
-                            sip, tur.req.method, tur.req.protocol, tur.req.uri, tur.req.headers.contentLength());
+                            ship(), tur.req.method, tur.req.protocol, tur.req.uri, tur.req.headers.contentLength());
 
             int reqContLen = tur.req.headers.contentLength();
 
@@ -268,10 +279,10 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
                                     upd.windowSizeIncrement = len;
                                     CmdWindowUpdate upd2 = new CmdWindowUpdate(0);
                                     upd2.windowSizeIncrement = len;
-                                    CommandPacker cmdPacker = commandPacker;
+                                    CommandPacker cmdPacker = protocolHandler.commandPacker;
                                     try {
-                                        post(upd);
-                                        post(upd2);
+                                        protocolHandler.post(upd);
+                                        protocolHandler.post(upd2);
                                     }
                                     catch(IOException e) {
                                         BayLog.error(e);
@@ -316,13 +327,12 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
 
     @Override
     public NextSocketAction handleSettings(CmdSettings cmd) throws IOException {
-        InboundShip sip = ship();
-        BayLog.debug("%s handleSettings: stmid=%d", sip, cmd.streamId);
+        BayLog.debug("%s handleSettings: stmid=%d", ship(), cmd.streamId);
         if(cmd.flags.ack())
             return NextSocketAction.Continue; // ignore ACK
 
         for(CmdSettings.Item item : cmd.items) {
-            BayLog.debug("%s handle: Setting id=%d, value=%d", sip, item.id, item.value);
+            BayLog.debug("%s handle: Setting id=%d, value=%d", ship(), item.id, item.value);
             switch(item.id) {
                 case CmdSettings.HEADER_TABLE_SIZE:
                     settings.headerTableSize = item.value;
@@ -348,7 +358,7 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
         }
 
         CmdSettings res = new CmdSettings(0, new H2Flags(H2Flags.FLAGS_ACK));
-        post(res);
+        protocolHandler.post(res);
         return NextSocketAction.Continue;
     }
 
@@ -386,7 +396,7 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
         BayLog.debug("%s handle_ping: stm=%d", sip, cmd.streamId);
 
         CmdPing res = new CmdPing(cmd.streamId, new H2Flags(H2Flags.FLAGS_ACK), cmd.opaqueData);
-        post(res);
+        protocolHandler.post(res);
         return NextSocketAction.Continue;
     }
 
@@ -400,6 +410,10 @@ public class H2InboundHandler extends H2ProtocolHandler implements InboundHandle
     ///////////////////////////////////////////////////////////////////////////////////////////
     // private
     ///////////////////////////////////////////////////////////////////////////////////////////
+    InboundShip ship() {
+        return (InboundShip) protocolHandler.ship;
+    }
+
     Tour getTour(int key) {
         return ship().getTour(key);
     }

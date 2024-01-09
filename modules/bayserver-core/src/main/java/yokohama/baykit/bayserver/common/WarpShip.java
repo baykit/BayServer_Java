@@ -5,7 +5,6 @@ import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.docker.Warp;
 import yokohama.baykit.bayserver.protocol.Command;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
@@ -57,7 +56,7 @@ public final class WarpShip extends Ship {
         this.docker = dkr;
         this.socketTimeoutSec = dkr.timeoutSec() >= 0 ? dkr.timeoutSec() : BayServer.harbor.socketTimeoutSec();
         this.protocolHandler = protoHandler;
-        protoHandler.ship = this;
+        protoHandler.init(this);
     }
 
 
@@ -191,7 +190,7 @@ public final class WarpShip extends Ship {
             throw new Sink("warpId exists");
 
         tourMap.put(warpId, new Pair<>(tur.id(), tur));
-        wHnd.postWarpHeaders(tur);
+        wHnd.sendHeaders(tur);
 
         if(connected) {
             BayLog.debug("%s is already connected. Start warp tour:%s", wdat, tur);

@@ -39,7 +39,7 @@ public class FcgPacketUnPacker extends PacketUnpacker<FcgPacket> {
     int contLen;
     int readBytes;
     
-    public FcgPacketUnPacker(PacketStore<FcgPacket, FcgType> pktStore, FcgCommandUnPacker cmdUnpacker) {
+    public FcgPacketUnPacker(FcgCommandUnPacker cmdUnpacker, PacketStore<FcgPacket, FcgType> pktStore) {
         this.cmdUnpacker = cmdUnpacker;
         this.pktStore = pktStore;
         reset();

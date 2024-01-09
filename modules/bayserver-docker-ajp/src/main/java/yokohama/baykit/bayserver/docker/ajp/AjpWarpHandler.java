@@ -7,13 +7,10 @@ import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.common.WarpData;
 import yokohama.baykit.bayserver.common.WarpHandler;
 import yokohama.baykit.bayserver.common.WarpShip;
+import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.ajp.command.*;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
-import yokohama.baykit.bayserver.protocol.PacketStore;
-import yokohama.baykit.bayserver.protocol.ProtocolException;
-import yokohama.baykit.bayserver.protocol.ProtocolHandler;
-import yokohama.baykit.bayserver.protocol.ProtocolHandlerFactory;
 
 import java.io.IOException;
 
@@ -22,14 +19,28 @@ import java.io.IOException;
  * AJP Protocol
  * https://tomcat.apache.org/connectors-doc/ajp/ajpv13a.html
  */
-public class AjpWarpHandler extends AjpProtocolHandler implements WarpHandler {
+public class AjpWarpHandler implements WarpHandler, AjpHandler {
 
     static class WarpProtocolHandlerFactory implements ProtocolHandlerFactory<AjpCommand, AjpPacket, AjpType> {
 
         @Override
         public ProtocolHandler<AjpCommand, AjpPacket, AjpType> createProtocolHandler(
                 PacketStore<AjpPacket, AjpType> pktStore) {
-            return new AjpWarpHandler(pktStore);
+            AjpWarpHandler warpHandler = new AjpWarpHandler();
+            AjpCommandUnPacker commandUnpacker = new AjpCommandUnPacker(warpHandler);
+            AjpPacketUnPacker packetUnpacker = new AjpPacketUnPacker(pktStore, commandUnpacker);
+            PacketPacker packetPacker = new PacketPacker<>();
+            CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
+            AjpProtocolHandler protocolHandler =
+                    new AjpProtocolHandler(
+                            warpHandler,
+                            packetUnpacker,
+                            packetPacker,
+                            commandUnpacker,
+                            commandPacker,
+                            true);
+            warpHandler.init(protocolHandler);
+            return protocolHandler;
         }
     }
 
@@ -40,17 +51,21 @@ public class AjpWarpHandler extends AjpProtocolHandler implements WarpHandler {
         ReadContent,
     }
 
+    AjpProtocolHandler protocolHandler;
     CommandState state;
     int contReadLen;
 
-    public AjpWarpHandler(PacketStore<AjpPacket, AjpType> pktStore) {
-        super(pktStore, false);
+    public AjpWarpHandler() {
         resetState();
+    }
+
+    private void init(AjpProtocolHandler protocolHandler) {
+        this.protocolHandler = protocolHandler;
     }
 
     @Override
     public String toString() {
-        return ship.toString();
+        return ship().toString();
     }
 
     /////////////////////////////////////
@@ -59,7 +74,6 @@ public class AjpWarpHandler extends AjpProtocolHandler implements WarpHandler {
 
     @Override
     public void reset() {
-        super.reset();
         resetState();
         contReadLen = 0;
     }
@@ -79,18 +93,18 @@ public class AjpWarpHandler extends AjpProtocolHandler implements WarpHandler {
     }
 
     @Override
-    public void postWarpHeaders(Tour tur) throws IOException {
+    public void sendHeaders(Tour tur) throws IOException {
         sendForwardRequest(tur);
     }
 
     @Override
-    public void postWarpContents(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
+    public void sendContent(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
         sendData(tur, buf, start, len, lis);
     }
 
     @Override
-    public void postWarpEnd(Tour tur) throws IOException {
-
+    public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+        ship().post(null, lis);
     }
 
     @Override
@@ -283,6 +297,6 @@ public class AjpWarpHandler extends AjpProtocolHandler implements WarpHandler {
     }
 
     WarpShip ship() {
-        return (WarpShip) ship;
+        return (WarpShip) protocolHandler.ship;
     }
 }

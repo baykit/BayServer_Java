@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.tour.ContentConsumeListener;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
@@ -50,7 +51,7 @@ public class WarpData implements ReqContentHandler {
                 // The buffer will become corrupted due to reuse.
                 buf = buf.clone();
 
-            warpShip.warpHandler().postWarpContents(
+            warpShip.warpHandler().sendContent(
                     tur,
                     buf,
                     start + pos,
@@ -63,7 +64,10 @@ public class WarpData implements ReqContentHandler {
     public synchronized final void onEndContent(Tour tur) throws IOException {
         BayLog.debug("%s endReqContent tur=%s", warpShip, tur);
         warpShip.checkShipId(warpShipId);
-        warpShip.warpHandler().postWarpEnd(tur);
+        warpShip.warpHandler().sendEnd(tur, false, () -> {
+            GrandAgent agt = GrandAgent.get(warpShip.agentId);
+            agt.nonBlockingHandler.askToRead(warpShip.ch);
+        });
     }
 
     @Override
