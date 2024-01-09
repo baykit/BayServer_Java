@@ -87,6 +87,7 @@ public class QicProtocolHandler
     public static final String PROTOCOL = "HTTP/3";
 
     public QicProtocolHandler(Connection con, InetSocketAddress adr, Http3Config cfg, Postman postman) {
+        super(null, null, null, null, null, true);
         this.con = con;
         this.sender = adr;
         this.h3Config = cfg;
@@ -158,7 +159,7 @@ public class QicProtocolHandler
     ////////////////////////////////////////////
 
     @Override
-    public void sendResHeaders(Tour tur) throws IOException {
+    public void sendHeaders(Tour tur) throws IOException {
         BayLog.debug("%s stm#%d sendResHeader cap=%d", tur, tur.req.key, con.streamCapacity(tur.req.key));
 
         final List<Http3Header> h3headers = new ArrayList<>();
@@ -203,7 +204,7 @@ public class QicProtocolHandler
     }
 
     @Override
-    public void sendResContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
+    public void sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
 
         long stmId = tur.req.key;
         BayLog.debug("%s stm#%d sendResContent len=%d posted=%d/%d", tur, stmId, len, tur.res.bytesPosted, tur.res.headers.contentLength());
@@ -283,7 +284,7 @@ public class QicProtocolHandler
     }
 
     @Override
-    public void sendEndTour(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+    public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
 
         long stmId = tur.req.key;
         BayLog.debug("%s stm#%d sendEndTour", tur, stmId);

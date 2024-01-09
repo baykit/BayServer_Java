@@ -3,18 +3,14 @@ package yokohama.baykit.bayserver.docker.fcgi;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.common.WarpData;
 import yokohama.baykit.bayserver.common.WarpHandler;
-import yokohama.baykit.bayserver.ship.Ship;
 import yokohama.baykit.bayserver.common.WarpShip;
-import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.fcgi.command.*;
-import yokohama.baykit.bayserver.protocol.PacketStore;
-import yokohama.baykit.bayserver.protocol.ProtocolException;
-import yokohama.baykit.bayserver.protocol.ProtocolHandler;
-import yokohama.baykit.bayserver.protocol.ProtocolHandlerFactory;
+import yokohama.baykit.bayserver.protocol.*;
+import yokohama.baykit.bayserver.ship.Ship;
+import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.CGIUtil;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Headers;
@@ -27,29 +23,39 @@ import java.util.StringTokenizer;
 import static yokohama.baykit.bayserver.docker.fcgi.FcgWarpHandler.CommandState.ReadContent;
 import static yokohama.baykit.bayserver.docker.fcgi.FcgWarpHandler.CommandState.ReadHeader;
 
-public class FcgWarpHandler extends FcgProtocolHandler implements WarpHandler {
+public class FcgWarpHandler implements WarpHandler, FcgHandler {
 
     static class WarpProtocolHandlerFactory implements ProtocolHandlerFactory<FcgCommand, FcgPacket, FcgType> {
 
         @Override
         public ProtocolHandler<FcgCommand, FcgPacket, FcgType> createProtocolHandler(
                 PacketStore<FcgPacket, FcgType> pktStore) {
-            return new FcgWarpHandler(pktStore);
+            FcgWarpHandler warpHandler = new FcgWarpHandler();
+            FcgCommandUnPacker commandUnpacker = new FcgCommandUnPacker(warpHandler);
+            FcgPacketUnPacker packetUnpacker = new FcgPacketUnPacker(commandUnpacker, pktStore);
+            PacketPacker packetPacker = new PacketPacker<>();
+            CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
+            FcgProtocolHandler protocolHandler =
+                    new FcgProtocolHandler(
+                            warpHandler,
+                            packetUnpacker,
+                            packetPacker,
+                            commandUnpacker,
+                            commandPacker,
+                            false);
+            warpHandler.init(protocolHandler);
+            return protocolHandler;
         }
     }
 
     int curWarpId;
-
-    public FcgWarpHandler(PacketStore<FcgPacket, FcgType> pktStore) {
-        super(pktStore, false);
-        resetState();
-    }
 
     enum CommandState {
         ReadHeader,
         ReadContent,
     }
 
+    FcgProtocolHandler protocolHandler;
     CommandState state;
     CharArrayWriter lineBuf = new CharArrayWriter();
 
@@ -58,12 +64,22 @@ public class FcgWarpHandler extends FcgProtocolHandler implements WarpHandler {
     int last;
     byte[] data;
 
+    public FcgWarpHandler() {
+        resetState();
+    }
+
+    private void init(FcgProtocolHandler protocolHandler) {
+        this.protocolHandler = protocolHandler;
+    }
+
+
+
+
     /////////////////////////////////////
     // Implements Reusable
     /////////////////////////////////////
     @Override
     public void reset() {
-        super.reset();
         resetState();
         lineBuf.reset();
         pos = 0;
@@ -86,22 +102,19 @@ public class FcgWarpHandler extends FcgProtocolHandler implements WarpHandler {
     }
 
     @Override
-    public void postWarpHeaders(Tour tur) throws IOException {
+    public void sendHeaders(Tour tur) throws IOException {
         sendBeginReq(tur);
         sendParams(tur);
     }
 
     @Override
-    public void postWarpContents(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
+    public void sendContent(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
         sendStdIn(tur, buf, start, len, lis);
     }
 
     @Override
-    public void postWarpEnd(Tour tur) throws IOException {
-        sendStdIn(tur, null, 0, 0, () -> {
-            GrandAgent agt = GrandAgent.get(ship.agentId);
-            agt.nonBlockingHandler.askToRead(ship().ch);
-        });
+    public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+        sendStdIn(tur, null, 0, 0, lis);
     }
 
     @Override
@@ -347,6 +360,6 @@ public class FcgWarpHandler extends FcgProtocolHandler implements WarpHandler {
     }
 
     WarpShip ship() {
-        return (WarpShip) ship;
+        return (WarpShip) protocolHandler.ship;
     }
 }

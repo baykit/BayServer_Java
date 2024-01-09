@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.docker.http.h2;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.Town;
 import yokohama.baykit.bayserver.docker.http.h2.command.*;
@@ -11,29 +12,42 @@ import yokohama.baykit.bayserver.common.WarpHandler;
 import yokohama.baykit.bayserver.common.WarpShip;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.HttpStatus;
-import yokohama.baykit.bayserver.protocol.PacketStore;
-import yokohama.baykit.bayserver.protocol.ProtocolException;
-import yokohama.baykit.bayserver.protocol.ProtocolHandler;
-import yokohama.baykit.bayserver.protocol.ProtocolHandlerFactory;
 
 import java.io.IOException;
 
-public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
+public class H2WarpHandler implements WarpHandler, H2Handler {
 
     public static class WarpProtocolHandlerFactory implements ProtocolHandlerFactory<H2Command, H2Packet, H2Type> {
 
         @Override
         public ProtocolHandler<H2Command, H2Packet, H2Type> createProtocolHandler(
                 PacketStore<H2Packet, H2Type> pktStore) {
-            return new H2WarpHandler(pktStore);
+
+            H2WarpHandler warpHandler = new H2WarpHandler();
+            H2CommandUnPacker commandUnpacker = new H2CommandUnPacker(warpHandler);
+            H2PacketUnPacker packetUnpacker = new H2PacketUnPacker(commandUnpacker, pktStore, false);
+            PacketPacker packetPacker = new PacketPacker<>();
+            CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
+            H2ProtocolHandler protocolHandler =
+                    new H2ProtocolHandler(warpHandler, packetUnpacker, packetPacker, commandUnpacker, commandPacker, false);
+            warpHandler.init(protocolHandler);
+            return protocolHandler;
         }
     }
 
+    H2ProtocolHandler protocolHandler;
     final HeaderBlockAnalyzer analyzer = new HeaderBlockAnalyzer();
+    public final HeaderTable reqHeaderTbl = HeaderTable.createDynamicTable();
+    public final HeaderTable resHeaderTbl = HeaderTable.createDynamicTable();
     int curStreamId = 1;
+    WarpShip ship;
 
-    protected H2WarpHandler(PacketStore<H2Packet, H2Type> pktStore) {
-        super(pktStore, false);
+    protected H2WarpHandler() {
+
+    }
+
+    private void init(H2ProtocolHandler protocolHandler) {
+        this.protocolHandler = protocolHandler;
     }
 
     /////////////////////////////////////
@@ -42,7 +56,6 @@ public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
 
     @Override
     public void reset() {
-        super.reset();
         curStreamId = 1;
     }
 
@@ -118,7 +131,7 @@ public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
     public NextSocketAction handleSettings(CmdSettings cmd) throws IOException {
         if(!cmd.flags.ack()){
             CmdSettings res = new CmdSettings(0, new H2Flags(H2Flags.FLAGS_ACK));
-            post(res);
+            protocolHandler.post(res);
         }
         return NextSocketAction.Continue;
     }
@@ -139,7 +152,7 @@ public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
     @Override
     public NextSocketAction handlePing(CmdPing cmd) throws IOException {
         CmdPing res = new CmdPing(cmd.streamId, new H2Flags(H2Flags.FLAGS_ACK), cmd.opaqueData);
-        post(res);
+        protocolHandler.post(res);
         return NextSocketAction.Continue;
     }
 
@@ -172,17 +185,17 @@ public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
     }
 
     @Override
-    public void postWarpHeaders(Tour tur) throws IOException {
+    public void sendHeaders(Tour tur) throws IOException {
         sendReqHeaders(tur);
     }
 
     @Override
-    public void postWarpContents(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
+    public void sendContent(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
         sendReqContents(tur, buf, start, len, lis);
     }
 
     @Override
-    public void postWarpEnd(Tour tur) throws IOException {
+    public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
 
     }
 
@@ -203,6 +216,10 @@ public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
     /////////////////////////////////////
     // Custom methods
     /////////////////////////////////////
+
+    WarpShip ship() {
+        return null;
+    }
 
     void sendReqHeaders(Tour tur) throws IOException {
         Town town = tur.town;
@@ -238,7 +255,7 @@ public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
         }
 
         cmdHdr.flags = new H2Flags(H2Flags.FLAGS_END_HEADERS);
-        post(cmdHdr);
+        ship().post(cmdHdr);
     }
 
 
@@ -251,17 +268,13 @@ public class H2WarpHandler extends H2ProtocolHandler implements WarpHandler{
                         buf,
                         start,
                         len);
-        post(cmd, lis);
+        ship().post(cmd, lis);
     }
 
 
     private void endResContent(Tour tur) throws IOException {
         tur.res.endContent(Tour.TOUR_ID_NOCHECK);
-        ship().endWarpTour(tur);
-    }
-
-    WarpShip ship() {
-        return (WarpShip) ship;
+        ship.endWarpTour(tur);
     }
 
 }

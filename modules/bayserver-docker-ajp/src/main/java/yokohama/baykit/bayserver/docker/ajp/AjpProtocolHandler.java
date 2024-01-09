@@ -5,27 +5,28 @@ import yokohama.baykit.bayserver.docker.ajp.command.CmdData;
 import yokohama.baykit.bayserver.docker.ajp.command.CmdSendBodyChunk;
 import yokohama.baykit.bayserver.protocol.CommandPacker;
 import yokohama.baykit.bayserver.protocol.PacketPacker;
-import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 
 /**
  * The class to hold AJP ship (connection)
  */
-public abstract class AjpProtocolHandler
-        extends ProtocolHandler<AjpCommand, AjpPacket, AjpType>
-        implements AjpCommandHandler{
+public class AjpProtocolHandler
+        extends ProtocolHandler<AjpCommand, AjpPacket, AjpType> {
 
-    protected AjpProtocolHandler(
-            PacketStore<AjpPacket, AjpType> pktStore,
-            boolean svrMdoe) {
-
-        commandUnpacker = new AjpCommandUnPacker(this);
-        packetUnpacker = new AjpPacketUnPacker(pktStore, (AjpCommandUnPacker) commandUnpacker);
-        packetPacker = new PacketPacker<>();
-        commandPacker = new CommandPacker<>(packetPacker, pktStore);
-        serverMode = svrMdoe;
+    public AjpProtocolHandler(
+            AjpHandler ajpHandler,
+            PacketUnpacker<AjpPacket> packetUnpacker,
+            PacketPacker<AjpPacket> packetPacker,
+            CommandUnPacker<AjpPacket> commandUnpacker,
+            CommandPacker<AjpCommand, AjpPacket, AjpType, ?> commandPacker,
+            boolean serverMode) {
+        super(packetUnpacker, packetPacker, commandUnpacker, commandPacker, ajpHandler, serverMode);
     }
 
+    @Override
+    public void reset() {
+        super.reset();
+    }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // Implements ProtocolHandler

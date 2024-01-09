@@ -1,7 +1,6 @@
 package yokohama.baykit.bayserver.docker.fcgi;
 
 import yokohama.baykit.bayserver.protocol.*;
-import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.CommandPacker;
 import yokohama.baykit.bayserver.protocol.PacketPacker;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
@@ -9,20 +8,24 @@ import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 /**
  * The class to hold FCGI ship (connection)
  */
-public abstract class FcgProtocolHandler
-        extends ProtocolHandler<FcgCommand, FcgPacket, FcgType>
-        implements FcgCommandHandler {
+public class FcgProtocolHandler
+        extends ProtocolHandler<FcgCommand, FcgPacket, FcgType> {
 
-    protected FcgProtocolHandler(
-            PacketStore<FcgPacket, FcgType> pktStore,
-            boolean svrMode) {
-        commandUnpacker = new FcgCommandUnPacker(this);
-        packetUnpacker = new FcgPacketUnPacker(pktStore, (FcgCommandUnPacker) commandUnpacker);
-        packetPacker = new PacketPacker<>();
-        commandPacker = new CommandPacker<>(packetPacker, pktStore);
-        serverMode = svrMode;
+    public FcgProtocolHandler(
+            FcgHandler fcgHandler,
+            PacketUnpacker<FcgPacket> packetUnpacker,
+            PacketPacker<FcgPacket> packetPacker,
+            CommandUnPacker<FcgPacket> commandUnpacker,
+            CommandPacker<FcgCommand, FcgPacket, FcgType, ?> commandPacker,
+            boolean serverMode) {
+        super(packetUnpacker, packetPacker, commandUnpacker, commandPacker, fcgHandler, serverMode);
     }
 
+    @Override
+    public void reset() {
+        super.reset();
+        commandHandler.reset();
+    }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // Implements ProtocolHandler
