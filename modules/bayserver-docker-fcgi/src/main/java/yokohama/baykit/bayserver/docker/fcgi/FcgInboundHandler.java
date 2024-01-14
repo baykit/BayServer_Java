@@ -234,7 +234,7 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
             }
 
             if(reqContLen > 0) {
-                tur.req.setReqContentLength(reqContLen);
+                tur.req.setLimit(reqContLen);
             }
 
             changeState(ReadStdIn);

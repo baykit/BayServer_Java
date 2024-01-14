@@ -3,7 +3,6 @@ package yokohama.baykit.bayserver.docker.http.h1;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.UpgradeException;
-import yokohama.baykit.bayserver.docker.http.h2.H2InboundHandler;
 import yokohama.baykit.bayserver.docker.http.h2.H2ProtocolHandler;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.common.InboundHandler;
@@ -207,7 +206,6 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
             HtpPortDocker port = (HtpPortDocker)sip.portDocker();
             if(port.supportH2) {
                 sip.portDocker().returnProtocolHandler(sip.agentId, protocolHandler);
-                H2InboundHandler inboundHandler = new H2InboundHandler();
                 H2ProtocolHandler protocolHandler = (H2ProtocolHandler)ProtocolHandlerStore.getStore(HtpDocker.H2_PROTO_NAME, true, sip.agentId).rent();
                 sip.setProtocolHandler(protocolHandler);
                 throw new UpgradeException();
@@ -219,10 +217,6 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         }
 
         Tour tur = sip.getTour(curReqId);
-        curTour = tur;
-        curTourId = tur.tourId;
-        curReqId++;  // issue new request id
-
         if(tur == null) {
             BayLog.error(BayMessage.get(Symbol.INT_NO_MORE_TOURS));
             tur = sip.getTour(curReqId, true);
@@ -230,6 +224,10 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
             //sip.agent.shutdown(false);
             return NextSocketAction.Continue;
         }
+
+        curTour = tur;
+        curTourId = tur.tourId;
+        curReqId++;  // issue new request id
 
         sip.keeping = false;
 
@@ -262,7 +260,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         }
 
         if(reqContLen > 0) {
-            tur.req.setReqContentLength(reqContLen);
+            tur.req.setLimit(reqContLen);
         }
 
         try {
