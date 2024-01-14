@@ -190,7 +190,7 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
         int reqContLen = cmd.headers.contentLength();
 
         if(reqContLen > 0) {
-            tur.req.setReqContentLength(reqContLen);
+            tur.req.setLimit(reqContLen);
         }
 
         try {

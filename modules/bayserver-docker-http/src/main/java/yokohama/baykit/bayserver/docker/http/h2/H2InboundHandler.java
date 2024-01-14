@@ -224,7 +224,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
             int reqContLen = tur.req.headers.contentLength();
 
             if(reqContLen > 0) {
-                tur.req.setReqContentLength(reqContLen);
+                tur.req.setLimit(reqContLen);
             }
 
             try {
