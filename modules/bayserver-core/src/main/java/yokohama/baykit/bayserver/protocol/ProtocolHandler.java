@@ -54,6 +54,7 @@ public abstract class ProtocolHandler<C extends Command<C, P, T, ?>, P extends P
         packetPacker.reset();
         packetUnpacker.reset();
         commandHandler.reset();
+        ship = null;
     }
 
     /////////////////////////////////////
