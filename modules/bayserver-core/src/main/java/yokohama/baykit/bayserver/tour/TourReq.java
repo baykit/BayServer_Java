@@ -150,7 +150,7 @@ public class TourReq implements Reusable {
         this.contentHandler = hnd;
     }
 
-    public void setReqContentLength(int limit) {
+    public void setLimit(int limit) {
         if (limit < 0) {
             throw new Sink("Invalid limit");
         }

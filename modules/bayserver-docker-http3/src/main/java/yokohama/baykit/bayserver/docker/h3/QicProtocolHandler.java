@@ -400,7 +400,7 @@ public class QicProtocolHandler
 
             int reqContLen = tur.req.headers.contentLength();
             if (reqContLen > 0) {
-                tur.req.setReqContentLength(reqContLen);
+                tur.req.setLimit(reqContLen);
             }
 
             try {
