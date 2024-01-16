@@ -388,7 +388,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
                 tur.req.serverAddress = null;
             }
         }
-        tur.req.remoteHostFunc = new TourReq.DefaultRemoteHostResolver(tur.req);
+        tur.req.remoteHostFunc = new TourReq.DefaultRemoteHostResolver(tur.req.remoteAddress);
 
         tur.req.serverPort = tur.req.reqPort;
         tur.req.serverName = tur.req.reqHost;

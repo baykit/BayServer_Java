@@ -403,7 +403,7 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
             BayLog.error(e);
         }
         tur.req.remoteAddress = env.get(CGIUtil.REMOTE_ADDR);
-        tur.req.remoteHostFunc = new TourReq.DefaultRemoteHostResolver(tur.req);
+        tur.req.remoteHostFunc = new TourReq.DefaultRemoteHostResolver(tur.req.remoteAddress);
 
         tur.req.serverName = env.get(CGIUtil.SERVER_NAME);
         tur.req.serverAddress = env.get(CGIUtil.SERVER_ADDR);
