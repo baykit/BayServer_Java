@@ -1,6 +1,7 @@
-package yokohama.baykit.bayserver.util;
+package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.bcf.*;
+import yokohama.baykit.bayserver.util.MD5Password;
 
 import java.util.HashMap;
 import java.util.HashSet;
