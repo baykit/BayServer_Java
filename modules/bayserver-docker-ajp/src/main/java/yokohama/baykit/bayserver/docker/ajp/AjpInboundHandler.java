@@ -11,7 +11,6 @@ import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.ajp.command.*;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.HttpStatus;
-import yokohama.baykit.bayserver.util.HttpUtil;
 import yokohama.baykit.bayserver.util.StringUtil;
 
 import java.io.IOException;
@@ -329,8 +328,8 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
 
 
     void startTour(Tour tur) throws HttpException {
-        HttpUtil.parseHostPort(tur, reqCommand.isSsl ? 443 : 80);
-        HttpUtil.parseAuthrization(tur);
+        tur.req.parseHostPort(reqCommand.isSsl ? 443 : 80);
+        tur.req.parseAuthorization();
 
         Socket socket = ((SocketChannel)ship().ch).socket();
         tur.req.remotePort = -1;
