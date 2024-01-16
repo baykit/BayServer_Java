@@ -563,8 +563,8 @@ public class QicProtocolHandler
     }
 
     void startTour(Tour tur) throws HttpException {
-        HttpUtil.parseHostPort(tur, 443);
-        HttpUtil.parseAuthrization(tur);
+        tur.req.parseHostPort(443);
+        tur.req.parseAuthorization();
 
         tur.req.protocol = PROTOCOL;
         tur.req.remotePort = sender.getPort();

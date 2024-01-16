@@ -12,7 +12,6 @@ import yokohama.baykit.bayserver.tour.TourReq;
 import yokohama.baykit.bayserver.tour.TourStore;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.HttpStatus;
-import yokohama.baykit.bayserver.util.HttpUtil;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -425,8 +424,8 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
     void startTour(Tour tur) throws HttpException {
         InboundShip sip = ship();
 
-        HttpUtil.parseHostPort(tur, sip.portDocker().secure() ? 443 : 80);
-        HttpUtil.parseAuthrization(tur);
+        tur.req.parseHostPort(sip.portDocker().secure() ? 443 : 80);
+        tur.req.parseAuthorization();
 
         tur.req.protocol = httpProtocol;
 

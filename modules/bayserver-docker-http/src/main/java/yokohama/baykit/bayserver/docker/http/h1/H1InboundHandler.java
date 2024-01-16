@@ -365,8 +365,8 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
 
     void startTour(Tour tur) throws HttpException {
         boolean secure = ship().portDocker().secure();
-        HttpUtil.parseHostPort(tur, secure ? 443 : 80);
-        HttpUtil.parseAuthrization(tur);
+        tur.req.parseHostPort(secure ? 443 : 80);
+        tur.req.parseAuthorization();
 
         // Get remote address
         String clientAdr = tur.req.headers.get(Headers.X_FORWARDED_FOR);
