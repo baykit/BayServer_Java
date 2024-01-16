@@ -14,14 +14,10 @@ public class CgiStdErrShip extends ReadOnlyShip  {
 
     CgiReqContentHandler handler;
 
-    CgiStdErrShip() {
-        reset();
-    }
-
 
     @Override
     public String toString() {
-        return "agt# " + agentId + " err_sip#" + shipId + "/" + objectId;
+        return "agt#" + agentId + " err_sip#" + shipId + "/" + objectId;
     }
 
 
