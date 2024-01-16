@@ -1,7 +1,6 @@
 package yokohama.baykit.bayserver.agent.transporter;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.agent.NonBlockingHandler;
 import yokohama.baykit.bayserver.common.Valve;
 
 import java.io.EOFException;

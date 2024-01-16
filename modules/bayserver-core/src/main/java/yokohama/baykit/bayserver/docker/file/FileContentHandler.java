@@ -5,7 +5,7 @@ import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.NonBlockingValve;
+import yokohama.baykit.bayserver.agent.MultiplexingValve;
 import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
 import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
 import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
@@ -127,7 +127,7 @@ public class FileContentHandler implements ReqContentHandler {
                     sendFileShip.init(ch, tur, txi);
                     PlainTransporter tp = new PlainTransporter(false, bufsize, false);
                     GrandAgent agt = GrandAgent.get(tur.ship.agentId);
-                    tp.init(ch, new SimpleDataListener(sendFileShip), new NonBlockingValve(agt.nonBlockingHandler, ch));
+                    tp.init(ch, new SimpleDataListener(sendFileShip), new MultiplexingValve(agt.multiplexer, ch));
                     txi.setChannelListener(ch, tp);
 
                     int sid = sendFileShip.id();
@@ -146,7 +146,7 @@ public class FileContentHandler implements ReqContentHandler {
                     sendFileShip.init(ch, tur, null);
                     PlainTransporter tp = new PlainTransporter(false, bufsize, false);
                     GrandAgent agt = GrandAgent.get(tur.ship.agentId);
-                    tp.init(ch, new SimpleDataListener(sendFileShip), new NonBlockingValve(agt.nonBlockingHandler, ch));
+                    tp.init(ch, new SimpleDataListener(sendFileShip), new MultiplexingValve(agt.multiplexer, ch));
 
                     Train tr = new ReadChannelTrain(ch, tp, tur);
                     if(!TrainRunner.post(tr)) {
