@@ -19,10 +19,6 @@ public class SendFileShip extends ReadOnlyShip {
     Tour tour;
     int tourId;
 
-    public SendFileShip() {
-        reset();
-    }
-
     public void init(Channel ch, Tour tur, Valve vlv) throws IOException {
         super.init(ch, tur.ship.agentId, vlv);
         this.tour = tur;
@@ -31,7 +27,7 @@ public class SendFileShip extends ReadOnlyShip {
 
     @Override
     public String toString() {
-        return "agt# " + agentId + " send_file#" + shipId + "/" + objectId;
+        return "agt#" + agentId + " send_file#" + shipId + "/" + objectId;
     }
 
 
