@@ -6,7 +6,7 @@ import yokohama.baykit.bayserver.ConfigException;
 import yokohama.baykit.bayserver.Symbol;
 import yokohama.baykit.bayserver.agent.ChannelListener;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.NonBlockingValve;
+import yokohama.baykit.bayserver.agent.MultiplexingValve;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.base.PortBase;
@@ -103,7 +103,7 @@ public class H3PortDocker extends PortBase implements H3Docker {
         UdpTransporter tp = new UdpTransporter(true, 8192);
         lis.initUdp((DatagramChannel) ch, agentId, tp, this);
         GrandAgent agt = GrandAgent.get(agentId);
-        tp.init(ch, lis, new NonBlockingValve(agt.nonBlockingHandler, ch));
+        tp.init(ch, lis, new MultiplexingValve(agt.multiplexer, ch));
         return tp;
     }
 

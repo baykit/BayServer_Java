@@ -2,7 +2,7 @@ package yokohama.baykit.bayserver.docker.base;
 
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
-import yokohama.baykit.bayserver.agent.NonBlockingValve;
+import yokohama.baykit.bayserver.agent.MultiplexingValve;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
 import yokohama.baykit.bayserver.common.Valve;
@@ -163,7 +163,7 @@ public abstract class WarpBase extends ClubBase implements Warp {
                 ch.configureBlocking(false);
                 tp = newTransporter(agt, ch);
                 ProtocolHandler protoHnd = ProtocolHandlerStore.getStore(protocol(), false, agt.agentId).rent();
-                Valve v = new NonBlockingValve(agt.nonBlockingHandler, ch);
+                Valve v = new MultiplexingValve(agt.multiplexer, ch);
                 wsip.initWarp(ch, agt.agentId, tp, v, this, protoHnd);
 
                 tp.init(ch, new SimpleDataListener(wsip), v);
@@ -178,8 +178,8 @@ public abstract class WarpBase extends ClubBase implements Warp {
             wsip.startWarpTour(tour);
 
             if(needConnect) {
-                agt.nonBlockingHandler.addChannelListener(wsip.ch, tp);
-                agt.nonBlockingHandler.askToConnect((SocketChannel)wsip.ch, hostAddr);
+                agt.multiplexer.addChannelListener(wsip.ch, tp);
+                agt.multiplexer.reqConnect((SocketChannel)wsip.ch, hostAddr);
             }
 
         }

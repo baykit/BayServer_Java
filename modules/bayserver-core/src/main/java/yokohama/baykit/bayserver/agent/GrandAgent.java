@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.agent;
 
 import yokohama.baykit.bayserver.*;
+import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.docker.base.PortBase;
 
@@ -8,7 +9,7 @@ import java.io.IOException;
 import java.nio.channels.*;
 import java.util.*;
 
-public class GrandAgent extends Thread {
+public class GrandAgent {
 
     public static final int CMD_OK = 0;
     public static final int CMD_CLOSE = 1;
@@ -27,39 +28,19 @@ public class GrandAgent extends Thread {
 
     int selectTimeoutSec = SELECT_TIMEOUT_SEC;
     public final int agentId;
-    public boolean anchorable;
-    Selector selector;
+    public Multiplexer multiplexer;
     public SpinHandler spinHandler;
-    public NonBlockingHandler nonBlockingHandler;
-    public AcceptHandler acceptHandler;
+
     public final int maxInboundShips;
     public boolean aborted;
-    public CommandReceiver commandReceiver;
     ArrayList<TimerHandler> timerHandlers = new ArrayList<>();
 
     public GrandAgent(
             int agentId,
-            int maxShips,
-            boolean anchorable) {
-        super("GrandAgent#" + agentId);
+            int maxShips) {
         this.agentId = agentId;
-        this.anchorable = anchorable;
-
-        if(anchorable) {
-            this.acceptHandler = new AcceptHandler(this);
-        }
-        else {
-        }
 
         this.spinHandler = new SpinHandler(this);
-        this.nonBlockingHandler = new NonBlockingHandler(this);
-        try {
-            this.selector = Selector.open();
-        }
-        catch(IOException e) {
-            BayLog.fatal(e);
-            System.exit(1);
-        }
         this.maxInboundShips = maxShips > 0 ? maxShips : 1;
     }
 
@@ -68,115 +49,17 @@ public class GrandAgent extends Thread {
     }
 
 
-    /////////////////////////////////////////////////////////////////////////////
-    // override methods                                                        //
-    /////////////////////////////////////////////////////////////////////////////
-
-    @Override
-    public void run() {
-        BayLog.info(BayMessage.get(Symbol.MSG_RUNNING_GRAND_AGENT, this));
-        try {
-            commandReceiver.comRecvChannel.configureBlocking(false);
-            commandReceiver.comRecvChannel.register(selector, SelectionKey.OP_READ);
-
-            // Set up unanchorable channel
-            if(!anchorable) {
-                for (DatagramChannel ch : BayServer.unanchorablePortMap.keySet()) {
-                    Port p = BayServer.unanchorablePortMap.get(ch);
-                    ChannelListener tp = p.newChannelListener(this.agentId, ch);
-                    nonBlockingHandler.addChannelListener(ch, tp);
-                    nonBlockingHandler.askToStart(ch);
-                    nonBlockingHandler.askToRead(ch);
-                }
-            }
-
-            boolean busy = true;
-            while (true) {
-                if(acceptHandler != null) {
-                    boolean testBusy = acceptHandler.chCount >= maxInboundShips;
-                    if (testBusy != busy) {
-                        busy = testBusy;
-                        if(busy) {
-                            acceptHandler.onBusy();
-                        }
-                        else {
-                            acceptHandler.onFree();
-                        }
-                    }
-                }
-
-                /*
-                System.err.println("selecting...");
-                selector.keys().forEach((key) -> {
-                    System.err.println(this + " readable=" + (key.isValid() ? "" + key.interestOps() : "invalid "));
-                });
-                */
-
-                if(aborted) {
-                    BayLog.info("%s aborted by another thread", this);
-                    break;
-                }
-
-                int count;
-                if (!spinHandler.isEmpty()) {
-                    count = selector.selectNow();
-                }
-                else {
-                    count = selector.select(selectTimeoutSec * 1000L);
-                }
-
-                if(aborted) {
-                    BayLog.info("%s aborted by another thread", this);
-                    break;
-                }
-
-                //BayLog.debug(this + " select count=" + count);
-                boolean processed = nonBlockingHandler.registerChannelOps() > 0;
-
-                Set<SelectionKey> selKeys = selector.selectedKeys();
-                if(selKeys.isEmpty()) {
-                    processed |= spinHandler.processData();
-                }
-
-                for(Iterator<SelectionKey> it = selKeys.iterator(); it.hasNext(); ) {
-                    SelectionKey key = it.next();
-                    it.remove();
-                    //BayLog.debug(this + " selected key=" + key);
-                    if(key.channel() == commandReceiver.comRecvChannel)
-                        commandReceiver.onPipeReadable();
-                    else if(key.isAcceptable())
-                        acceptHandler.onAcceptable(key);
-                    else
-                        nonBlockingHandler.handleChannel(key);
-                    processed = true;
-                }
-
-                if(!processed) {
-                    // timeout check if there is nothing to do
-                    for(TimerHandler th: timerHandlers) {
-                        th.onTimer();
-                    }
-                }
-            }
-        }
-        catch (Throwable e) {
-            // If error occurs, grand agent ends
-            BayLog.fatal(e);
-        }
-        finally {
-            BayLog.info("%s end", this);
-            shutdown();
-        }
+    ////////////////////////////////////////////
+    // Custom methods                         //
+    ////////////////////////////////////////////
+    public void setMultiplexer(Multiplexer multiplexer) {
+        this.multiplexer = multiplexer;
     }
-
 
     public void shutdown() {
         BayLog.debug("%s shutdown", this);
-        if(acceptHandler != null)
-            acceptHandler.shutdown();
-
-        commandReceiver.end();
-        clean();
+        aborted = true;
+        multiplexer.shutdown();
 
         listeners.forEach(lis -> lis.remove(agentId));
 
@@ -214,10 +97,6 @@ public class GrandAgent extends Thread {
         MemUsage.get(agentId).printUsage(1);
     }
 
-    public void runCommandReceiver(Pipe.SourceChannel readCh, Pipe.SinkChannel writeCh) {
-        commandReceiver = new CommandReceiver(this, readCh, writeCh);
-    }
-
     public void addTimerHandler(TimerHandler th) {
         timerHandlers.add(th);
     }
@@ -226,9 +105,6 @@ public class GrandAgent extends Thread {
         timerHandlers.remove(th);
     }
 
-    private void clean() {
-        nonBlockingHandler.closeAll();
-    }
 
     /////////////////////////////////////////////////////////////////////////////
     // static methods                                                          //
@@ -245,8 +121,7 @@ public class GrandAgent extends Thread {
     }
 
     public static GrandAgent add(
-            int agtId,
-            boolean anchorable) {
+            int agtId) {
         if(agtId == -1)
             agtId = ++maxAgentId;
         BayLog.debug("Add agent: id=%d", agtId);
@@ -254,7 +129,7 @@ public class GrandAgent extends Thread {
         if(agtId > maxAgentId)
             maxAgentId = agtId;
 
-        GrandAgent agt = new GrandAgent(agtId, maxShips, anchorable);
+        GrandAgent agt = new GrandAgent(agtId, maxShips);
         agents.put(agtId, agt);
 
         listeners.forEach(lis -> lis.add(agt.agentId));

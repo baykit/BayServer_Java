@@ -139,11 +139,11 @@ public class GrandAgentMonitor {
         Pipe sendPipe = Pipe.open();
         Pipe recvPipe = Pipe.open();
 
-        GrandAgent agt = GrandAgent.add(agtId, anchorable);
-
-        Thread t = new Thread(agt);
-        agt.runCommandReceiver(sendPipe.source(), recvPipe.sink());
-        t.start();
+        GrandAgent agt = GrandAgent.add(agtId);
+        SelectMultiplexer multiplexer = new SelectMultiplexer(agt, anchorable);
+        agt.setMultiplexer(multiplexer);
+        multiplexer.runCommandReceiver(sendPipe.source(), recvPipe.sink());
+        multiplexer.start();
 
         monitors.put(
                 agtId,
@@ -163,7 +163,6 @@ public class GrandAgentMonitor {
         if(!finale) {
             if (monitors.size() < numAgents) {
                 try {
-                    GrandAgent.add(-1, anchorable);
                     add(anchorable);
                 }
                 catch (IOException e) {
