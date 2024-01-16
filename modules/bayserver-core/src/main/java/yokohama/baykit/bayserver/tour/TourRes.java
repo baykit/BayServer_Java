@@ -327,7 +327,7 @@ public class TourRes implements Reusable {
                 String str = HttpStatus.description(status);
 
                 // print status
-                body.append("<h1>").append(status).append(" ").append(str).append("</h1>").append(Constants.CRLF);
+                body.append("<h1>").append(status).append(" ").append(str).append("</h1>").append(CharUtil.CRLF);
 
                 tour.res.headers.setStatus(status);
 

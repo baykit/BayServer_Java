@@ -31,10 +31,13 @@ import java.util.stream.IntStream;
 
 public class BayServer {
 
-    private static final String RESOURCE_NAME = "yokohama/baykit/bayserver/version";
-
     public static final String ENV_BAYSERVER_HOME = "BSERV_HOME";
     public static final String ENV_BAYSERVER_PLAN = "BSERV_PLAN";
+
+    /**
+     * Defualt decode tilde
+     */
+    public static final boolean DEFAULT_DECODE_TILDE = false;
 
     /** Host name */
     public static String myHostName;
@@ -52,7 +55,7 @@ public class BayServer {
     public static String planDir;
 
     /** Decode tilde */
-    public static boolean decodeTilde = Constants.DEFAULT_DECODE_TILDE;
+    public static boolean decodeTilde = DEFAULT_DECODE_TILDE;
 
     private static String softwareName;
 

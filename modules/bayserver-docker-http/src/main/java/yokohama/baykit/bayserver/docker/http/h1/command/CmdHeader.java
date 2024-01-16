@@ -2,15 +2,14 @@ package yokohama.baykit.bayserver.docker.http.h1.command;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayMessage;
-import yokohama.baykit.bayserver.Constants;
 import yokohama.baykit.bayserver.Symbol;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.protocol.PacketPartAccessor;
-import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.docker.http.h1.H1Command;
 import yokohama.baykit.bayserver.docker.http.h1.H1CommandHandler;
 import yokohama.baykit.bayserver.docker.http.h1.H1Packet;
 import yokohama.baykit.bayserver.docker.http.h1.H1Type;
+import yokohama.baykit.bayserver.protocol.PacketPartAccessor;
+import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.Headers;
 import yokohama.baykit.bayserver.util.HttpStatus;
 
@@ -49,6 +48,22 @@ public class CmdHeader extends H1Command {
     boolean req; // request packet
     public String method, uri, version;
     public int status;
+
+    /** Line separator */
+    public static String CRLF = "\r\n";
+    public static byte[] CRLF_BYTES = CRLF.getBytes();
+
+    /** Bytes of Space */
+    public static String SPACE = " ";
+    public static byte[] SPACE_BYTES = SPACE.getBytes();
+
+    /** HTTP 1.1 Protocol header bytes */
+    public static String HTTP_11 = "HTTP/1.1";
+    public static byte[] HTTP_11_BYTES = HTTP_11.getBytes();
+
+    /** HTTP 1.0 Protocol header bytes */
+    public static String HTTP_10 = "HTTP/1.0";
+    public static byte[] HTTP_10_BYTES = HTTP_10.getBytes();
 
     public CmdHeader(boolean req) {
         super(H1Type.Header);
@@ -245,20 +260,20 @@ loop:
 
     private void packRequestLine(PacketPartAccessor acc) throws IOException {
         acc.putString(method);
-        acc.putBytes(Constants.SPACE_BYTES);
+        acc.putBytes(SPACE_BYTES);
         acc.putString(uri);
-        acc.putBytes(Constants.SPACE_BYTES);
+        acc.putBytes(SPACE_BYTES);
         acc.putString(version);
-        acc.putBytes(Constants.CRLF_BYTES);
+        acc.putBytes(CRLF_BYTES);
     }
 
     private void packStatusLine(PacketPartAccessor acc) throws IOException {
         String desc = HttpStatus.description(status);
 
         if (version != null && version.equalsIgnoreCase("HTTP/1.1"))
-            acc.putBytes(Constants.HTTP_11_BYTES);
+            acc.putBytes(HTTP_11_BYTES);
         else
-            acc.putBytes(Constants.HTTP_10_BYTES);
+            acc.putBytes(HTTP_10_BYTES);
 
         // status
         acc.putBytes(H1Packet.SP_BYTES);
@@ -273,10 +288,10 @@ loop:
         acc.putString(name);
         acc.putBytes(Headers.HEADER_SEPARATOR_BYTES);
         acc.putString(value);
-        acc.putBytes(Constants.CRLF_BYTES);
+        acc.putBytes(CRLF_BYTES);
     }
 
     public void packEndHeader(PacketPartAccessor acc) throws IOException {
-        acc.putBytes(Constants.CRLF_BYTES);
+        acc.putBytes(CRLF_BYTES);
     }
 }
