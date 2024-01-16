@@ -27,10 +27,6 @@ public class CgiStdOutShip extends ReadOnlyShip {
     String remain = "";
     boolean headerReading;
 
-    CgiStdOutShip() {
-        reset();
-    }
-
     @Override
     public String toString() {
         return "agt#" + agentId + " out_sip#" + shipId + "/" + objectId;
@@ -44,6 +40,7 @@ public class CgiStdOutShip extends ReadOnlyShip {
         this.handler = handler;
         this.tour = tur;
         this.tourId = tur.tourId;
+        this.headerReading = true;
     }
 
     /////////////////////////////////////
@@ -51,6 +48,7 @@ public class CgiStdOutShip extends ReadOnlyShip {
     /////////////////////////////////////
     @Override
     public void reset() {
+        super.reset();
         fileWroteLen = 0;
         tourId = 0;
         tour = null;
