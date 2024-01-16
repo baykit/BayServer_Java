@@ -393,8 +393,8 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
     void startTour(Tour tur) throws HttpException {
         //String scheme = env.get(CGIUtil.REQUEST_SCHEME);
         //ShipUtil.parseHostPort(tour, scheme == null ? false : scheme.equalsIgnoreCase("https"));
-        HttpUtil.parseHostPort(tur, tur.isSecure ? 443 : 80);
-        HttpUtil.parseAuthrization(tur);
+        tur.req.parseHostPort(tur.isSecure ? 443 : 80);
+        tur.req.parseAuthorization();
 
         try {
             tur.req.remotePort = Integer.parseInt(env.get(CGIUtil.REMOTE_PORT));

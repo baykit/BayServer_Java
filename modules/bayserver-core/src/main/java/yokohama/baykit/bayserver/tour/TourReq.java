@@ -8,6 +8,9 @@ import yokohama.baykit.bayserver.util.Reusable;
 import yokohama.baykit.bayserver.util.StringUtil;
 
 import java.io.IOException;
+import java.util.Base64;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TourReq implements Reusable {
 
@@ -17,16 +20,16 @@ public class TourReq implements Reusable {
 
     public static class DefaultRemoteHostResolver implements RemoteHostResolver{
 
-        final TourReq req;
+        final String ip;
 
-        public DefaultRemoteHostResolver(TourReq req) {
-            this.req = req;
+        public DefaultRemoteHostResolver(String ip) {
+            this.ip = ip;
         }
 
         public String getRemoteHost() {
-            if(req.remoteAddress == null)
+            if(ip == null)
                 return null;
-            return HttpUtil.resolveHost(req.remoteAddress);
+            return HttpUtil.resolveHost(ip);
         }
     }
 
@@ -158,6 +161,61 @@ public class TourReq implements Reusable {
         this.bytesConsumed = 0;
         this.bytesPosted = 0;
         this.available = true;
+    }
+
+    /**
+     * Parse AUTHORIZATION header
+     */
+    public void parseAuthorization() {
+        String auth = headers.get(Headers.AUTHORIZATION);
+        if (!StringUtil.empty(auth)) {
+            Pattern ptn = Pattern.compile("Basic (.*)");
+            Matcher mch = ptn.matcher(auth);
+            if (!mch.matches()) {
+                BayLog.debug("Not matched with basic authentication format");
+            } else {
+                auth = mch.group(1);
+                try {
+                    auth = new String(Base64.getDecoder().decode(auth));
+                    ptn = Pattern.compile("(.*):(.*)");
+                    mch = ptn.matcher(auth);
+                    if (mch.matches()) {
+                        remoteUser = mch.group(1);
+                        remotePass = mch.group(2);
+                    }
+                } catch (Exception e) {
+                    BayLog.error(e);
+                }
+            }
+        }
+    }
+
+    public void parseHostPort(int defaultPort) {
+        reqHost = "";
+
+        String hostPort = headers.get(Headers.X_FORWARDED_HOST);
+        if(StringUtil.isSet(hostPort)) {
+            headers.remove(Headers.X_FORWARDED_HOST);
+            headers.set(Headers.HOST, hostPort);
+        }
+
+        hostPort = headers.get(Headers.HOST);
+        if(StringUtil.isSet(hostPort)) {
+            int pos = hostPort.lastIndexOf(':');
+            if(pos == -1) {
+                reqHost = hostPort;
+                reqPort = defaultPort;
+            }
+            else {
+                reqHost = hostPort.substring(0, pos);
+                try {
+                    reqPort = Integer.parseInt(hostPort.substring(pos + 1));
+                }
+                catch(NumberFormatException e) {
+                    BayLog.error(e);
+                }
+            }
+        }
     }
 
     public boolean postContent(int checkId, byte[] data, int start, int len, ContentConsumeListener lis) throws IOException {

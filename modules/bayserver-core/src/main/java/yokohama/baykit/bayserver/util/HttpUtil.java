@@ -138,62 +138,6 @@ public class HttpUtil {
         out.write(Constants.CRLF.getBytes());
     }
 
-    /**
-     * Parse AUTHORIZATION header
-     * @param tur
-     */
-    public static void parseAuthrization(Tour tur) {
-        String auth = tur.req.headers.get(Headers.AUTHORIZATION);
-        if (!StringUtil.empty(auth)) {
-            Pattern ptn = Pattern.compile("Basic (.*)");
-            Matcher mch = ptn.matcher(auth);
-            if (!mch.matches()) {
-                BayLog.debug("Not matched with basic authentication format");
-            } else {
-                auth = mch.group(1);
-                try {
-                    auth = new String(Base64.getDecoder().decode(auth));
-                    ptn = Pattern.compile("(.*):(.*)");
-                    mch = ptn.matcher(auth);
-                    if (mch.matches()) {
-                        tur.req.remoteUser = mch.group(1);
-                        tur.req.remotePass = mch.group(2);
-                    }
-                } catch (Exception e) {
-                    BayLog.error(e);
-                }
-            }
-        }
-    }
-
-    public static void parseHostPort(Tour tour, int defaultPort) {
-        tour.req.reqHost = "";
-
-        String hostPort = tour.req.headers.get(Headers.X_FORWARDED_HOST);
-        if(StringUtil.isSet(hostPort)) {
-            tour.req.headers.remove(Headers.X_FORWARDED_HOST);
-            tour.req.headers.set(Headers.HOST, hostPort);
-        }
-
-        hostPort = tour.req.headers.get(Headers.HOST);
-        if(StringUtil.isSet(hostPort)) {
-            int pos = hostPort.lastIndexOf(':');
-            if(pos == -1) {
-                tour.req.reqHost = hostPort;
-                tour.req.reqPort = defaultPort;
-            }
-            else {
-                tour.req.reqHost = hostPort.substring(0, pos);
-                try {
-                    tour.req.reqPort = Integer.parseInt(hostPort.substring(pos + 1));
-                }
-                catch(NumberFormatException e) {
-                    BayLog.error(e);
-                }
-            }
-        }
-    }
-
     public static String resolveHost(String adr) {
         try {
             InetAddress sadr = InetAddress.getByName(adr);
