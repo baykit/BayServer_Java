@@ -434,7 +434,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
 
         tur.req.remoteAddress = skt.getInetAddress().getHostAddress();
         tur.req.serverAddress = skt.getLocalAddress().getHostAddress();
-        tur.req.remoteHostFunc = new TourReq.DefaultRemoteHostResolver(tur.req);
+        tur.req.remoteHostFunc = new TourReq.DefaultRemoteHostResolver(tur.req.remoteAddress);
 
         tur.req.serverPort = tur.req.reqPort;
         tur.req.serverName = tur.req.reqHost;
