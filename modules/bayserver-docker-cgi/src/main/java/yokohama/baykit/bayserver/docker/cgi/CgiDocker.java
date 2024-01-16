@@ -208,7 +208,7 @@ public class CgiDocker extends ClubBase {
                 ReadChannelTaxi outTxi = new ReadChannelTaxi(tur.ship.agentId);
                 outShip.init(outCh, tur.ship.agentId, tur, outTxi, handler);
                 outTxi.setChannelListener(outCh, outTp);
-                outTp.init(null, new SimpleDataListener(outShip), outTxi);
+                outTp.init(outCh, new SimpleDataListener(outShip), outTxi);
                 int sipId = tur.ship.shipId;
                 tur.res.setConsumeListener((len, resume) -> {
                     if(resume) {
