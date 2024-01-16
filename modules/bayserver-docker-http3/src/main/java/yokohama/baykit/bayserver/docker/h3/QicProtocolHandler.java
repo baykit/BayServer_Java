@@ -569,7 +569,7 @@ public class QicProtocolHandler
         tur.req.protocol = PROTOCOL;
         tur.req.remotePort = sender.getPort();
         tur.req.remoteAddress = sender.getAddress().getHostAddress();
-        tur.req.remoteHostFunc = new TourReq.DefaultRemoteHostResolver(tur.req);
+        tur.req.remoteHostFunc = new TourReq.DefaultRemoteHostResolver(tur.req.remoteAddress);
 
         tur.req.serverAddress = sender.getAddress().getHostAddress();
         tur.req.serverPort = tur.req.reqPort;
