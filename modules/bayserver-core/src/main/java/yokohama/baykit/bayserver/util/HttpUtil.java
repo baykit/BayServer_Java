@@ -1,21 +1,25 @@
 package yokohama.baykit.bayserver.util;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.Constants;
 import yokohama.baykit.bayserver.tour.Tour;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
-import java.util.Base64;
 import java.util.Iterator;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class HttpUtil {
 
     static final int MAX_LINE_LEN = 5000;
+
+    /** HTTP 1.1 Protocol header bytes */
+    public static String HTTP_11 = "HTTP/1.1";
+    public static byte[] HTTP_11_BYTES = HTTP_11.getBytes();
+
+    /** HTTP 1.0 Protocol header bytes */
+    public static String HTTP_10 = "HTTP/1.0";
+    public static byte[] HTTP_10_BYTES = HTTP_10.getBytes();
 
     /**
      * Read a line from stream
@@ -109,7 +113,7 @@ public class HttpUtil {
                 out.write(name.getBytes());
                 out.write(Headers.HEADER_SEPARATOR_BYTES);
                 out.write(value.getBytes());
-                out.write(Constants.CRLF_BYTES);
+                out.write(CharUtil.CRLF_BYTES);
             }
         }
     }
@@ -122,20 +126,20 @@ public class HttpUtil {
         String desc = HttpStatus.description(tur.res.headers.status());
 
         if (tur.req.protocol != null && tur.req.protocol.equalsIgnoreCase("HTTP/1.1"))
-            out.write(Constants.HTTP_11.getBytes());
+            out.write(HTTP_11_BYTES);
         else
-            out.write(Constants.HTTP_10.getBytes());
+            out.write(HTTP_10_BYTES);
 
         // status
         out.write(' ');
         out.write(Integer.toString(tur.res.headers.status()).getBytes());
         out.write(' ');
         out.write(desc.getBytes());
-        out.write(Constants.CRLF_BYTES);
+        out.write(CharUtil.CRLF_BYTES);
     }
 
     public static void sendNewLine(OutputStream out) throws IOException {
-        out.write(Constants.CRLF.getBytes());
+        out.write(CharUtil.CRLF_BYTES);
     }
 
     public static String resolveHost(String adr) {
