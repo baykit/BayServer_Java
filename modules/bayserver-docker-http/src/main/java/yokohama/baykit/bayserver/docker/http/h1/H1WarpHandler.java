@@ -3,12 +3,9 @@ package yokohama.baykit.bayserver.docker.http.h1;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.Constants;
-import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.common.*;
 import yokohama.baykit.bayserver.protocol.*;
-import yokohama.baykit.bayserver.ship.Ship;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.Town;
 import yokohama.baykit.bayserver.docker.http.h1.command.CmdContent;
@@ -18,7 +15,6 @@ import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Headers;
 import yokohama.baykit.bayserver.util.HttpStatus;
 
-import javax.xml.crypto.Data;
 import java.io.IOException;
 
 import static yokohama.baykit.bayserver.docker.http.h1.H1WarpHandler.CommandState.*;
@@ -186,7 +182,7 @@ public class H1WarpHandler implements WarpHandler, H1Handler {
                 CmdHeader.newReqHeader(
                         tur.req.method,
                         newUri,
-                        Constants.HTTP_11);
+                        "HTTP/1.1");
 
         tur.req.headers.headerNames().forEach(
                 name -> {

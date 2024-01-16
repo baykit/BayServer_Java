@@ -8,5 +8,5 @@ public class CharUtil {
 
     public static final byte[] CR_BYTE = CR.getBytes();
     public static final byte[] LF_BYTE = LF.getBytes();
-
+    public static final byte[] CRLF_BYTES = CRLF.getBytes();
 }
