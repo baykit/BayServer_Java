@@ -1,19 +1,18 @@
 package yokohama.baykit.bayserver.agent;
 
-import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.Sink;
+import yokohama.baykit.bayserver.*;
+import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.docker.Port;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import static java.nio.channels.SelectionKey.*;
 
-public class NonBlockingHandler implements TimerHandler{
+public class SelectMultiplexer extends Thread implements TimerHandler, Multiplexer {
 
     class ChannelState {
         final SelectableChannel ch;
@@ -71,36 +70,153 @@ public class NonBlockingHandler implements TimerHandler{
 
     int chCount;
 
-    GrandAgent agent;
+    private final GrandAgent agent;
+    private final boolean anchorable;
+    private final AcceptHandler acceptHandler;
+
+    private Selector selector;
+
+    private CommandReceiver commandReceiver;
+
 
     final ArrayList<ChannelOperation> operations = new ArrayList<>();
     final Map<SelectableChannel, ChannelState> channels = new HashMap<>();
 
-    public NonBlockingHandler(GrandAgent agent) {
+    public SelectMultiplexer(GrandAgent agent, boolean anchorable) {
+        super("SelectMultiplexer: " + agent);
+
         this.agent = agent;
+        this.anchorable = anchorable;
+
+        if(anchorable) {
+            this.acceptHandler = new AcceptHandler(agent);
+        }
+        else {
+            this.acceptHandler = null;
+        }
+
+        try {
+            this.selector = Selector.open();
+        }
+        catch(IOException e) {
+            BayLog.fatal(e);
+            System.exit(1);
+        }
 
         agent.addTimerHandler(this);
     }
 
-    ////////////////////////////////////////////////////////////////////
-    // Implements TimerHandler
-    ////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////
+    // Implements Thread
+    ////////////////////////////////////////////
     @Override
-    public void onTimer() {
-        closeTimeoutSockets();
+    public void run() {
+        BayLog.info(BayMessage.get(Symbol.MSG_RUNNING_GRAND_AGENT, this));
+        try {
+            commandReceiver.comRecvChannel.configureBlocking(false);
+            commandReceiver.comRecvChannel.register(selector, SelectionKey.OP_READ);
+
+            // Set up unanchorable channel
+            if(!anchorable) {
+                for (DatagramChannel ch : BayServer.unanchorablePortMap.keySet()) {
+                    Port p = BayServer.unanchorablePortMap.get(ch);
+                    ChannelListener tp = p.newChannelListener(agent.agentId, ch);
+                    addChannelListener(ch, tp);
+                    reqStart(ch);
+                    reqRead(ch);
+                }
+            }
+
+            boolean busy = true;
+            while (true) {
+                if(acceptHandler != null) {
+                    boolean testBusy = acceptHandler.chCount >= agent.maxInboundShips;
+                    if (testBusy != busy) {
+                        busy = testBusy;
+                        if(busy) {
+                            onBusy();
+                        }
+                        else {
+                            onFree();
+                        }
+                    }
+                }
+
+                /*
+                System.err.println("selecting...");
+                selector.keys().forEach((key) -> {
+                    System.err.println(this + " readable=" + (key.isValid() ? "" + key.interestOps() : "invalid "));
+                });
+                */
+
+                if(agent.aborted) {
+                    BayLog.info("%s aborted by another thread", this);
+                    break;
+                }
+
+                int count;
+                if (!agent.spinHandler.isEmpty()) {
+                    count = selector.selectNow();
+                }
+                else {
+                    count = selector.select(agent.selectTimeoutSec * 1000L);
+                }
+
+                if(agent.aborted) {
+                    BayLog.info("%s aborted by another thread", this);
+                    break;
+                }
+
+                //BayLog.debug(this + " select count=" + count);
+                boolean processed = registerChannelOps() > 0;
+
+                Set<SelectionKey> selKeys = selector.selectedKeys();
+                if(selKeys.isEmpty()) {
+                    processed |= agent.spinHandler.processData();
+                }
+
+                for(Iterator<SelectionKey> it = selKeys.iterator(); it.hasNext(); ) {
+                    SelectionKey key = it.next();
+                    it.remove();
+                    //BayLog.debug(this + " selected key=" + key);
+                    if(key.channel() == commandReceiver.comRecvChannel)
+                        commandReceiver.onPipeReadable();
+                    else if(key.isAcceptable())
+                        acceptHandler.onAcceptable(key);
+                    else
+                        handleChannel(key);
+                    processed = true;
+                }
+
+                if(!processed) {
+                    // timeout check if there is nothing to do
+                    for(TimerHandler th: agent.timerHandlers) {
+                        th.onTimer();
+                    }
+                }
+            }
+        }
+        catch (Throwable e) {
+            // If error occurs, grand agent ends
+            BayLog.fatal(e);
+        }
+        finally {
+            BayLog.info("%s end", this);
+            agent.shutdown();
+        }
     }
 
-    ////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////
     // Custom methods
-    ////////////////////////////////////////////////////////////////////
-    public ChannelState addChannelListener(SelectableChannel ch, ChannelListener lis) {
+    ////////////////////////////////////////////
+    public void addChannelListener(SelectableChannel ch, ChannelListener lis) {
         ChannelState chState = new ChannelState(ch, lis);
         addChannelState(ch, chState);
         chState.access();
-        return chState;
     }
 
-    public void askToStart(SelectableChannel ch) {
+    public void reqStart(SelectableChannel ch) {
         BayLog.debug("%s askToStart: ch=%s", agent, ch);
 
         ChannelState chState = findChannelState(ch);
@@ -108,7 +224,7 @@ public class NonBlockingHandler implements TimerHandler{
         //askToRead(ch);
     }
 
-    public void askToConnect(SocketChannel ch,  SocketAddress addr) throws IOException {
+    public void reqConnect(SocketChannel ch, SocketAddress addr) throws IOException {
         if(ch == null)
             throw new NullPointerException();
 
@@ -122,14 +238,14 @@ public class NonBlockingHandler implements TimerHandler{
             // Unix domain socket does not support connect operation
             NextSocketAction nextSocketAction = chState.listener.onConnectable(ch);
             if(nextSocketAction == NextSocketAction.Continue)
-                askToRead(ch);
+                reqRead(ch);
         }
         else {
             addOperation(ch, OP_CONNECT);
         }
     }
 
-    public void askToRead(SelectableChannel ch) {
+    public void reqRead(SelectableChannel ch) {
         if(ch == null)
             throw new NullPointerException();
 
@@ -144,7 +260,7 @@ public class NonBlockingHandler implements TimerHandler{
         st.access();
     }
 
-    public void askToWrite(SelectableChannel ch) {
+    public void reqWrite(SelectableChannel ch) {
         if(ch == null)
             throw new NullPointerException();
 
@@ -159,7 +275,7 @@ public class NonBlockingHandler implements TimerHandler{
         st.access();
     }
 
-    public void askToClose(SelectableChannel ch) {
+    public void reqClose(SelectableChannel ch) {
         if(ch == null)
             throw new NullPointerException();
 
@@ -172,6 +288,28 @@ public class NonBlockingHandler implements TimerHandler{
 
         st.access();
     }
+
+    public void runCommandReceiver(Pipe.SourceChannel readCh, Pipe.SinkChannel writeCh) {
+        commandReceiver = new CommandReceiver(agent, readCh, writeCh);
+    }
+
+    public void shutdown() {
+        commandReceiver.end();
+        closeAll();
+    }
+
+    ////////////////////////////////////////////
+    // Implements TimerHandler
+    ////////////////////////////////////////////
+    @Override
+    public void onTimer() {
+        closeTimeoutSockets();
+    }
+
+
+    ////////////////////////////////////////////
+    // Private methods
+    ////////////////////////////////////////////
 
     private void addOperation(SelectableChannel ch, int op, boolean close) {
         synchronized (operations) {
@@ -190,7 +328,7 @@ public class NonBlockingHandler implements TimerHandler{
             }
         }
         BayLog.trace("%s wakeup", agent);
-        agent.selector.wakeup();
+        selector.wakeup();
     }
 
     private void addOperation(SelectableChannel ch, int op) {
@@ -320,7 +458,7 @@ public class NonBlockingHandler implements TimerHandler{
             for (ChannelOperation cop : operations) {
                 ChannelState st = findChannelState(cop.ch);
                 BayLog.debug("%s register chState=%s register op=%d(%s) ch=%s", agent, st, cop.op, opMode(cop.op), cop.ch);
-                SelectionKey key = cop.ch.keyFor(agent.selector);
+                SelectionKey key = cop.ch.keyFor(selector);
                 if(key != null) {
                     int op = key.interestOps();
                     int newOp = op | cop.op;
@@ -329,7 +467,7 @@ public class NonBlockingHandler implements TimerHandler{
                 }
                 else {
                     try {
-                        cop.ch.register(agent.selector, cop.op);
+                        cop.ch.register(selector, cop.op);
                     } catch (ClosedChannelException e) {
                         ChannelState cst = findChannelState(cop.ch);
                         BayLog.debug(e, "%s Cannot register operation (Channel is closed): %s ch=%s op=%d(%s) close=%b",
@@ -398,7 +536,7 @@ public class NonBlockingHandler implements TimerHandler{
 
         chState.listener.onClosed(ch);
         if(chState.accepted)
-            agent.acceptHandler.onClosed();
+            acceptHandler.onClosed();
 
         removeChannelState(ch);
     }
@@ -423,6 +561,30 @@ public class NonBlockingHandler implements TimerHandler{
     private ChannelState findChannelState(Channel ch) {
         synchronized (channels) {
             return channels.get(ch);
+        }
+    }
+
+    public synchronized void onBusy() {
+        BayLog.debug("%s AcceptHandler:onBusy", agent);
+        for(ServerSocketChannel ch: BayServer.anchorablePortMap.keySet()) {
+            SelectionKey key = ch.keyFor(selector);
+            if(key != null)
+                key.cancel();
+        }
+    }
+
+    public synchronized void onFree() {
+        BayLog.debug("%s AcceptHandler:onFree isShutdown=%s", agent, agent.aborted);
+        if(agent.aborted)
+            return;
+
+        for(ServerSocketChannel ch: BayServer.anchorablePortMap.keySet()) {
+            try {
+                ch.register(selector, SelectionKey.OP_ACCEPT);
+            }
+            catch(ClosedChannelException e) {
+                BayLog.error(e);
+            }
         }
     }
 

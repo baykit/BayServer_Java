@@ -4,7 +4,6 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.ChannelListener;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.agent.NonBlockingHandler;
 import yokohama.baykit.bayserver.agent.UpgradeException;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
@@ -18,7 +17,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 

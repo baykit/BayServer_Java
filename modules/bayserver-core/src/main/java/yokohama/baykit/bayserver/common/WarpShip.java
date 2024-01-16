@@ -86,7 +86,7 @@ public final class WarpShip extends Ship {
 
         //  Send pending packet
         GrandAgent agt = GrandAgent.get(agentId);
-        agt.nonBlockingHandler.askToWrite(ch);
+        agt.multiplexer.reqWrite(ch);
         return NextSocketAction.Continue;
     }
 
