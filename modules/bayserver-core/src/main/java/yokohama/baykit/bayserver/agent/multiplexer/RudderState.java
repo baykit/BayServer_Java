@@ -1,7 +1,7 @@
-package yokohama.baykit.bayserver.agent;
+package yokohama.baykit.bayserver.agent.multiplexer;
 
-import yokohama.baykit.bayserver.agent.transporter.DataListener;
-import yokohama.baykit.bayserver.agent.transporter.SelectHandler;
+import yokohama.baykit.bayserver.common.DataListener;
+import yokohama.baykit.bayserver.common.EOFChecker;
 import yokohama.baykit.bayserver.common.Rudder;
 
 import java.nio.ByteBuffer;
@@ -11,7 +11,7 @@ public class RudderState {
 
     public final Rudder rudder;
     public final DataListener listener;
-    public final SelectHandler selectHandler;
+    public final Transporter transporter;
 
     boolean accepted;
     long lastAccessTime;
@@ -26,14 +26,14 @@ public class RudderState {
         this(rd, lis, null);
     }
 
-    public RudderState(Rudder rd, DataListener lis, SelectHandler handler) {
+    public RudderState(Rudder rd, DataListener lis, Transporter handler) {
         if (rd == null)
             throw new NullPointerException();
         if (lis == null)
             throw new NullPointerException();
         this.rudder = rd;
         this.listener = lis;
-        this.selectHandler = handler;
+        this.transporter = handler;
         this.accepted = false;
         this.valid = true;
     }

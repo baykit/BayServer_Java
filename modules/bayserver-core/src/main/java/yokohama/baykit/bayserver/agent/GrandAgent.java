@@ -3,6 +3,8 @@ package yokohama.baykit.bayserver.agent;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.MemUsage;
+import yokohama.baykit.bayserver.agent.multiplexer.SpinMultiplexer;
+import yokohama.baykit.bayserver.agent.multiplexer.TaxiMultiplexer;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.docker.base.PortBase;
@@ -30,7 +32,7 @@ public class GrandAgent {
     public static Map<Integer, GrandAgent> agents = new HashMap<>();
     public static List<LifecycleListener> listeners = new ArrayList<>();
 
-    int selectTimeoutSec = SELECT_TIMEOUT_SEC;
+    public int selectTimeoutSec = SELECT_TIMEOUT_SEC;
     public final int agentId;
     public Multiplexer multiplexer;
     public Multiplexer taxiMultiplexer;
@@ -38,7 +40,7 @@ public class GrandAgent {
 
     public final int maxInboundShips;
     public boolean aborted;
-    ArrayList<TimerHandler> timerHandlers = new ArrayList<>();
+    public ArrayList<TimerHandler> timerHandlers = new ArrayList<>();
 
     public GrandAgent(
             int agentId,

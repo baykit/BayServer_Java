@@ -8,7 +8,7 @@ import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.agent.transporter.DataListener;
+import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.common.Rudder;

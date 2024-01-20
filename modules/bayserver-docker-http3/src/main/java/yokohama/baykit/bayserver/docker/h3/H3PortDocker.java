@@ -8,8 +8,8 @@ import yokohama.baykit.bayserver.BayMessage;
 import yokohama.baykit.bayserver.ConfigException;
 import yokohama.baykit.bayserver.Symbol;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.transporter.DataListener;
-import yokohama.baykit.bayserver.agent.transporter.SelectHandler;
+import yokohama.baykit.bayserver.common.DataListener;
+import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.docker.Docker;
@@ -105,7 +105,7 @@ public class H3PortDocker extends PortBase implements H3Docker {
     }
 
     @Override
-    public SelectHandler newSelectHandler(int agentId, Rudder rd) {
+    public Transporter newTransporter(int agentId, Rudder rd) {
         UdpTransporter tp = new UdpTransporter(true, 8192);
         return tp;
     }
