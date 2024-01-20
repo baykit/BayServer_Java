@@ -2,6 +2,7 @@ package yokohama.baykit.bayserver.docker.http.h2;
 
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.common.ChannelRudder;
 import yokohama.baykit.bayserver.common.InboundHandler;
 import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.docker.http.h2.command.*;
@@ -138,7 +139,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
         cmd.debugData = "Thank you!".getBytes(StandardCharsets.UTF_8);
         try {
             protocolHandler.post(cmd);
-            protocolHandler.ship.postman.postEnd();
+            protocolHandler.ship.postEnd();
         }
         catch(IOException ex) {
             BayLog.error(ex);
@@ -429,7 +430,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
 
         tur.req.protocol = httpProtocol;
 
-        Socket skt = ((SocketChannel)sip.ch).socket();
+        Socket skt = ((SocketChannel)((ChannelRudder)sip.rudder).channel).socket();
         tur.req.remotePort = skt.getPort();
 
         tur.req.remoteAddress = skt.getInetAddress().getHostAddress();

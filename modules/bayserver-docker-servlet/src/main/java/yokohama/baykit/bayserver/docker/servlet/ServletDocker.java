@@ -365,7 +365,7 @@ public class ServletDocker extends ClubBase {
             else {
                 // If sync mode run servlet on another thread
                 req.setAsyncSupported(true);
-                TrainRunner.post(train);
+                TrainRunner.post(tour.ship.agentId, train);
             }
         }
         catch (HttpException e) {

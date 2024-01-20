@@ -66,7 +66,7 @@ public class WarpData implements ReqContentHandler {
         warpShip.checkShipId(warpShipId);
         warpShip.warpHandler().sendEnd(tur, false, () -> {
             GrandAgent agt = GrandAgent.get(warpShip.agentId);
-            agt.multiplexer.reqRead(warpShip.ch);
+            agt.multiplexer.reqRead(warpShip.rudder);
         });
     }
 

@@ -1,31 +1,24 @@
 package yokohama.baykit.bayserver.train;
 
 import yokohama.baykit.bayserver.BayLog;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.RejectedExecutionException;
+import yokohama.baykit.bayserver.common.VehicleRunner;
 
 public class TrainRunner {
 
-    static ExecutorService exe;
+    static VehicleRunner runner = new VehicleRunner();
 
-    public static void init(int count) {
-        if(count <= 0)
-            throw new IllegalArgumentException();
-        exe = Executors.newFixedThreadPool(count);
+    //////////////////////////////////////////////
+    // Static methods
+    //////////////////////////////////////////////
+    public static void init(int maxTrains) {
+        runner.init(maxTrains);
     }
 
     /**
      * Run train on available thread
      */
-    public static boolean post(Train train) {
-        try {
-            exe.submit(train);
-            return true;
-        } catch(RejectedExecutionException e) {
-            BayLog.error(e);
-            return false;
-        }
+    public static boolean post(int agtId, Train train) {
+        BayLog.debug("Agt#%d post train: thread=%s taxi=%s", agtId, Thread.currentThread().getName(), train);
+        return runner.post(agtId, train);
     }
 }

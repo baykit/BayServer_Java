@@ -88,6 +88,11 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
         }
     }
 
+    @Override
+    protected void onTimer() {
+
+    }
+
     ///////////////////////////////////////////////////////////////////
     // implements Tour.ExtraData
     ///////////////////////////////////////////////////////////////////
@@ -103,7 +108,7 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
         BayLog.debug("%s endContent", tur);
         abortable = false;
 
-        if(!TrainRunner.post(this)) {
+        if(!TrainRunner.post(tur.ship.agentId, this)) {
             throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "TourRunner is busy");
         }
     }
@@ -120,4 +125,5 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
         w.write(path);
         w.write("</a><br>");
     }
+
 }

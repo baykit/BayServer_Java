@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.docker.http.h1;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.UpgradeException;
+import yokohama.baykit.bayserver.common.ChannelRudder;
 import yokohama.baykit.bayserver.docker.http.h2.H2ProtocolHandler;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.common.InboundHandler;
@@ -138,18 +139,18 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
     @Override
     public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
         InboundShip ship = ship();
-        BayLog.trace("%s sendEndTour: tur=%s keep=%s", ship, tur, keepAlive);
+        BayLog.debug("%s H1 sendEnd: tur=%s keep=%s", ship, tur, keepAlive);
 
         // Send end request command
         CmdEndContent cmd = new CmdEndContent();
         int sid = ship.shipId;
         Runnable ensureFunc = () -> {
-            if(keepAlive && !ship.postman.isZombie()) {
+            if(keepAlive) {
                 ship.keeping = true;
                 ship.resumeRead(sid);
             }
             else
-                ship.postman.postEnd();
+                ship.postEnd();
         };
 
         try {
@@ -376,7 +377,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         }
         else {
             try {
-                Socket skt = ((SocketChannel) ship().ch).socket();
+                Socket skt = ((SocketChannel) ((ChannelRudder)ship().rudder).channel).socket();
                 tur.req.remotePort = skt.getPort();
                 tur.req.remoteAddress = skt.getInetAddress().getHostAddress();
                 tur.req.serverAddress = skt.getLocalAddress().getHostAddress();

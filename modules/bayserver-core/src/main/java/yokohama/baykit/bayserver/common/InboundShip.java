@@ -17,7 +17,6 @@ import yokohama.baykit.bayserver.util.Headers;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectableChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,7 +30,6 @@ public class InboundShip extends Ship {
 
     static Counter errCounter = new Counter();
 
-    public SelectableChannel ch;
     public ProtocolHandler protocolHandler;
     boolean needEnd;
     protected int socketTimeoutSec;
@@ -40,14 +38,12 @@ public class InboundShip extends Ship {
     List<Tour> activeTours = new ArrayList<>();
 
     public void initInbound(
-            SelectableChannel ch,
+            Rudder rd,
             int agentId,
-            Postman pm,
-            Valve vlv,
+            Multiplexer mpx,
             Port portDkr,
             ProtocolHandler protoHandler) {
-        init(agentId, pm, vlv);
-        this.ch = ch;
+        init(agentId, rd, mpx);
         this.portDkr = portDkr;
         this.socketTimeoutSec = portDkr.timeoutSec() >= 0 ? portDkr.timeoutSec() : BayServer.harbor.socketTimeoutSec();
         this.tourStore = TourStore.getStore(agentId);
@@ -75,7 +71,6 @@ public class InboundShip extends Ship {
         }
         needEnd = false;
         protocolHandler = null;
-        ch = null;
     }
 
     /////////////////////////////////////
@@ -251,11 +246,13 @@ public class InboundShip extends Ship {
 
     private void abortTours() {
         BayLog.debug("%s abort tours", this);
+        /*
         try {
             throw new Exception("Abort Tours");
         } catch (Exception e) {
             BayLog.error(e);
         }
+        */
         ArrayList<Tour> returnList = new ArrayList<>();
 
         // Abort tours

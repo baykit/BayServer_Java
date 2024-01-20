@@ -1,49 +1,29 @@
 package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.agent.ChannelListener;
+import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.taxi.Taxi;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 
 import java.io.IOException;
-import java.nio.channels.Channel;
+import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 
-public class WriteChannelTaxi extends Taxi implements Valve {
-
+public class WriteChannelTaxi extends Taxi {
 
     int agentId;
-    Channel output;
-    ChannelListener channelListener;
-    boolean chValid;
+    WritableByteChannel output;
+    ByteBuffer buf;
 
-    public WriteChannelTaxi(int agentId){
+    public WriteChannelTaxi(int agentId, WritableByteChannel out, ByteBuffer buf) throws IOException {
         this.agentId = agentId;
-    }
-
-    public void init(Channel out, ChannelListener lis) throws IOException {
         this.output = out;
-        this.channelListener = lis;
-        this.chValid = true;
-    }
-
-    /////////////////////////////////////////
-    // Implements Valve
-    /////////////////////////////////////////
-
-    @Override
-    public void openReadValve() {
-        throw new Sink();
+        this.buf = buf;
     }
 
     @Override
-    public void openWriteValve() {
-        nextRun();
-    }
-
-    @Override
-    public synchronized void destroy() {
-        close();
+    public String toString() {
+        return super.toString() + "(WriteChannel on #agt" + agentId + ")";
     }
 
     /////////////////////////////////////////
@@ -52,16 +32,11 @@ public class WriteChannelTaxi extends Taxi implements Valve {
     @Override
     protected void depart() {
         try {
-            channelListener.onWritable(output);
+            output.write(buf);
         }
-        catch(IOException e) {
-            channelListener.onError(output, e);
+        catch(Throwable e) {
             close();
-        }
-        catch(RuntimeException | Error e) {
-            BayLog.error(e);
-            close();
-            throw e;
+            GrandAgent.get(agentId).reqShutdown();
         }
     }
 
@@ -75,9 +50,7 @@ public class WriteChannelTaxi extends Taxi implements Valve {
     }
 
     private synchronized void close() {
-        BayLog.debug("%s Close taxi", this);
-        if(!chValid)
-            return;
+        BayLog.debug("%s Close", this);
 
         try {
             output.close();
@@ -85,8 +58,5 @@ public class WriteChannelTaxi extends Taxi implements Valve {
         catch (IOException e) {
             BayLog.error(e, "%s Cannot close", this);
         }
-
-        chValid = false;
-        channelListener.onClosed(output);
     }
 }

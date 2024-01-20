@@ -2,10 +2,11 @@ package yokohama.baykit.bayserver.docker.base;
 
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
-import yokohama.baykit.bayserver.agent.MultiplexingValve;
+import yokohama.baykit.bayserver.agent.RudderState;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
-import yokohama.baykit.bayserver.common.Valve;
+import yokohama.baykit.bayserver.common.ChannelRudder;
+import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.common.WarpShip;
 import yokohama.baykit.bayserver.common.WarpShipStore;
 import yokohama.baykit.bayserver.docker.Warp;
@@ -161,12 +162,11 @@ public abstract class WarpBase extends ClubBase implements Warp {
                     ch = SysUtil.openUnixDomainSocketChannel();
 
                 ch.configureBlocking(false);
+                Rudder rd = new ChannelRudder(ch);
                 tp = newTransporter(agt, ch);
                 ProtocolHandler protoHnd = ProtocolHandlerStore.getStore(protocol(), false, agt.agentId).rent();
-                Valve v = new MultiplexingValve(agt.multiplexer, ch);
-                wsip.initWarp(ch, agt.agentId, tp, v, this, protoHnd);
+                wsip.initWarp(rd, agt.agentId, agt.multiplexer, this, protoHnd);
 
-                tp.init(ch, new SimpleDataListener(wsip), v);
                 BayLog.debug("%s init warp ship", wsip);
                 needConnect = true;
             }
@@ -178,8 +178,8 @@ public abstract class WarpBase extends ClubBase implements Warp {
             wsip.startWarpTour(tour);
 
             if(needConnect) {
-                agt.multiplexer.addChannelListener(wsip.ch, tp);
-                agt.multiplexer.reqConnect((SocketChannel)wsip.ch, hostAddr);
+                agt.multiplexer.addState(wsip.rudder, new RudderState(wsip.rudder, new SimpleDataListener(wsip), tp));
+                agt.multiplexer.reqConnect(wsip.rudder, hostAddr);
             }
 
         }

@@ -1,34 +1,36 @@
 package yokohama.baykit.bayserver.docker.h3;
 
+import io.quiche4j.*;
+import io.quiche4j.http3.Http3Config;
+import io.quiche4j.http3.Http3ConfigBuilder;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
+import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.transporter.DataListener;
-import yokohama.baykit.bayserver.agent.transporter.Transporter;
-import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.common.InboundShip;
+import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.common.Rudder;
+import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
-import io.quiche4j.*;
-import io.quiche4j.http3.*;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
 import java.util.Arrays;
 import java.util.HashMap;
 
 
 public final class QicDataListener implements DataListener {
 
-    Transporter transporter;
+    Multiplexer multiplexer;
     byte[] connIdSeed = Quiche.newConnectionIdSeed();
     static HashMap<String, InboundShip> shipMap = new HashMap<>();
     Http3Config h3Config = new Http3ConfigBuilder().build();
     public int agentId;
-    DatagramChannel ch;
+    Rudder rudder;
     Port portDkr;
     boolean initialized;
 
@@ -44,13 +46,13 @@ public final class QicDataListener implements DataListener {
     }
 
     public void initUdp(
-            DatagramChannel ch,
             int agentId,
-            Transporter tp,
+            Rudder rd,
+            Multiplexer mpx,
             Port dkr) {
-        this.ch = ch;
         this.agentId = agentId;
-        this.transporter = tp;
+        this.rudder = rd;
+        this.multiplexer = mpx;
         this.portDkr = dkr;
         this.initialized = true;
 
@@ -195,9 +197,10 @@ public final class QicDataListener implements DataListener {
 
         BayLog.info("%s New connection scid=%s odcid=%s ref=%d", this, Utils.asHex(srcConId), Utils.asHex(odcid), con.getPointer());
 
-        QicProtocolHandler hnd = new QicProtocolHandler(con, adr, h3Config, transporter);
+        GrandAgent agt = GrandAgent.get(agentId);
+        QicProtocolHandler hnd = new QicProtocolHandler(con, adr, h3Config, agt.multiplexer);
         InboundShip sip = new InboundShip();
-        sip.initInbound(ch, agentId, transporter, new QicValve(), portDkr, hnd);
+        sip.initInbound(rudder, agentId, agt.multiplexer, portDkr, hnd);
         hnd.setShip(sip);
 
         addShip(srcConId, sip);
@@ -311,7 +314,7 @@ public final class QicDataListener implements DataListener {
 
         // Check packets held in data listener
         if(tmpPostPacket != null) {
-            transporter.post(tmpPostPacket.asBuffer(), tmpPostAddress, tmpPostPacket, null);
+            multiplexer.reqWrite(rudder, tmpPostPacket.asBuffer(), tmpPostAddress, tmpPostPacket, null);
             tmpPostPacket = null;
             tmpPostAddress = null;
             posted = true;

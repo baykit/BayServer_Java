@@ -5,18 +5,13 @@ import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.MultiplexingValve;
-import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
+import yokohama.baykit.bayserver.agent.RudderState;
 import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
-import yokohama.baykit.bayserver.agent.transporter.SpinReadTransporter;
-import yokohama.baykit.bayserver.common.ReadChannelTaxi;
-import yokohama.baykit.bayserver.common.ReadChannelTrain;
-import yokohama.baykit.bayserver.taxi.TaxiRunner;
+import yokohama.baykit.bayserver.common.ChannelRudder;
+import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.tour.ContentConsumeListener;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
-import yokohama.baykit.bayserver.train.Train;
-import yokohama.baykit.bayserver.train.TrainRunner;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.Mimes;
 
@@ -24,8 +19,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.channels.Channel;
 import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 
 public class FileContentHandler implements ReqContentHandler {
 
@@ -95,22 +90,15 @@ public class FileContentHandler implements ReqContentHandler {
             tur.res.sendHeaders(Tour.TOUR_ID_NOCHECK);
 
             InputStream in = new FileInputStream(file);
-            Channel ch = Channels.newChannel(in);
+            ReadableByteChannel ch = Channels.newChannel(in);
+            Rudder rd = new ChannelRudder(ch);
             int bufsize = tur.ship.protocolHandler.maxResPacketDataSize();
 
             switch(BayServer.harbor.fileSendMethod()) {
                 case Spin: {
                     GrandAgent agt = GrandAgent.get(tur.ship.agentId);
-                    int timeout = 10;
-                    SpinReadTransporter tp = new SpinReadTransporter(bufsize);
-                    sendFileShip.init(ch, tur, tp);
-                    tp.init(
-                            agt.spinHandler,
-                            new SimpleDataListener(sendFileShip),
-                            new FileInputStream(file),
-                            (int)file.length(),
-                            timeout,
-                            null);
+                    sendFileShip.init(rd, agt.multiplexer, tur);
+                    agt.spinMultiplexer.addState(rd, new RudderState(rd, new SimpleDataListener(sendFileShip)));
 
                     int sid = sendFileShip.id();
                     tur.res.setConsumeListener((len, resume) -> {
@@ -118,17 +106,14 @@ public class FileContentHandler implements ReqContentHandler {
                             sendFileShip.resumeRead(sid);
                         }
                     });
-                    tp.openReadValve();
+                    agt.spinMultiplexer.reqRead(rd);
                     break;
                 }
 
                 case Taxi:{
-                    ReadChannelTaxi txi = new ReadChannelTaxi(tur.ship.agentId);
-                    sendFileShip.init(ch, tur, txi);
-                    PlainTransporter tp = new PlainTransporter(false, bufsize, false);
                     GrandAgent agt = GrandAgent.get(tur.ship.agentId);
-                    tp.init(ch, new SimpleDataListener(sendFileShip), new MultiplexingValve(agt.multiplexer, ch));
-                    txi.setChannelListener(ch, tp);
+                    sendFileShip.init(rd, agt.taxiMultiplexer, tur);
+                    agt.taxiMultiplexer.addState(rd, new RudderState(rd, new SimpleDataListener(sendFileShip)));
 
                     int sid = sendFileShip.id();
                     tur.res.setConsumeListener((len, resume) -> {
@@ -136,23 +121,10 @@ public class FileContentHandler implements ReqContentHandler {
                             sendFileShip.resumeRead(sid);
                         }
                     });
-                    if(!TaxiRunner.post(tur.ship.agentId, txi)) {
-                        throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Taxi is busy!");
-                    }
+
+                    agt.taxiMultiplexer.reqRead(rd);
                     break;
                 }
-
-                case Train:
-                    sendFileShip.init(ch, tur, null);
-                    PlainTransporter tp = new PlainTransporter(false, bufsize, false);
-                    GrandAgent agt = GrandAgent.get(tur.ship.agentId);
-                    tp.init(ch, new SimpleDataListener(sendFileShip), new MultiplexingValve(agt.multiplexer, ch));
-
-                    Train tr = new ReadChannelTrain(ch, tp, tur);
-                    if(!TrainRunner.post(tr)) {
-                        throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Train is busy");
-                    }
-                    break;
 
                 default:
                     throw new Sink();

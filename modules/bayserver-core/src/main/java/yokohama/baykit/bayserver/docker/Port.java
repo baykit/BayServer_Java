@@ -1,13 +1,14 @@
 package yokohama.baykit.bayserver.docker;
 
 import yokohama.baykit.bayserver.HttpException;
-import yokohama.baykit.bayserver.agent.ChannelListener;
+import yokohama.baykit.bayserver.agent.transporter.DataListener;
+import yokohama.baykit.bayserver.agent.transporter.SelectHandler;
 import yokohama.baykit.bayserver.common.InboundShip;
+import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,7 +39,9 @@ public interface Port {
 
     City findCity(String name);
 
-    ChannelListener newChannelListener(int agentId, SelectableChannel ch) throws IOException;
+    DataListener newDataListener(int agentId, Rudder rd) throws IOException;
+
+    SelectHandler newSelectHandler(int agentId, Rudder rd) throws IOException;
 
     void returnProtocolHandler(int agentId, ProtocolHandler protoHnd);
 

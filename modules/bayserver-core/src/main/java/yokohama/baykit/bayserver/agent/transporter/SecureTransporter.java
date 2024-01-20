@@ -1,7 +1,8 @@
 package yokohama.baykit.bayserver.agent.transporter;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.common.Valve;
+import yokohama.baykit.bayserver.common.ChannelRudder;
+import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.util.SSLHandler;
 import yokohama.baykit.bayserver.util.SSLUtil;
 
@@ -11,7 +12,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.nio.channels.SocketChannel;
 
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
@@ -32,11 +32,10 @@ public class SecureTransporter extends Transporter {
         super(serverMode, traceSSL);
         this.ctx = ctx;
         this.appProtocols = appProtocols;
+        init();
     }
 
-    @Override
-    public void init(Channel ch, DataListener lis, Valve vlv) {
-        super.init(ch, lis, vlv);
+    public void init() {
         sslh = new SSLHandler(ctx, appProtocols, serverMode);
         if (netIn == null)
             netIn = ByteBuffer.allocate(sslh.engine.getSession().getPacketBufferSize());
@@ -50,7 +49,6 @@ public class SecureTransporter extends Transporter {
 
     @Override
     public void reset() {
-        super.reset();
         netIn.limit(0);
         netOut.limit(0);
         appIn.clear();
@@ -61,7 +59,7 @@ public class SecureTransporter extends Transporter {
 
     @Override
     public String toString() {
-        return "stp[" + dataListener + "]";
+        return "stp[]";
     }
 
 
@@ -69,9 +67,9 @@ public class SecureTransporter extends Transporter {
     // implements Transporter
     /////////////////////////////////////////////////////////////////////////////////
     @Override
-    protected boolean handshake(boolean readable) throws IOException {
+    protected boolean handshake(Rudder rd, DataListener lis, boolean readable) throws IOException {
         if(readable)
-            readNetIn();
+            readNetIn(rd);
 
         SSLEngineResult.HandshakeStatus status = sslh.engine.getHandshakeStatus();
         if(status == NOT_HANDSHAKING) {
@@ -105,7 +103,7 @@ public class SecureTransporter extends Transporter {
     //                BayLog.debug(this + " After wrap: appOut" + appOut.position() + "/" + appOut.limit() + " netOut=" + netOut.position() + "/" + netOut.limit());
 
  // In handshaking, maybe we can write data without blocking because packet size is small
-                    writeNetOut();
+                    writeNetOut(rd);
                     continue;
                 }
 
@@ -115,7 +113,7 @@ public class SecureTransporter extends Transporter {
 //                    BayLog.debug(this + " Handshake finished. status=" + status + " remain: net=" + netIn.remaining() + " app=" + appIn.remaining());
                     needHandshake = false;
                     String pcl = SSLUtil.getApplicationProtocol(sslh.engine);
-                    dataListener.notifyHandshakeDone(pcl);
+                    lis.notifyHandshakeDone(pcl);
                     if(netIn.hasRemaining())
                         netIn.compact();
                     return netIn.hasRemaining() || appIn.hasRemaining();
@@ -127,13 +125,13 @@ public class SecureTransporter extends Transporter {
     }
 
     @Override
-    protected ByteBuffer readNonBlock(InetSocketAddress[] adr) throws IOException {
+    protected ByteBuffer readNonBlock(Rudder rd, InetSocketAddress[] adr) throws IOException {
         if(appIn.hasRemaining()) {
             BayLog.debug("Remains appIn data (may be generated on handshaking)");
             return appIn;
         }
 
-        readNetIn();
+        readNetIn(rd);
 
         appIn.clear();
         SSLEngineResult.HandshakeStatus status = sslh.unwrap(netIn, appIn);
@@ -149,7 +147,7 @@ public class SecureTransporter extends Transporter {
     }
 
     @Override
-    protected boolean writeNonBlock(ByteBuffer appOut, InetSocketAddress adr) throws IOException {
+    protected boolean writeNonBlock(Rudder rd, InetSocketAddress adr, ByteBuffer appOut) throws IOException {
         do {
             if (!netOut.hasRemaining()) {
                 netOut.clear();
@@ -163,7 +161,7 @@ public class SecureTransporter extends Transporter {
                 netOut.flip();
             }
 
-            writeNetOut();
+            writeNetOut(rd);
 
         } while (appOut.hasRemaining() && !netOut.hasRemaining());
 
@@ -186,12 +184,12 @@ public class SecureTransporter extends Transporter {
     }
 
 
-    private void readNetIn() throws IOException {
+    private void readNetIn(Rudder rd) throws IOException {
         if(!netIn.hasRemaining())
             netIn.clear();
 
         int oldPos = netIn.position();
-        int c = ((SocketChannel)ch).read(netIn);
+        int c = ((SocketChannel) ((ChannelRudder)rd).channel).read(netIn);
         if (c == -1) {
             throw new EOFException("Closed by peer.");
         }
@@ -200,9 +198,9 @@ public class SecureTransporter extends Transporter {
             BayLog.trace(this + " Read " + (netIn.limit() - oldPos) + " encrypted bytes");
     }
 
-    private void writeNetOut() throws IOException {
+    private void writeNetOut(Rudder rd) throws IOException {
         int npos = netOut.position();
-        ((SocketChannel)ch).write(netOut);
+        ((SocketChannel) ((ChannelRudder)rd).channel).write(netOut);
         if (BayLog.isTraceMode())
             BayLog.trace(this + " Wrote " + (netOut.position() - npos) + " encrypted bytes(" + netOut.position() + "/" + netOut.limit() + ")");
     }

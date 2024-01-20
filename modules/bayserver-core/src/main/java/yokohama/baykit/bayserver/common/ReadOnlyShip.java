@@ -6,15 +6,11 @@ import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.ship.Ship;
 
 import java.io.IOException;
-import java.nio.channels.Channel;
 
 public abstract class ReadOnlyShip extends Ship {
 
-    public Channel channel;
-
-    protected void init(Channel ch, int agentId, Valve vlv) {
-        super.init(agentId, null, vlv);
-        this.channel = ch;
+    protected void init(int agentId, Rudder rd, Multiplexer mpx) {
+        super.init(agentId, rd, mpx);
     }
 
     /////////////////////////////////////
@@ -22,7 +18,6 @@ public abstract class ReadOnlyShip extends Ship {
     /////////////////////////////////////
     public void reset() {
         super.reset();
-        this.channel = null;
     }
 
     /////////////////////////////////////
