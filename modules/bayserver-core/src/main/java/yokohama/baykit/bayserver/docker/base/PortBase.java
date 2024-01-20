@@ -1,21 +1,14 @@
 package yokohama.baykit.bayserver.docker.base;
 
 import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.agent.ChannelListener;
+import yokohama.baykit.bayserver.agent.transporter.*;
+import yokohama.baykit.bayserver.common.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.MultiplexingValve;
-import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
-import yokohama.baykit.bayserver.agent.transporter.Transporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
-import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
-import yokohama.baykit.bayserver.common.InboundShip;
-import yokohama.baykit.bayserver.common.InboundShipStore;
-import yokohama.baykit.bayserver.common.Valve;
 import yokohama.baykit.bayserver.docker.*;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
-import yokohama.baykit.bayserver.common.Cities;
 import yokohama.baykit.bayserver.util.IOUtil;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.SysUtil;
@@ -23,7 +16,6 @@ import yokohama.baykit.bayserver.util.SysUtil;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -228,26 +220,29 @@ public abstract class PortBase extends DockerBase implements Port {
     }
 
     @Override
-    public ChannelListener newChannelListener(int agentId, SelectableChannel ch) {
+    public DataListener newDataListener(int agentId, Rudder rd) {
         InboundShip sip = getShipStore(agentId).rent();
+        ProtocolHandler protoHnd = getProtocolHandlerStore(protocol(), agentId).rent();
+        GrandAgent agt = GrandAgent.get(agentId);
+        sip.initInbound(rd, agentId, agt.multiplexer, this, protoHnd);
+        return new SimpleDataListener(sip);
+    }
+
+    @Override
+    public SelectHandler newSelectHandler(int agentId, Rudder rd) {
         Transporter tp;
         if(secure())
             tp = secureDocker.createTransporter();
         else {
             int size;
             try {
-                size = IOUtil.getSockRecvBufSize((SocketChannel) ch);
+                size = IOUtil.getSockRecvBufSize((SocketChannel) ((ChannelRudder)rd).channel);
             }
             catch(IOException e) {
                 size = 8192;
             }
             tp = new PlainTransporter(true, size);
         }
-        ProtocolHandler protoHnd = getProtocolHandlerStore(protocol(), agentId).rent();
-        GrandAgent agt = GrandAgent.get(agentId);
-        Valve v = new MultiplexingValve(agt.multiplexer, ch);
-        sip.initInbound(ch, agentId, tp, v, this, protoHnd);
-        tp.init(ch, new SimpleDataListener(sip), v);
         return tp;
     }
 

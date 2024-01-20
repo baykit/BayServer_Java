@@ -1,13 +1,17 @@
 package yokohama.baykit.bayserver.agent;
 
-import yokohama.baykit.bayserver.*;
+import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.BayServer;
+import yokohama.baykit.bayserver.MemUsage;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.docker.base.PortBase;
 
 import java.io.IOException;
-import java.nio.channels.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class GrandAgent {
 
@@ -29,7 +33,8 @@ public class GrandAgent {
     int selectTimeoutSec = SELECT_TIMEOUT_SEC;
     public final int agentId;
     public Multiplexer multiplexer;
-    public SpinHandler spinHandler;
+    public Multiplexer taxiMultiplexer;
+    public SpinMultiplexer spinMultiplexer;
 
     public final int maxInboundShips;
     public boolean aborted;
@@ -40,8 +45,9 @@ public class GrandAgent {
             int maxShips) {
         this.agentId = agentId;
 
-        this.spinHandler = new SpinHandler(this);
         this.maxInboundShips = maxShips > 0 ? maxShips : 1;
+        this.taxiMultiplexer = new TaxiMultiplexer(this);
+        this.spinMultiplexer = new SpinMultiplexer(this);
     }
 
     public String toString() {

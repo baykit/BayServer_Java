@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.docker.ajp;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgentMonitor;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.common.ChannelRudder;
 import yokohama.baykit.bayserver.common.InboundHandler;
 import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.protocol.*;
@@ -115,7 +116,7 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
 
         Runnable ensureFunc = () -> {
             if (!keepAlive)
-                ship().postman.postEnd();
+                ship().postEnd();
         };
 
         try {
@@ -331,7 +332,7 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
         tur.req.parseHostPort(reqCommand.isSsl ? 443 : 80);
         tur.req.parseAuthorization();
 
-        Socket socket = ((SocketChannel)ship().ch).socket();
+        Socket socket = ((SocketChannel)((ChannelRudder)ship().rudder).channel).socket();
         tur.req.remotePort = -1;
         tur.req.remoteAddress = reqCommand.remoteAddr;
         tur.req.remoteHostFunc = () ->  reqCommand.remoteHost;

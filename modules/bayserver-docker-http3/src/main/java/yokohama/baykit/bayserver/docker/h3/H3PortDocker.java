@@ -1,25 +1,24 @@
 package yokohama.baykit.bayserver.docker.h3;
 
+import io.quiche4j.Config;
+import io.quiche4j.ConfigBuilder;
+import io.quiche4j.Quiche;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayMessage;
 import yokohama.baykit.bayserver.ConfigException;
 import yokohama.baykit.bayserver.Symbol;
-import yokohama.baykit.bayserver.agent.ChannelListener;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.MultiplexingValve;
+import yokohama.baykit.bayserver.agent.transporter.DataListener;
+import yokohama.baykit.bayserver.agent.transporter.SelectHandler;
 import yokohama.baykit.bayserver.bcf.BcfElement;
+import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.base.PortBase;
 import yokohama.baykit.bayserver.docker.builtin.BuiltInSecureDocker;
-import io.quiche4j.Config;
-import io.quiche4j.ConfigBuilder;
-import io.quiche4j.Quiche;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.nio.channels.DatagramChannel;
-import java.nio.channels.SelectableChannel;
 
 public class H3PortDocker extends PortBase implements H3Docker {
 
@@ -98,12 +97,16 @@ public class H3PortDocker extends PortBase implements H3Docker {
     }
 
     @Override
-    public ChannelListener newChannelListener(int agentId, SelectableChannel ch) {
+    public DataListener newDataListener(int agentId, Rudder rd) {
         QicDataListener lis = new QicDataListener();
-        UdpTransporter tp = new UdpTransporter(true, 8192);
-        lis.initUdp((DatagramChannel) ch, agentId, tp, this);
         GrandAgent agt = GrandAgent.get(agentId);
-        tp.init(ch, lis, new MultiplexingValve(agt.multiplexer, ch));
+        lis.initUdp(agentId, rd, agt.multiplexer, this);
+        return lis;
+    }
+
+    @Override
+    public SelectHandler newSelectHandler(int agentId, Rudder rd) {
+        UdpTransporter tp = new UdpTransporter(true, 8192);
         return tp;
     }
 

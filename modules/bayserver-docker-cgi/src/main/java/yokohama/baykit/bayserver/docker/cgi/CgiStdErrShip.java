@@ -1,14 +1,12 @@
 package yokohama.baykit.bayserver.docker.cgi;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.common.ReadOnlyShip;
+import yokohama.baykit.bayserver.common.Rudder;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 
 public class CgiStdErrShip extends ReadOnlyShip  {
 
@@ -24,8 +22,8 @@ public class CgiStdErrShip extends ReadOnlyShip  {
     /////////////////////////////////////
     // Initialize methods
     /////////////////////////////////////
-    public void init(Channel ch, int agentId, CgiReqContentHandler handler) {
-        super.init(ch, agentId, null);
+    public void init(Rudder rd, int agentId, CgiReqContentHandler handler) {
+        super.init(agentId, rd, null);
         this.handler = handler;
     }
 

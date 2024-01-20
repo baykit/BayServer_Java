@@ -3,14 +3,14 @@ package yokohama.baykit.bayserver.docker.file;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.common.ReadOnlyShip;
-import yokohama.baykit.bayserver.common.Valve;
+import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.HttpStatus;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 
 public class SendFileShip extends ReadOnlyShip {
 
@@ -19,8 +19,8 @@ public class SendFileShip extends ReadOnlyShip {
     Tour tour;
     int tourId;
 
-    public void init(Channel ch, Tour tur, Valve vlv) throws IOException {
-        super.init(ch, tur.ship.agentId, vlv);
+    public void init(Rudder rd, Multiplexer mpx, Tour tur) throws IOException {
+        super.init(tur.ship.agentId, rd, mpx);
         this.tour = tur;
         this.tourId = tur.tourId;
     }
