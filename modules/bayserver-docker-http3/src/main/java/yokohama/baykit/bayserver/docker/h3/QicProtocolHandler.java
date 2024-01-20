@@ -80,18 +80,18 @@ public class QicProtocolHandler
     final InetSocketAddress sender;
     final HashMap<Long, ArrayList<PartialResponse>> partialResponses = new HashMap<>();
     final Http3Config h3Config;
-    final Postman postman;
+    final Multiplexer multiplexer;
     InboundShip ship;
     Http3Connection h3con;
 
     public static final String PROTOCOL = "HTTP/3";
 
-    public QicProtocolHandler(Connection con, InetSocketAddress adr, Http3Config cfg, Postman postman) {
+    public QicProtocolHandler(Connection con, InetSocketAddress adr, Http3Config cfg, Multiplexer mpx) {
         super(null, null, null, null, null, true);
         this.con = con;
         this.sender = adr;
         this.h3Config = cfg;
-        this.postman = postman;
+        this.multiplexer = mpx;
     }
 
     @Override
@@ -752,7 +752,7 @@ public class QicProtocolHandler
 
             //BayLog.debug("%s post packet len=%d addr=%s", this, len, addr[0]);
             pkt.bufLen = len;
-            postman.post(pkt.asBuffer(), addr[0], pkt, null);
+            multiplexer.reqWrite(ship.rudder, pkt.asBuffer(), addr[0], pkt, null);
             posted = true;
         }
         return posted;

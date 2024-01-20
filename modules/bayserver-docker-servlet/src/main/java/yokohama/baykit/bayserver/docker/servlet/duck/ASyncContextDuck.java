@@ -1,12 +1,10 @@
 package yokohama.baykit.bayserver.docker.servlet.duck;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.HttpException;
+import yokohama.baykit.bayserver.docker.servlet.ServletDocker;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.train.Train;
 import yokohama.baykit.bayserver.train.TrainRunner;
-import yokohama.baykit.bayserver.docker.servlet.ServletDocker;
-
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -119,7 +117,12 @@ public abstract class ASyncContextDuck {
         }
         Tour tur = (Tour) docker.reqHelper.getAttribute(req, ServletDocker.ATTR_TOUR);
         started = true;
-        TrainRunner.post(new Train() {
+        TrainRunner.post(tur.ship.agentId, new Train() {
+            @Override
+            protected void onTimer() {
+
+            }
+
             @Override
             protected void depart() {
                 run.run();

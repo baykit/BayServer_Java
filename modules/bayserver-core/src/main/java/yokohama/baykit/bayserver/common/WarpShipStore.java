@@ -2,9 +2,8 @@ package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.common.WarpShip;
-import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.ObjectStore;
+import yokohama.baykit.bayserver.util.StringUtil;
 
 import java.util.ArrayList;
 
@@ -37,8 +36,6 @@ public class WarpShipStore extends ObjectStore<WarpShip> {
         }
         if(wsip == null)
             throw new Sink("BUG! ship is null");
-        if(wsip.postman != null && wsip.postman.isZombie())
-            throw new Sink("BUG! channel is zombie: " + wsip);
         busyList.add(wsip);
 
         if(BayLog.isTraceMode())

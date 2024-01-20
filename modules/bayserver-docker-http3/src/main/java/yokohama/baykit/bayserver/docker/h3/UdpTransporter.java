@@ -3,12 +3,11 @@ package yokohama.baykit.bayserver.docker.h3;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.transporter.DataListener;
 import yokohama.baykit.bayserver.agent.transporter.Transporter;
-import yokohama.baykit.bayserver.common.Valve;
+import yokohama.baykit.bayserver.common.Rudder;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.nio.channels.DatagramChannel;
 
 public class UdpTransporter extends Transporter {
@@ -20,16 +19,14 @@ public class UdpTransporter extends Transporter {
         readBuf = ByteBuffer.allocate(bufsiz);
     }
 
-    @Override
-    public void init(Channel ch, DataListener lis, Valve vlv) {
-        super.init(ch, lis, vlv);
+    public void init() {
         needHandshake = false;
     }
 
 
     @Override
     public String toString() {
-        return "tp[" + dataListener + "]";
+        return "utp[]";
     }
 
     ////////////////////////////////////////////
@@ -38,7 +35,6 @@ public class UdpTransporter extends Transporter {
 
     @Override
     public void reset() {
-        super.reset();
         if(readBuf != null)
             readBuf.clear();
     }
@@ -47,16 +43,16 @@ public class UdpTransporter extends Transporter {
     // implements Transporter
     ////////////////////////////////////////////
     @Override
-    protected boolean handshake(boolean readable) throws IOException {
+    protected boolean handshake(Rudder rd, DataListener lis, boolean readable) throws IOException {
         throw new IllegalStateException("This transporter does not need handshake");
     }
 
     @Override
-    protected ByteBuffer readNonBlock(InetSocketAddress[] adr) throws IOException {
+    protected ByteBuffer readNonBlock(Rudder rd, InetSocketAddress[] adr) throws IOException {
 
         // read data
         readBuf.clear();
-        InetSocketAddress sender = (InetSocketAddress) ((DatagramChannel)ch).receive(readBuf);
+        InetSocketAddress sender = (InetSocketAddress) ((DatagramChannel) rd).receive(readBuf);
         if (sender == null) {
             BayLog.trace("%s Empty packet data (Maybe another agent received data)", this);
             return null;
@@ -69,10 +65,10 @@ public class UdpTransporter extends Transporter {
     }
 
     @Override
-    protected boolean writeNonBlock(ByteBuffer buf, InetSocketAddress adr) throws IOException {
+    protected boolean writeNonBlock(Rudder rd, InetSocketAddress adr, ByteBuffer buf) throws IOException {
         int pos = buf.position();
 
-        int len = ((DatagramChannel)ch).send(buf, adr);
+        int len = ((DatagramChannel) rd).send(buf, adr);
         BayLog.trace("%s wrote %d bytes remain=%d", this,  (buf.position() - pos), buf.remaining());
 
         return !buf.hasRemaining();

@@ -3,6 +3,10 @@ package yokohama.baykit.bayserver.agent;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.HttpException;
+import yokohama.baykit.bayserver.agent.transporter.DataListener;
+import yokohama.baykit.bayserver.agent.transporter.SelectHandler;
+import yokohama.baykit.bayserver.common.ChannelRudder;
+import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.docker.Port;
 
 import java.io.IOException;
@@ -14,11 +18,8 @@ public class AcceptHandler {
 
     final GrandAgent agent;
 
-    int chCount;
-
     public AcceptHandler(GrandAgent agent) {
         this.agent = agent;
-        this.chCount = 0;
     }
 
 
@@ -49,11 +50,14 @@ public class AcceptHandler {
                 }
                 //BayServer.debug(ch + " accepted");
                 ch.configureBlocking(false);
-                ChannelListener lis = p.newChannelListener(agent.agentId, ch);
-                agent.multiplexer.addChannelListener(ch, lis);
-                agent.multiplexer.reqStart(ch);
-                agent.multiplexer.reqRead(ch);
-                chCount++;
+                Rudder rd = new ChannelRudder(ch);
+
+                DataListener lis = p.newDataListener(agent.agentId, rd);
+                SelectHandler h = p.newSelectHandler(agent.agentId, rd);
+                RudderState st = new RudderState(rd, lis, h);
+                agent.multiplexer.addState(rd, st);
+                agent.multiplexer.reqStart(rd);
+                agent.multiplexer.reqRead(rd);
             } catch (IOException e) {
                 BayLog.error(e);
                 if (ch != null) {
@@ -66,9 +70,4 @@ public class AcceptHandler {
             }
         }
     }
-
-    public void onClosed() {
-        chCount--;
-    }
-
 }

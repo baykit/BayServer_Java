@@ -3,8 +3,8 @@ package yokohama.baykit.bayserver.ship;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.common.Postman;
-import yokohama.baykit.bayserver.common.Valve;
+import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.Counter;
 import yokohama.baykit.bayserver.util.Reusable;
@@ -26,8 +26,8 @@ public abstract class Ship implements Reusable {
     public final int objectId;
     public int shipId;
     public int agentId;
-    public Postman postman;
-    public Valve valve;
+    public Rudder rudder;
+    public Multiplexer multiplexer;
     public boolean initialized;
     public boolean keeping;
 
@@ -40,13 +40,13 @@ public abstract class Ship implements Reusable {
     // Initialize mthods
     /////////////////////////////////////
 
-    protected void init(int agentId, Postman pm, Valve vlv){
+    protected void init(int agentId, Rudder rd, Multiplexer mpx){
         if(initialized)
             throw new Sink("Ship already initialized");
         this.shipId = idCounter.next();
         this.agentId = agentId;
-        this.postman = pm;
-        this.valve = vlv;
+        this.rudder = rd;
+        this.multiplexer = mpx;
         this.initialized = true;
         BayLog.debug("%s Initialized", this);
     }
@@ -59,9 +59,8 @@ public abstract class Ship implements Reusable {
     public void reset() {
         BayLog.debug("%s reset", this);
         initialized = false;
-        if(postman != null)
-            postman.reset();
-        postman = null;  // for reloading certification
+        multiplexer = null;
+        rudder = null;
         agentId = -1;
         shipId = INVALID_SHIP_ID;
         keeping = false;
@@ -75,18 +74,6 @@ public abstract class Ship implements Reusable {
         return shipId;
     }
 
-    public void resumeRead(int chkId) {
-        checkShipId(chkId);
-        BayLog.debug("%s open write valve", this);
-        valve.openReadValve();
-    }
-
-    public void resumeWrite(int chkId) {
-        checkShipId(chkId);
-        BayLog.debug("%s open write valve", this);
-        valve.openWriteValve();
-    }
-
     public final void checkShipId(int shipId) {
         if(!initialized) {
             throw new Sink(this + " Uninitialized ship (might be returned ship): " + shipId);
@@ -94,6 +81,16 @@ public abstract class Ship implements Reusable {
         if(shipId == 0 || (shipId != SHIP_ID_NOCHECK && shipId != this.shipId)) {
             throw new Sink(this + " Invalid ship id (might be returned ship): " + shipId);
         }
+    }
+
+    public void resumeRead(int chkId) {
+        checkShipId(chkId);
+        BayLog.debug("%s open write valve", this);
+        multiplexer.reqRead(rudder);
+    }
+
+    public void postEnd() {
+        multiplexer.reqEnd(rudder);
     }
 
     /////////////////////////////////////

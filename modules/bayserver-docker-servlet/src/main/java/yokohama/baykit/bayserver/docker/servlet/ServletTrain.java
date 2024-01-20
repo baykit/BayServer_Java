@@ -2,12 +2,11 @@ package yokohama.baykit.bayserver.docker.servlet;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
-import yokohama.baykit.bayserver.HttpException;
+import yokohama.baykit.bayserver.docker.servlet.duck.*;
 import yokohama.baykit.bayserver.tour.ContentConsumeListener;
-import yokohama.baykit.bayserver.train.Train;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
-import yokohama.baykit.bayserver.docker.servlet.duck.*;
+import yokohama.baykit.bayserver.train.Train;
 import yokohama.baykit.bayserver.util.HttpStatus;
 
 import java.io.IOException;
@@ -128,6 +127,10 @@ class ServletTrain extends Train implements ReqContentHandler {
         }
     }
 
+    @Override
+    protected void onTimer() {
+
+    }
 
     ///////////////////////////////////////////////////////////////////
     // implements Tour.ContentHandler

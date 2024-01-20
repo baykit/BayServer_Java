@@ -143,7 +143,7 @@ public class GrandAgentMonitor {
         SelectMultiplexer multiplexer = new SelectMultiplexer(agt, anchorable);
         agt.setMultiplexer(multiplexer);
         multiplexer.runCommandReceiver(sendPipe.source(), recvPipe.sink());
-        multiplexer.start();
+        new Thread(multiplexer).start();
 
         monitors.put(
                 agtId,

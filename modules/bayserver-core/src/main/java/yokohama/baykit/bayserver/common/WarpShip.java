@@ -3,7 +3,6 @@ package yokohama.baykit.bayserver.common;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.Warp;
 import yokohama.baykit.bayserver.protocol.Command;
@@ -17,7 +16,6 @@ import yokohama.baykit.bayserver.ship.Ship;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,7 +26,6 @@ public final class WarpShip extends Ship {
     public Warp docker;
     protected Map<Integer, Pair<Integer, Tour>> tourMap = new HashMap<>();
 
-    public SelectableChannel ch;
     public ProtocolHandler protocolHandler;
     boolean connected;
     int socketTimeoutSec;
@@ -45,14 +42,12 @@ public final class WarpShip extends Ship {
     // Initialize method
     /////////////////////////////////////
     public void initWarp(
-            SocketChannel ch,
+            Rudder rd,
             int agentId,
-            Postman pm,
-            Valve vlv,
+            Multiplexer mpx,
             Warp dkr,
             ProtocolHandler protoHandler) {
-        init(agentId, pm, vlv);
-        this.ch = ch;
+        init(agentId, rd, mpx);
         this.docker = dkr;
         this.socketTimeoutSec = dkr.timeoutSec() >= 0 ? dkr.timeoutSec() : BayServer.harbor.socketTimeoutSec();
         this.protocolHandler = protoHandler;
@@ -72,7 +67,6 @@ public final class WarpShip extends Ship {
         tourMap.clear();
         connected = false;
         cmdBuf.clear();
-        ch = null;
         protocolHandler = null;
     }
 
@@ -83,10 +77,6 @@ public final class WarpShip extends Ship {
     public NextSocketAction notifyHandshakeDone(String protocol) throws IOException {
 
         ((WarpHandler)protocolHandler).verifyProtocol(protocol);
-
-        //  Send pending packet
-        GrandAgent agt = GrandAgent.get(agentId);
-        agt.multiplexer.reqWrite(ch);
         return NextSocketAction.Continue;
     }
 
@@ -256,7 +246,7 @@ public final class WarpShip extends Ship {
 
     public void abort(int checkId) {
         checkShipId(checkId);
-        postman.abort();
+        multiplexer.reqClose(rudder);
     }
 
     public final boolean isTimeout(long duration) {

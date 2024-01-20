@@ -1,70 +1,41 @@
 package yokohama.baykit.bayserver.agent.transporter;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.agent.ChannelListener;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.agent.RudderState;
 import yokohama.baykit.bayserver.agent.UpgradeException;
+import yokohama.baykit.bayserver.agent.WriteUnit;
+import yokohama.baykit.bayserver.common.ChannelRudder;
+import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
-import yokohama.baykit.bayserver.util.DataConsumeListener;
-import yokohama.baykit.bayserver.common.Postman;
 import yokohama.baykit.bayserver.util.Reusable;
-import yokohama.baykit.bayserver.common.Valve;
 
 import javax.net.ssl.SSLException;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
 
-public abstract class Transporter implements ChannelListener, Reusable, Postman {
+public abstract class Transporter implements SelectHandler, Reusable {
     
     protected static class WaitReadableException extends IOException {
 
     }
 
-    static class WriteUnit {
-        final ByteBuffer buf;
-        final InetSocketAddress adr;
-        final Object tag;
-        final DataConsumeListener listener;
-
-        WriteUnit(ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) {
-            this.buf = buf;
-            this.adr = adr;
-            this.tag = tag;
-            this.listener = listener;
-        }
-
-        void done() {
-            if(listener != null)
-                listener.dataConsumed();
-        }
-    }
-
-    protected DataListener dataListener;
     protected final boolean serverMode;
     protected final boolean traceSSL;
-    protected final boolean writeOnly;
-    protected Channel ch;
-    protected ArrayList<WriteUnit> writeQueue = new ArrayList<>();
-    protected boolean finale;
-    protected boolean initialized;
-    protected boolean chValid = false;
     protected boolean needHandshake = true;
+    protected boolean writeOnly = false;
     protected InetSocketAddress[] tmpAddress = new InetSocketAddress[1];
-    protected Valve valve;
 
     /////////////////////////////////////////////////////////////////////////////////
     // abstract methods
     /////////////////////////////////////////////////////////////////////////////////
 
-    protected abstract boolean handshake(boolean readable) throws IOException;
-    protected abstract ByteBuffer readNonBlock(InetSocketAddress[] adr) throws IOException;
-    protected abstract boolean writeNonBlock(ByteBuffer buf, InetSocketAddress adr) throws IOException;
+    protected abstract boolean handshake(Rudder rd, DataListener lis, boolean readable) throws IOException;
+    protected abstract ByteBuffer readNonBlock(Rudder rd, InetSocketAddress[] adr) throws IOException;
+    protected abstract boolean writeNonBlock(Rudder rd, InetSocketAddress adr, ByteBuffer buf) throws IOException;
     protected abstract boolean secure();
 
 
@@ -78,131 +49,33 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman 
         this(serverMode, traceSSL, false);
     }
 
-    public void init(Channel ch, DataListener lis, Valve vlv) {
-
-        if(initialized)
-            throw new Sink(this + " This transporter is already in use by channel: " + ch);
-        if(!writeQueue.isEmpty())
-            throw new Sink();
-
-        this.dataListener = lis;
-        this.ch = ch;
-        setValid(true);
-        this.valve = vlv;
-        this.initialized = true;
-    }
-
     /////////////////////////////////////////////////////////////////////////////////
-    // implements Reusable
-    /////////////////////////////////////////////////////////////////////////////////
+    // implements SelectListener
+    ////////////////////////////////////////////////////////////////////////////////
 
     @Override
-    public void reset() {
-
-        // Check write queue
-        if(!writeQueue.isEmpty())
-            throw new Sink("Write queue is not empty");
-
-        finale = false;
-        initialized = false;
-        ch = null;
-        setValid(false);
-        needHandshake = true;
-        valve = null;
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////
-    // implements Postman
-    /////////////////////////////////////////////////////////////////////////////////
-    @Override
-    public final void post(ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) throws IOException {
-        checkInitialized();
-
-        BayLog.debug("%s post: %s len=%d", this, tag, buf.limit());
-
-        if(!chValid) {
-            throw new IOException("Invalid channel");
-        }
-        else {
-            WriteUnit unt = new WriteUnit(buf, adr, tag, listener);
-            synchronized (this) {
-                writeQueue.add(unt);
-            }
-            BayLog.debug("%s post->openWriteValve", this);
-            valve.openWriteValve();
-        }
-    }
-
-    @Override
-    public final void flush() {
-        checkInitialized();
-
-        BayLog.debug("%s flush", this);
-
-        if(chValid) {
-            if (!writeQueue.isEmpty()) {
-                BayLog.debug("%s flush->openWriteValve", this);
-                valve.openWriteValve();
-            }
-        }
-    }
-
-    @Override
-    public final void postEnd() {
-        checkInitialized();
-
-        BayLog.debug("%s postEnd vld=%s", this, chValid);
-
-        // setting order is QUITE important  finalState->finale
-        this.finale = true;
-
-        if(chValid) {
-            if (!writeQueue.isEmpty()) {
-                BayLog.debug("%s postEnd->openWriteValve len=%d", this, writeQueue.size());
-                valve.openWriteValve();
-            }
-        }
-    }
-
-    @Override
-    public void abort() {
-        BayLog.debug("%s abort", this);
-        valve.destroy();
-    }
-
-    @Override
-    public boolean isZombie() {
-        return ch != null && !chValid;
-    }
-
-
-    /////////////////////////////////////////////////////////////////////////////////
-    // implements ChannelListener
-    /////////////////////////////////////////////////////////////////////////////////
-    @Override
-    public NextSocketAction onConnectable(Channel chkCh) throws IOException {
-        checkChannel(chkCh);
+    public NextSocketAction onConnectable(RudderState st) throws IOException {
         BayLog.trace("%s onConnectable", this);
 
         try {
-            ((SocketChannel)chkCh).finishConnect();
+            ((SocketChannel)((ChannelRudder)st.rudder).channel).finishConnect();
         }
         catch(IOException e) {
             BayLog.error("Connect failed: %s", e);
             return NextSocketAction.Close;
         }
-        return dataListener.notifyConnect();
+
+        return st.listener.notifyConnect();
     }
 
     @Override
-    public final NextSocketAction onReadable(Channel chkCh) throws IOException {
-        checkChannel(chkCh);
+    public NextSocketAction onReadable(RudderState st) throws IOException {
         BayLog.trace("%s onReadable", this);
 
         if(needHandshake) {
             boolean remain;
             try {
-                remain = handshake(true);
+                remain = handshake(st.rudder, st.listener, true);
             }
             catch(WaitReadableException e) {
                 return NextSocketAction.Continue;
@@ -218,7 +91,7 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman 
 
         ByteBuffer buf = null;
         try {
-            buf = readNonBlock(tmpAddress);
+            buf = readNonBlock(st.rudder, tmpAddress);
         }
         catch(EOFException e) {
             BayLog.debug("%s EOF (ignore): %s", this, e);
@@ -226,19 +99,19 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman 
 
         if(buf == null) {
             // Does not throw IOException
-            return dataListener.notifyEof();
+            return st.listener.notifyEof();
         }
         else {
             try {
-                return dataListener.notifyRead(buf, tmpAddress[0]);
+                return st.listener.notifyRead(buf, tmpAddress[0]);
             }
             catch(UpgradeException e) {
-                BayLog.debug("%s Protocol upgrade", dataListener);
+                BayLog.debug("%s Protocol upgrade", st.listener);
                 buf.rewind();
-                return dataListener.notifyRead(buf, tmpAddress[0]);
+                return st.listener.notifyRead(buf, tmpAddress[0]);
             }
             catch (ProtocolException e) {
-                boolean close = dataListener.notifyProtocolError(e);
+                boolean close = st.listener.notifyProtocolError(e);
                 if(!close && serverMode)
                     return NextSocketAction.Continue;
                 else
@@ -247,35 +120,33 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman 
             catch (IOException e) {
                 // IOException which occur in notifyRead must be distinguished from
                 // IOException which occur in handshake or readNonBlock.
-                onError(chkCh, e);
+                onError(st, e);
                 return NextSocketAction.Close;
             }
         }
     }
 
-
     @Override
-    public NextSocketAction onWritable(Channel chkCh) throws IOException {
-        checkChannel(chkCh);
+    public NextSocketAction onWritable(RudderState st) throws IOException {
         BayLog.trace("%s onWritable", this);
 
         if(needHandshake) {
             try {
-                handshake(false);
+                handshake(st.rudder, st.listener, false);
             }
             catch(WaitReadableException e) {
                 return NextSocketAction.Read;
             }
         }
 
-        while(!writeQueue.isEmpty()) {
-            WriteUnit wUnit = writeQueue.get(0);
+        while(!st.writeQueue.isEmpty()) {
+            WriteUnit wUnit = st.writeQueue.get(0);
 
-            BayLog.debug("%s Try to write: pkt=%s pos=%d len=%d chValid=%b adr=%s", this, wUnit.tag, wUnit.buf.position(), wUnit.buf.limit(), chValid, wUnit.adr);
+            BayLog.debug("%s Try to write: pkt=%s pos=%d len=%d chValid=%b adr=%s", this, wUnit.tag, wUnit.buf.position(), wUnit.buf.limit(), st.valid, wUnit.adr);
             //BayLog.debug(this + " " + new String(wUnit.buf.array(), 0, wUnit.buf.limit()));
 
-            if (chValid && wUnit.buf.hasRemaining()) {
-                if (!writeNonBlock(wUnit.buf, wUnit.adr)) {
+            if (st.valid && wUnit.buf.hasRemaining()) {
+                if (!writeNonBlock(st.rudder, wUnit.adr, wUnit.buf)) {
                     // Data remains
                     BayLog.debug("%s data remains", this);
                     break;
@@ -283,7 +154,7 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman 
             }
 
             synchronized (this) {
-                writeQueue.remove(0);
+                st.writeQueue.remove(0);
             }
 
             // packet send complete
@@ -291,8 +162,8 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman 
         }
 
         NextSocketAction state;
-        if(writeQueue.isEmpty()) {
-            if(finale) {
+        if(st.writeQueue.isEmpty()) {
+            if(st.finale) {
                 BayLog.debug("%s finale return Close", this);
                 state = NextSocketAction.Close;
             }
@@ -309,72 +180,27 @@ public abstract class Transporter implements ChannelListener, Reusable, Postman 
     }
 
     @Override
-    public boolean checkTimeout(Channel chkCh, int durationSec) {
-        checkChannel(chkCh);
-
-        return dataListener.checkTimeout(durationSec);
-    }
-
-    @Override
-    public void onError(Channel chkCh, Throwable e) {
-        checkChannel(chkCh);
+    public void onError(RudderState st, Throwable e) {
         //BayLog.trace("%s onError: %s", this, e);
 
-        try {
-            throw e;
-        }
-        catch(SSLException ex) {
+        if(e instanceof SSLException) {
             if(traceSSL)
                 BayLog.error(e, "%s SSL Error: %s", this, e);
             else
                 BayLog.debug(e, "%s SSL Error: %s", this, e);
         }
-        catch(Throwable ex) {
+        else {
             BayLog.error(e);
         }
     }
 
     @Override
-    public void onClosed(Channel chkCh) {
-        try {
-            checkChannel(chkCh);
-        }
-        catch(IllegalStateException e) {
-            BayLog.error(e);
-            return;
-        }
-
-        setValid(false);
-
-        synchronized (this) {
-            // Clear queue
-            for (WriteUnit wu : writeQueue) {
-                wu.done();
-            }
-            writeQueue.clear();
-        }
-
-        dataListener.notifyClose();
+    public void onClosed(RudderState st) {
+        st.listener.notifyClose();
     }
 
-
-    /////////////////////////////////////////////////////////////////////////////////
-    // other methods
-    /////////////////////////////////////////////////////////////////////////////////
-
-    private void checkChannel(Channel chkCh) {
-        if(chkCh != this.ch)
-            throw new Sink("Invalid transporter instance (ship was returned?)");
+    @Override
+    public boolean checkTimeout(RudderState st, int durationSec) {
+        return st.listener.checkTimeout(durationSec);
     }
-
-    private void checkInitialized() {
-        if(!initialized)
-            throw new Sink("Transporter not initialized");
-    }
-
-    private void setValid(boolean valid) {
-        chValid = valid;
-    }
-
-
 }

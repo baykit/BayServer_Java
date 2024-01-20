@@ -2,18 +2,16 @@ package yokohama.baykit.bayserver.docker.cgi;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
-import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.common.ReadOnlyShip;
+import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.StringUtil;
-import yokohama.baykit.bayserver.common.Valve;
-import yokohama.baykit.bayserver.common.ReadOnlyShip;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.util.StringTokenizer;
 
 public class CgiStdOutShip extends ReadOnlyShip {
@@ -35,8 +33,8 @@ public class CgiStdOutShip extends ReadOnlyShip {
     /////////////////////////////////////
     // Initialize methods
     /////////////////////////////////////
-    public void init(Channel ch, int agentId, Tour tur, Valve vv, CgiReqContentHandler handler) {
-        super.init(ch, agentId, vv);
+    public void init(Rudder rd, int agentId, Tour tur, Multiplexer mpx, CgiReqContentHandler handler) {
+        super.init(agentId, rd, mpx);
         this.handler = handler;
         this.tour = tur;
         this.tourId = tur.tourId;

@@ -1,12 +1,13 @@
 package yokohama.baykit.bayserver.common;
 
-import yokohama.baykit.bayserver.agent.ChannelListener;
+import yokohama.baykit.bayserver.agent.RudderState;
+import yokohama.baykit.bayserver.util.DataConsumeListener;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
-import java.nio.channels.SelectableChannel;
-import java.nio.channels.SocketChannel;
 
 /**
  * Managements I/O Multiplexing
@@ -14,17 +15,19 @@ import java.nio.channels.SocketChannel;
  */
 public interface Multiplexer {
 
-    void addChannelListener(SelectableChannel ch, ChannelListener lis);
+    void addState(Rudder rd, RudderState st);
 
-    void reqStart(SelectableChannel ch);
+    void reqStart(Rudder rd);
 
-    void reqConnect(SocketChannel ch, SocketAddress addr) throws IOException;
+    void reqConnect(Rudder rd, SocketAddress addr) throws IOException;
 
-    void reqRead(SelectableChannel ch);
+    void reqRead(Rudder rd);
 
-    void reqWrite(SelectableChannel ch);
+    void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) throws IOException;
 
-    void reqClose(SelectableChannel ch);
+    void reqEnd(Rudder rd);
+
+    void reqClose(Rudder rd);
 
     void runCommandReceiver(Pipe.SourceChannel readCh, Pipe.SinkChannel writeCh);
 

@@ -2,20 +2,21 @@ package yokohama.baykit.bayserver.docker.cgi;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.agent.ChannelListener;
+import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.agent.transporter.DataListener;
 import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
 import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
-import yokohama.baykit.bayserver.common.Valve;
+import yokohama.baykit.bayserver.common.InputStreamRudder;
+import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.train.Train;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.channels.Channel;
-import java.nio.channels.Channels;
+import java.nio.ByteBuffer;
 
-public class CgiTrain extends Train implements Valve {
+public class CgiTrain extends Train {
 
     final CgiDocker cgiDocker;
     CgiReqContentHandler handler;
@@ -36,64 +37,69 @@ public class CgiTrain extends Train implements Valve {
     @Override
     public void depart() {
 
+        GrandAgent agt = GrandAgent.get(tour.ship.agentId);
+
         // Handle StdOut
         int bufsize = tour.ship.protocolHandler.maxResPacketDataSize();
         InputStream outIn = handler.process.getInputStream();
-        Channel outCh = Channels.newChannel(outIn);
-        PlainTransporter outTp = new PlainTransporter(true, bufsize, false);
+        Rudder outRd = new InputStreamRudder(outIn);
+        PlainTransporter outTp = new PlainTransporter(true, bufsize);
         CgiStdOutShip outShip = new CgiStdOutShip();
-        outShip.init(outCh, tour.ship.agentId, tour, null, handler);
-        outTp.init(outCh, new SimpleDataListener(outShip), this);
+        outShip.init(outRd, tour.ship.agentId, tour, null, handler);
 
         tour.res.setConsumeListener((len, resume) -> {
             if(resume)
-                openReadValve();
+                available = true;
         });
 
-        readAll(outCh, outTp);
+        ByteBuffer buffer = ByteBuffer.allocate(bufsize);
+        readAll(outRd, new SimpleDataListener(outShip), buffer);
+        BayLog.debug("%s Stdout done", this);
 
         // Handle StdErr
         InputStream errIn = handler.process.getErrorStream();
-        Channel errCh = Channels.newChannel(errIn);
+        Rudder errRd = new InputStreamRudder(errIn);
         CgiStdErrShip errShip = new CgiStdErrShip();
-        PlainTransporter errTp = new PlainTransporter(false, bufsize, false);
 
-        errTp.init(errCh, new SimpleDataListener(errShip), this);
+        errShip.init(errRd, tour.ship.agentId, handler);
 
-        errShip.init(errCh, tour.ship.agentId, handler);
-
-        readAll(errCh, errTp);
-
-    }
-
-    ///////////////////////////////////////////////////////////////////
-    // implements Valve
-    ///////////////////////////////////////////////////////////////////
-
-    @Override
-    public void openReadValve() {
-        available = true;
+        readAll(errRd, new SimpleDataListener(errShip), buffer);
+        BayLog.debug("%s Stderr done", this);
     }
 
     @Override
-    public void openWriteValve() {
-        throw new Sink();
+    protected void onTimer() {
+        BayLog.warn("%s onTimer: %s", this, tour);
+        if (handler.timedOut()) {
+            // Kill cgi process instead of handing timeout
+            BayLog.warn("%s Kill process!: %s", tour, handler.process);
+            handler.process.destroyForcibly();
+        }
     }
 
-    @Override
-    public void destroy() {
-
-    }
 
     ///////////////////////////////////////////////////////////////////
     // Private methods
     ///////////////////////////////////////////////////////////////////
 
-    private void readAll(Channel input, ChannelListener lis) {
+    private void readAll(Rudder rd, DataListener lis, ByteBuffer buf) {
         while_break:
         try {
             while (true) {
-                NextSocketAction act = lis.onReadable(input);
+                buf.clear();
+                InputStream input = ((InputStreamRudder)rd).input;
+                int len = input.read(buf.array());
+                if (len == -1)
+                    len = 0;
+                NextSocketAction act;
+                if(len == 0) {
+                    act = lis.notifyEof();
+                }
+                else {
+                    buf.limit(len);
+                    act = lis.notifyRead(buf, null);
+                }
+
                 switch (act) {
                     case Continue:
                     case Suspend:
@@ -116,16 +122,16 @@ public class CgiTrain extends Train implements Valve {
             }
         }
         catch(IOException e) {
-            lis.onError(input, e);
+            BayLog.error(e);
         }
 
         try {
-            input.close();
+            rd.close();
         }
         catch(IOException e) {
             BayLog.error(e);
         }
-        lis.onClosed(input);
+        lis.notifyClose();
     }
 
 }

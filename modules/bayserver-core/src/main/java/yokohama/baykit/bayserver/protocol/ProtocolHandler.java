@@ -85,6 +85,6 @@ public abstract class ProtocolHandler<C extends Command<C, P, T, ?>, P extends P
     }
 
     public void post(C cmd, DataConsumeListener listener) throws IOException {
-        commandPacker.post(ship.postman, cmd, listener);
+        commandPacker.post(ship, cmd, listener);
     }
 }

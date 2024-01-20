@@ -1,21 +1,22 @@
 package yokohama.baykit.bayserver.train;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.HttpException;
-import yokohama.baykit.bayserver.tour.Tour;
+import yokohama.baykit.bayserver.common.Vehicle;
 import yokohama.baykit.bayserver.util.Counter;
 
-import java.io.IOException;
-
-public abstract class Train implements Runnable {
+public abstract class Train extends Vehicle {
 
     protected abstract void depart();
 
-    public final int trainId;
     static Counter trainIdCounter = new Counter();
 
     public Train() {
-        this.trainId = trainIdCounter.next();
+        super(trainIdCounter.next());
+    }
+
+    @Override
+    public String toString() {
+        return "train#" + id;
     }
 
     @Override
