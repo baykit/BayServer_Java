@@ -1,11 +1,11 @@
 package yokohama.baykit.bayserver.docker.http;
 
-import yokohama.baykit.bayserver.agent.transporter.Transporter;
+import yokohama.baykit.bayserver.agent.multiplexer.TransporterBase;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
-import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
-import yokohama.baykit.bayserver.agent.transporter.SecureTransporter;
+import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
+import yokohama.baykit.bayserver.agent.multiplexer.SecureTransporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
@@ -119,7 +119,7 @@ public class HtpWarpDocker extends WarpBase implements HtpDocker {
     }
 
     @Override
-    protected Transporter newTransporter(GrandAgent agent, SocketChannel ch) throws IOException {
+    protected TransporterBase newTransporter(GrandAgent agent, SocketChannel ch) throws IOException {
         if(secure) {
             String[] appProtocols = supportH2 ? new String[]{"h2"} : null;
             return new SecureTransporter(sslCtx, appProtocols, false, traceSSL);

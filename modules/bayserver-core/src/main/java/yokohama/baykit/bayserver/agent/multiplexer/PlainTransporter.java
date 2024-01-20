@@ -1,7 +1,8 @@
-package yokohama.baykit.bayserver.agent.transporter;
+package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.common.ChannelRudder;
+import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.common.Rudder;
 
 import java.io.EOFException;
@@ -11,7 +12,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
-public class PlainTransporter extends Transporter {
+public class PlainTransporter extends TransporterBase {
 
     final ByteBuffer readBuf;
 

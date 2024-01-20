@@ -1,11 +1,11 @@
 package yokohama.baykit.bayserver.docker.cgi;
 
 import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.agent.EOFChecker;
+import yokohama.baykit.bayserver.common.EOFChecker;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.RudderState;
-import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
-import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
+import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
+import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
+import yokohama.baykit.bayserver.common.SimpleDataListener;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.bcf.ParseException;

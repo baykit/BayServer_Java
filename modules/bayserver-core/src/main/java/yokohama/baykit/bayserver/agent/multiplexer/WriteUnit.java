@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.agent;
+package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 

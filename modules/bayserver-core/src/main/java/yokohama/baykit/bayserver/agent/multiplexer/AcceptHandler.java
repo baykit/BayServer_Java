@@ -1,10 +1,10 @@
-package yokohama.baykit.bayserver.agent;
+package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.HttpException;
-import yokohama.baykit.bayserver.agent.transporter.DataListener;
-import yokohama.baykit.bayserver.agent.transporter.SelectHandler;
+import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.common.ChannelRudder;
 import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.docker.Port;
@@ -53,8 +53,8 @@ public class AcceptHandler {
                 Rudder rd = new ChannelRudder(ch);
 
                 DataListener lis = p.newDataListener(agent.agentId, rd);
-                SelectHandler h = p.newSelectHandler(agent.agentId, rd);
-                RudderState st = new RudderState(rd, lis, h);
+                Transporter tp = p.newTransporter(agent.agentId, rd);
+                RudderState st = new RudderState(rd, lis, tp);
                 agent.multiplexer.addState(rd, st);
                 agent.multiplexer.reqStart(rd);
                 agent.multiplexer.reqRead(rd);

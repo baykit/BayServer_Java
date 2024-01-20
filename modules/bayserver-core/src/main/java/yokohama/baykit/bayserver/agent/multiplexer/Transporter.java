@@ -1,11 +1,10 @@
-package yokohama.baykit.bayserver.agent.transporter;
+package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.agent.RudderState;
 
 import java.io.IOException;
 
-public interface SelectHandler {
+public interface Transporter {
 
     NextSocketAction onConnectable(RudderState st) throws IOException;
 

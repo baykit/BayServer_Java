@@ -2,11 +2,11 @@ package yokohama.baykit.bayserver.docker.fcgi;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.ConfigException;
-import yokohama.baykit.bayserver.agent.transporter.Transporter;
+import yokohama.baykit.bayserver.agent.multiplexer.TransporterBase;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
-import yokohama.baykit.bayserver.agent.transporter.PlainTransporter;
+import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
@@ -66,7 +66,7 @@ public class FcgWarpDocker extends WarpBase implements FcgDocker {
     }
 
     @Override
-    protected Transporter newTransporter(GrandAgent agent, SocketChannel ch) throws IOException {
+    protected TransporterBase newTransporter(GrandAgent agent, SocketChannel ch) throws IOException {
         return new PlainTransporter(false, IOUtil.getSockRecvBufSize(ch));
     }
 
