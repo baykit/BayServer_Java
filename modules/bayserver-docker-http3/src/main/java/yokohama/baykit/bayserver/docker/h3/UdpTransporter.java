@@ -1,8 +1,8 @@
 package yokohama.baykit.bayserver.docker.h3;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.agent.transporter.DataListener;
-import yokohama.baykit.bayserver.agent.transporter.Transporter;
+import yokohama.baykit.bayserver.common.DataListener;
+import yokohama.baykit.bayserver.agent.multiplexer.TransporterBase;
 import yokohama.baykit.bayserver.common.Rudder;
 
 import java.io.IOException;
@@ -10,7 +10,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 
-public class UdpTransporter extends Transporter {
+public class UdpTransporter extends TransporterBase {
 
     final ByteBuffer readBuf;
 

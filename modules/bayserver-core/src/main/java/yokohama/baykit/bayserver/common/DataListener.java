@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.agent.transporter;
+package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.protocol.ProtocolException;

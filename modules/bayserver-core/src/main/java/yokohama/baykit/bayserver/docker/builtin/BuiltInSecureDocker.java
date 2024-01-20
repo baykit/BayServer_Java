@@ -1,11 +1,11 @@
 package yokohama.baykit.bayserver.docker.builtin;
 
 import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.agent.transporter.Transporter;
+import yokohama.baykit.bayserver.agent.multiplexer.TransporterBase;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
-import yokohama.baykit.bayserver.agent.transporter.SecureTransporter;
+import yokohama.baykit.bayserver.agent.multiplexer.SecureTransporter;
 import yokohama.baykit.bayserver.docker.Secure;
 import yokohama.baykit.bayserver.docker.base.DockerBase;
 import yokohama.baykit.bayserver.util.StringUtil;
@@ -133,7 +133,7 @@ public class BuiltInSecureDocker extends DockerBase implements Secure {
 
 
     @Override
-    public Transporter createTransporter() {
+    public TransporterBase createTransporter() {
         return new SecureTransporter(sslctx, appProtocols, true, traceSSL);
     }
 

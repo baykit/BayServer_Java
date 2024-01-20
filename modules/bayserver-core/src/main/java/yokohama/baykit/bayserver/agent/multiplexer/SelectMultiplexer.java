@@ -1,9 +1,9 @@
-package yokohama.baykit.bayserver.agent;
+package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.agent.transporter.DataListener;
-import yokohama.baykit.bayserver.agent.transporter.SelectHandler;
+import yokohama.baykit.bayserver.agent.*;
 import yokohama.baykit.bayserver.common.ChannelRudder;
+import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.docker.Port;
@@ -88,9 +88,9 @@ public class SelectMultiplexer extends MultiplexerBase implements Runnable, Time
                 for (DatagramChannel ch : BayServer.unanchorablePortMap.keySet()) {
                     Port p = BayServer.unanchorablePortMap.get(ch);
                     Rudder rd = new ChannelRudder(ch);
-                    DataListener tp = p.newDataListener(agent.agentId, rd);
-                    SelectHandler h = p.newSelectHandler(agent.agentId, rd);
-                    RudderState st = new RudderState(rd, tp, h);
+                    DataListener lis = p.newDataListener(agent.agentId, rd);
+                    Transporter tp = p.newTransporter(agent.agentId, rd);
+                    RudderState st = new RudderState(rd, lis, tp);
                     addState(rd, st);
                     reqStart(rd);
                     reqRead(rd);
@@ -201,7 +201,7 @@ public class SelectMultiplexer extends MultiplexerBase implements Runnable, Time
 
         if(!(addr instanceof InetSocketAddress)) {
             // Unix domain socket does not support connect operation
-            NextSocketAction nextSocketAction = chState.selectHandler.onConnectable(chState);
+            NextSocketAction nextSocketAction = chState.transporter.onConnectable(chState);
             if(nextSocketAction == NextSocketAction.Continue)
                 reqRead(rd);
         }
@@ -393,7 +393,7 @@ public class SelectMultiplexer extends MultiplexerBase implements Runnable, Time
                 int op = key.interestOps() & ~OP_CONNECT;
                 key.interestOps(op);
 
-                nextSocketAction = chStt.selectHandler.onConnectable(chStt);
+                nextSocketAction = chStt.transporter.onConnectable(chStt);
                 if(nextSocketAction == NextSocketAction.Read) {
                     // Write OP Off
                     op = key.interestOps() & ~OP_WRITE;
@@ -407,7 +407,7 @@ public class SelectMultiplexer extends MultiplexerBase implements Runnable, Time
                 // read or write
                 if (key.isReadable()) {
                     BayLog.trace("%s chState=%s socket readable", agent, chStt);
-                    nextSocketAction = chStt.selectHandler.onReadable(chStt);
+                    nextSocketAction = chStt.transporter.onReadable(chStt);
                     //BayLog.debug("%s chState=%s readable result=%s", agent, chStt, nextSocketAction);
                     if(nextSocketAction == NextSocketAction.Write) {
                         key.interestOps(key.interestOps() | OP_WRITE);
@@ -416,7 +416,7 @@ public class SelectMultiplexer extends MultiplexerBase implements Runnable, Time
 
                 if (nextSocketAction != NextSocketAction.Close && key.isWritable()) {
                     BayLog.trace("%s chState=%s socket writable", agent, chStt);
-                    nextSocketAction = chStt.selectHandler.onWritable(chStt);
+                    nextSocketAction = chStt.transporter.onWritable(chStt);
                     if(nextSocketAction == NextSocketAction.Read) {
                         // Handle as "Write Off"
                         int op = (key.interestOps() & ~OP_WRITE) | OP_READ;
@@ -446,7 +446,7 @@ public class SelectMultiplexer extends MultiplexerBase implements Runnable, Time
             }
 
             // Cannot handle Exception any more
-            chStt.selectHandler.onError(chStt, e);
+            chStt.transporter.onError(chStt, e);
             nextSocketAction = NextSocketAction.Close;
         }
 
@@ -483,7 +483,7 @@ public class SelectMultiplexer extends MultiplexerBase implements Runnable, Time
         synchronized (rudders) {
             long now = System.currentTimeMillis();
             for (RudderState st : rudders.values()) {
-                if(st.selectHandler.checkTimeout(st, (int)(now - st.lastAccessTime) / 1000)) {
+                if(st.transporter.checkTimeout(st, (int)(now - st.lastAccessTime) / 1000)) {
                     BayLog.debug("%s timeout: rd=%s", agent, st.rudder);
                     closeList.add(st);
                 }

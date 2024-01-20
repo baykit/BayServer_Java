@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.agent;
+package yokohama.baykit.bayserver.common;
 
 public interface EOFChecker {
     boolean isEof();

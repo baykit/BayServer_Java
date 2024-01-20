@@ -1,11 +1,10 @@
-package yokohama.baykit.bayserver.agent.transporter;
+package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.agent.RudderState;
 import yokohama.baykit.bayserver.agent.UpgradeException;
-import yokohama.baykit.bayserver.agent.WriteUnit;
 import yokohama.baykit.bayserver.common.ChannelRudder;
+import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.Reusable;
@@ -17,7 +16,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
-public abstract class Transporter implements SelectHandler, Reusable {
+public abstract class TransporterBase implements Transporter, Reusable {
     
     protected static class WaitReadableException extends IOException {
 
@@ -39,13 +38,13 @@ public abstract class Transporter implements SelectHandler, Reusable {
     protected abstract boolean secure();
 
 
-    public Transporter(boolean serverMode, boolean traceSSL, boolean writeOnly) {
+    public TransporterBase(boolean serverMode, boolean traceSSL, boolean writeOnly) {
         this.serverMode = serverMode;
         this.traceSSL = traceSSL;
         this.writeOnly = writeOnly;
     }
 
-    public Transporter(boolean serverMode, boolean traceSSL) {
+    public TransporterBase(boolean serverMode, boolean traceSSL) {
         this(serverMode, traceSSL, false);
     }
 

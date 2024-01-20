@@ -1,7 +1,8 @@
-package yokohama.baykit.bayserver.agent.transporter;
+package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.common.ChannelRudder;
+import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.util.SSLHandler;
 import yokohama.baykit.bayserver.util.SSLUtil;
@@ -20,7 +21,7 @@ import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING;
 /**
  * Transporter for secure TCP/IP connection
  */
-public class SecureTransporter extends Transporter {
+public class SecureTransporter extends TransporterBase {
 
     final SSLContext ctx;
     final String[] appProtocols;

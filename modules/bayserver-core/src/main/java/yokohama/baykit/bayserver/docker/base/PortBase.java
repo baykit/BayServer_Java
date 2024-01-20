@@ -1,7 +1,7 @@
 package yokohama.baykit.bayserver.docker.base;
 
 import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.agent.transporter.*;
+import yokohama.baykit.bayserver.agent.multiplexer.*;
 import yokohama.baykit.bayserver.common.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.bcf.BcfElement;
@@ -229,8 +229,8 @@ public abstract class PortBase extends DockerBase implements Port {
     }
 
     @Override
-    public SelectHandler newSelectHandler(int agentId, Rudder rd) {
-        Transporter tp;
+    public Transporter newTransporter(int agentId, Rudder rd) {
+        TransporterBase tp;
         if(secure())
             tp = secureDocker.createTransporter();
         else {

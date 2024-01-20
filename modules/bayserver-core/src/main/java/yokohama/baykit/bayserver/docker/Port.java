@@ -1,8 +1,8 @@
 package yokohama.baykit.bayserver.docker;
 
 import yokohama.baykit.bayserver.HttpException;
-import yokohama.baykit.bayserver.agent.transporter.DataListener;
-import yokohama.baykit.bayserver.agent.transporter.SelectHandler;
+import yokohama.baykit.bayserver.common.DataListener;
+import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
@@ -41,7 +41,7 @@ public interface Port {
 
     DataListener newDataListener(int agentId, Rudder rd) throws IOException;
 
-    SelectHandler newSelectHandler(int agentId, Rudder rd) throws IOException;
+    Transporter newTransporter(int agentId, Rudder rd) throws IOException;
 
     void returnProtocolHandler(int agentId, ProtocolHandler protoHnd);
 

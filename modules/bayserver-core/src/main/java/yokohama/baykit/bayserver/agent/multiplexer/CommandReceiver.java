@@ -1,6 +1,7 @@
-package yokohama.baykit.bayserver.agent;
+package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.util.IOUtil;
 
 import java.io.IOException;

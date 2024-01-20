@@ -2,9 +2,9 @@ package yokohama.baykit.bayserver.docker.base;
 
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
-import yokohama.baykit.bayserver.agent.RudderState;
-import yokohama.baykit.bayserver.agent.transporter.Transporter;
-import yokohama.baykit.bayserver.agent.transporter.SimpleDataListener;
+import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
+import yokohama.baykit.bayserver.agent.multiplexer.TransporterBase;
+import yokohama.baykit.bayserver.common.SimpleDataListener;
 import yokohama.baykit.bayserver.common.ChannelRudder;
 import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.common.WarpShip;
@@ -66,7 +66,7 @@ public abstract class WarpBase extends ClubBase implements Warp {
     /////////////////////////////////////
     public abstract boolean secure();
     protected abstract String protocol();
-    protected abstract Transporter newTransporter(GrandAgent agent, SocketChannel ch) throws IOException;
+    protected abstract TransporterBase newTransporter(GrandAgent agent, SocketChannel ch) throws IOException;
 
     /////////////////////////////////////
     // Implements Docker
@@ -153,7 +153,7 @@ public abstract class WarpBase extends ClubBase implements Warp {
         try {
             BayLog.trace("%s got from store", wsip);
             boolean needConnect = false;
-            Transporter tp = null;
+            TransporterBase tp = null;
             if (!wsip.initialized) {
                 SocketChannel ch;
                 if(hostAddr instanceof InetSocketAddress)
