@@ -4,7 +4,7 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayMessage;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Symbol;
-import yokohama.baykit.bayserver.agent.multiplexer.SelectMultiplexer;
+import yokohama.baykit.bayserver.agent.multiplexer.SensingMultiplexer;
 import yokohama.baykit.bayserver.util.BlockingIOException;
 import yokohama.baykit.bayserver.util.IOUtil;
 
@@ -141,7 +141,7 @@ public class GrandAgentMonitor {
         Pipe recvPipe = Pipe.open();
 
         GrandAgent agt = GrandAgent.add(agtId);
-        SelectMultiplexer multiplexer = new SelectMultiplexer(agt, anchorable);
+        SensingMultiplexer multiplexer = new SensingMultiplexer(agt, anchorable);
         agt.setMultiplexer(multiplexer);
         multiplexer.runCommandReceiver(sendPipe.source(), recvPipe.sink());
         new Thread(multiplexer).start();

@@ -20,7 +20,10 @@ import java.util.Set;
 
 import static java.nio.channels.SelectionKey.*;
 
-public class SelectMultiplexer extends MultiplexerBase implements Runnable, TimerHandler, Multiplexer {
+/**
+ * The purpose of SensingMultiplexer is to sense sockets, pipes, or files through the select/epoll/kqueue API.
+ */
+public class SensingMultiplexer extends MultiplexerBase implements Runnable, TimerHandler, Multiplexer {
 
     static class ChannelOperation {
         final Rudder rudder;
@@ -51,7 +54,7 @@ public class SelectMultiplexer extends MultiplexerBase implements Runnable, Time
 
     final ArrayList<ChannelOperation> operations = new ArrayList<>();
 
-    public SelectMultiplexer(GrandAgent agent, boolean anchorable) {
+    public SensingMultiplexer(GrandAgent agent, boolean anchorable) {
         super(agent);
 
         this.anchorable = anchorable;
