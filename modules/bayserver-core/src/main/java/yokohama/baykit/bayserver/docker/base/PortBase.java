@@ -230,7 +230,7 @@ public abstract class PortBase extends DockerBase implements Port {
 
     @Override
     public Transporter newTransporter(int agentId, Rudder rd) {
-        TransporterBase tp;
+        Transporter tp;
         if(secure())
             tp = secureDocker.createTransporter();
         else {
