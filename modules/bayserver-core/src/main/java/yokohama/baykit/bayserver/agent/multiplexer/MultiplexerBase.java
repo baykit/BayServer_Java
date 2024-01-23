@@ -132,7 +132,8 @@ public abstract class MultiplexerBase implements Multiplexer {
             chState.writeQueue.clear();
         }
 
-        chState.transporter.onClosed(chState);
+        if (chState.transporter != null)
+            chState.transporter.onClosed(chState);
 
         removeRudderState(chState.rudder);
     }

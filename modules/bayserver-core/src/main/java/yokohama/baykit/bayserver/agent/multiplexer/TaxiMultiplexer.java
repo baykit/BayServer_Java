@@ -91,7 +91,9 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
     ////////////////////////////////////////////
 
     private void nextRun(RudderState st) {
-        BayLog.debug("POST NEXT RUN: %s", this);
+        BayLog.debug("%s POST NEXT RUN: %s", this, st);
+        if(st == null)
+            throw new NullPointerException();
         TaxiRunner.post(agent.agentId, new Taxi() {
             @Override
             protected void depart() {
@@ -119,6 +121,7 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
                 act = st.listener.notifyEof();
             }
             else {
+                buf.flip();
                 act = st.listener.notifyRead(buf, null);
             }
 

@@ -209,7 +209,7 @@ public class CgiDocker extends ClubBase {
             case Taxi:{
                 PlainTransporter outTp = new PlainTransporter(true, bufsize);
                 outShip.init(outRd, tur.ship.agentId, tur, agt.taxiMultiplexer, handler);
-                agt.spinMultiplexer.addState(
+                agt.taxiMultiplexer.addState(
                         outRd,
                         new RudderState(
                                 outRd,
@@ -228,7 +228,7 @@ public class CgiDocker extends ClubBase {
 
                 PlainTransporter errTp = new PlainTransporter(true, bufsize);
                 errShip.init(errRd, tur.ship.agentId, handler);
-                agt.spinMultiplexer.addState(
+                agt.taxiMultiplexer.addState(
                         errRd,
                         new RudderState(
                                 errRd,
