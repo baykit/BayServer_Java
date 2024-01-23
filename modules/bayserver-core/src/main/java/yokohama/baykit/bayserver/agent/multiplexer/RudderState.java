@@ -26,14 +26,14 @@ public class RudderState {
         this(rd, lis, null);
     }
 
-    public RudderState(Rudder rd, DataListener lis, Transporter handler) {
+    public RudderState(Rudder rd, DataListener lis, Transporter tp) {
         if (rd == null)
             throw new NullPointerException();
         if (lis == null)
             throw new NullPointerException();
         this.rudder = rd;
         this.listener = lis;
-        this.transporter = handler;
+        this.transporter = tp;
         this.accepted = false;
         this.valid = true;
     }
