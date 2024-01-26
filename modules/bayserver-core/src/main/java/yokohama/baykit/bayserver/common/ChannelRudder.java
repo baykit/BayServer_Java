@@ -28,4 +28,12 @@ public class ChannelRudder implements Rudder{
     public void close() throws IOException {
         channel.close();
     }
+
+    ////////////////////////////////////////////
+    // Static functions
+    ////////////////////////////////////////////
+
+    public static Channel getChannel(Rudder rd) {
+        return ((ChannelRudder)rd).channel;
+    }
 }

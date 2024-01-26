@@ -332,7 +332,7 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
         tur.req.parseHostPort(reqCommand.isSsl ? 443 : 80);
         tur.req.parseAuthorization();
 
-        Socket socket = ((SocketChannel)((ChannelRudder)ship().rudder).channel).socket();
+        Socket socket = ((SocketChannel)ChannelRudder.getChannel(ship().rudder)).socket();
         tur.req.remotePort = -1;
         tur.req.remoteAddress = reqCommand.remoteAddr;
         tur.req.remoteHostFunc = () ->  reqCommand.remoteHost;

@@ -200,7 +200,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
         BayLog.debug("%s askToConnect addr=%s rd=%s chState=%s", agent, addr, rd, chState);
 
         //rd.configureBlocking(false);
-        ((SocketChannel)((ChannelRudder)rd).channel).connect(addr);
+        ((SocketChannel)ChannelRudder.getChannel(rd)).connect(addr);
 
         if(!(addr instanceof InetSocketAddress)) {
             // Unix domain socket does not support connect operation
@@ -334,7 +334,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
                     continue;
                 }
 
-                SelectableChannel ch =  ((SelectableChannel)((ChannelRudder)cop.rudder).channel);
+                SelectableChannel ch =  (SelectableChannel)ChannelRudder.getChannel(cop.rudder);
                 BayLog.debug("%s register chState=%s register op=%d(%s) ch=%s", agent, st, cop.op, opMode(cop.op), ch);
                 SelectionKey key = ch.keyFor(selector);
                 if(key != null) {

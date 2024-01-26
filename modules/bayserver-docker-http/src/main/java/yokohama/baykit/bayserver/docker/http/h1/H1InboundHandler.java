@@ -377,7 +377,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         }
         else {
             try {
-                Socket skt = ((SocketChannel) ((ChannelRudder)ship().rudder).channel).socket();
+                Socket skt = ((SocketChannel) ChannelRudder.getChannel(ship().rudder)).socket();
                 tur.req.remotePort = skt.getPort();
                 tur.req.remoteAddress = skt.getInetAddress().getHostAddress();
                 tur.req.serverAddress = skt.getLocalAddress().getHostAddress();
