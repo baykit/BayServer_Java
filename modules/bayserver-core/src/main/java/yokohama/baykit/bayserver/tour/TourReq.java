@@ -263,7 +263,7 @@ public class TourReq implements Reusable {
     }
 
     public void endContent(int checkId) throws IOException, HttpException {
-        BayLog.debug(tour + " endReqContent");
+        BayLog.debug("%s endReqContent", tour);
         tour.checkTourId(checkId);
         if (ended)
             throw new Sink(tour + " Request content is already ended");

@@ -184,7 +184,7 @@ public class TourRes implements Reusable {
         }
 
         if (!headerSent)
-            throw new Sink("BUG!: Header not sent");
+            throw new Sink("Header not sent");
 
         if (resConsumeListener == null)
             throw new Sink("Response consume listener is null");
@@ -193,7 +193,7 @@ public class TourRes implements Reusable {
         BayLog.debug("%s posted res content len=%d posted=%d limit=%d consumed=%d",
                 tour, len, bytesPosted, bytesLimit, bytesConsumed);
 
-        if(tour.isZombie() || tour.isAborted()) {
+        if(tour.isAborted()) {
             // Don't send peer any data. Do nothing
             BayLog.debug("%s Aborted or zombie tour. do nothing: %s state=%s", this, tour, tour.state);
             tour.changeState(checkId, Tour.TourState.ENDED);
@@ -329,7 +329,7 @@ public class TourRes implements Reusable {
                 // print status
                 body.append("<h1>").append(status).append(" ").append(str).append("</h1>").append(CharUtil.CRLF);
 
-                tour.res.headers.setStatus(status);
+                headers.setStatus(status);
 
                 try {
                     sendErrorContent(body.toString());
@@ -355,9 +355,8 @@ public class TourRes implements Reusable {
             else {
                 setConsumeListener(ContentConsumeListener.devNull);
                 try {
-                    Headers hdr = tour.res.headers;
-                    hdr.setStatus(status);
-                    hdr.set(Headers.LOCATION, location);
+                    headers.setStatus(status);
+                    headers.set(Headers.LOCATION, location);
 
                     String body = "<H2>Document Moved.</H2><BR>" + "<A HREF=\""
                             + location + "\">" + location + "</A>";
@@ -381,14 +380,12 @@ public class TourRes implements Reusable {
 
     private void sendErrorContent(String content) throws IOException {
 
-        // Get charset
-        String charset = tour.res.charset();
 
         // Set content type
         if (charset != null && !charset.equals("")) {
-            tour.res.headers.setContentType("text/html; charset=" + charset);
+            headers.setContentType("text/html; charset=" + charset);
         } else {
-            tour.res.headers.setContentType("text/html");
+            headers.setContentType("text/html");
         }
 
         byte[] bytes = null;
@@ -404,7 +401,7 @@ public class TourRes implements Reusable {
         tour.ship.sendHeaders(tour.ship.shipId, tour);
 
         if (bytes != null)
-            tour.ship.sendResContent(tour.ship.shipId, tour, bytes, 0, bytes.length, null);
+            tour.ship.sendResContent(tour.shipId, tour, bytes, 0, bytes.length, null);
     }
 
     private GzipCompressor getCompressor() throws IOException {
