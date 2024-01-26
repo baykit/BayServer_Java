@@ -89,8 +89,8 @@ public abstract class Ship implements Reusable {
         multiplexer.reqRead(rudder);
     }
 
-    public void postEnd() {
-        multiplexer.reqEnd(rudder);
+    public void postClose() {
+        multiplexer.reqClose(rudder);
     }
 
     /////////////////////////////////////

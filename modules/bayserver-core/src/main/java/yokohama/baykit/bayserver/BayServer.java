@@ -279,7 +279,6 @@ public class BayServer {
                     ch = SysUtil.openUnixDomainServerSocketChannel();
                 }
 
-                ch.configureBlocking(false);
                 try {
                     ch.bind(adr);
                 } catch (SocketException e) {

@@ -3,9 +3,13 @@ package yokohama.baykit.bayserver.agent;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.MemUsage;
+import yokohama.baykit.bayserver.Sink;
+import yokohama.baykit.bayserver.agent.multiplexer.JobMultiplexer;
+import yokohama.baykit.bayserver.agent.multiplexer.SensingMultiplexer;
 import yokohama.baykit.bayserver.agent.multiplexer.SpinMultiplexer;
 import yokohama.baykit.bayserver.agent.multiplexer.TaxiMultiplexer;
 import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.docker.base.PortBase;
 
@@ -34,7 +38,7 @@ public class GrandAgent {
 
     public int selectTimeoutSec = SELECT_TIMEOUT_SEC;
     public final int agentId;
-    public Multiplexer multiplexer;
+    public Multiplexer netMultiplexer;
     public Multiplexer taxiMultiplexer;
     public SpinMultiplexer spinMultiplexer;
 
@@ -44,10 +48,29 @@ public class GrandAgent {
 
     public GrandAgent(
             int agentId,
-            int maxShips) {
+            int maxShips,
+            boolean anchorable) {
         this.agentId = agentId;
 
         this.maxInboundShips = maxShips > 0 ? maxShips : 1;
+        switch(BayServer.harbor.netMultiplexer()) {
+            case Sensor:
+                this.netMultiplexer = new SensingMultiplexer(this, anchorable);
+                break;
+
+            case Job:
+                this.netMultiplexer = new JobMultiplexer(this, anchorable);
+                break;
+
+            case Taxi:
+                this.netMultiplexer = new TaxiMultiplexer(this);
+                break;
+
+            case Spin:
+            case Pigeon:
+            case Train:
+                throw new Sink("Multiplexer not supported: %s", Harbor.getMultiplexerTypeName(BayServer.harbor.netMultiplexer()));
+        }
         this.taxiMultiplexer = new TaxiMultiplexer(this);
         this.spinMultiplexer = new SpinMultiplexer(this);
     }
@@ -60,14 +83,11 @@ public class GrandAgent {
     ////////////////////////////////////////////
     // Custom methods                         //
     ////////////////////////////////////////////
-    public void setMultiplexer(Multiplexer multiplexer) {
-        this.multiplexer = multiplexer;
-    }
 
     public void shutdown() {
         BayLog.debug("%s shutdown", this);
         aborted = true;
-        multiplexer.shutdown();
+        netMultiplexer.shutdown();
 
         listeners.forEach(lis -> lis.remove(agentId));
 
@@ -128,8 +148,7 @@ public class GrandAgent {
         return agents.get(id);
     }
 
-    public static GrandAgent add(
-            int agtId) {
+    public static GrandAgent add(int agtId, boolean anchorable) {
         if(agtId == -1)
             agtId = ++maxAgentId;
         BayLog.debug("Add agent: id=%d", agtId);
@@ -137,7 +156,7 @@ public class GrandAgent {
         if(agtId > maxAgentId)
             maxAgentId = agtId;
 
-        GrandAgent agt = new GrandAgent(agtId, maxShips);
+        GrandAgent agt = new GrandAgent(agtId, maxShips, anchorable);
         agents.put(agtId, agt);
 
         listeners.forEach(lis -> lis.add(agt.agentId));

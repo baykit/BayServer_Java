@@ -116,7 +116,7 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
 
         Runnable ensureFunc = () -> {
             if (!keepAlive)
-                ship().postEnd();
+                ship().postClose();
         };
 
         try {

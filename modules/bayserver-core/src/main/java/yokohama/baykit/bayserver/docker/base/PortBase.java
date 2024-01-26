@@ -224,7 +224,7 @@ public abstract class PortBase extends DockerBase implements Port {
         InboundShip sip = getShipStore(agentId).rent();
         ProtocolHandler protoHnd = getProtocolHandlerStore(protocol(), agentId).rent();
         GrandAgent agt = GrandAgent.get(agentId);
-        sip.initInbound(rd, agentId, agt.multiplexer, this, protoHnd);
+        sip.initInbound(rd, agentId, agt.netMultiplexer, this, protoHnd);
         return new SimpleDataListener(sip);
     }
 

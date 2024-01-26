@@ -10,29 +10,42 @@ import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.docker.Port;
 
 import java.io.IOException;
+import java.nio.channels.Channel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AcceptHandler {
 
     final GrandAgent agent;
-
+    Map<Channel, Rudder> anchorableRudderMap = new HashMap<>();
     public AcceptHandler(GrandAgent agent) {
         this.agent = agent;
+
+        for(Rudder rd: BayServer.anchorablePortMap.keySet()) {
+            try {
+                ((SocketChannel)ChannelRudder.getChannel(rd)).configureBlocking(false);
+            }
+            catch(IOException e) {
+                BayLog.error(e);
+            }
+            anchorableRudderMap.put(ChannelRudder.getChannel(rd), rd);
+        }
     }
 
 
     public void onAcceptable(SelectionKey key) {
         // get channel from server socket
         ServerSocketChannel sch = (ServerSocketChannel) key.channel();
-        Port p = BayServer.anchorablePortMap.get(sch);
+        Rudder serverRd = anchorableRudderMap.get(key.channel());
+        Port p = BayServer.anchorablePortMap.get(serverRd);
 
         //BayLog.debug(this + " onAcceptable");
         SocketChannel ch = null;
         while(true) {
             try {
-                // create new listener
                 ch = sch.accept();
                 if (ch == null) {
                     // Another agent caught client socket
@@ -55,9 +68,8 @@ public class AcceptHandler {
                 DataListener lis = p.newDataListener(agent.agentId, rd);
                 Transporter tp = p.newTransporter(agent.agentId, rd);
                 RudderState st = new RudderState(rd, lis, tp);
-                agent.multiplexer.addState(rd, st);
-                agent.multiplexer.reqStart(rd);
-                agent.multiplexer.reqRead(rd);
+                agent.netMultiplexer.addState(rd, st);
+                agent.netMultiplexer.reqRead(rd);
             } catch (IOException e) {
                 BayLog.error(e);
                 if (ch != null) {

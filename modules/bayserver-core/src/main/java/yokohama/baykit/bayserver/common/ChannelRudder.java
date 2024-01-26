@@ -1,7 +1,10 @@
 package yokohama.baykit.bayserver.common;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 public class ChannelRudder implements Rudder{
     public final Channel channel;
@@ -22,6 +25,16 @@ public class ChannelRudder implements Rudder{
     @Override
     public Object key() {
         return channel;
+    }
+
+    @Override
+    public int read(ByteBuffer buf) throws IOException {
+        return ((ReadableByteChannel)channel).read(buf);
+    }
+
+    @Override
+    public int write(ByteBuffer buf) throws IOException {
+        return ((WritableByteChannel)channel).write(buf);
     }
 
     @Override

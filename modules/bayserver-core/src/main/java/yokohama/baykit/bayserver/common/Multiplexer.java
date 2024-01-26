@@ -15,9 +15,9 @@ import java.nio.channels.Pipe;
  */
 public interface Multiplexer {
 
-    void addState(Rudder rd, RudderState st);
+    void start();
 
-    void reqStart(Rudder rd);
+    void addState(Rudder rd, RudderState st);
 
     void reqConnect(Rudder rd, SocketAddress addr) throws IOException;
 

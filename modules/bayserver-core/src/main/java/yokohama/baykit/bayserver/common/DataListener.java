@@ -22,7 +22,10 @@ public interface DataListener {
 
     boolean notifyProtocolError(ProtocolException e) throws IOException;
 
+    void notifyError(Throwable e);
+
     void notifyClose();
 
     boolean checkTimeout(int durationSec);
+
 }
