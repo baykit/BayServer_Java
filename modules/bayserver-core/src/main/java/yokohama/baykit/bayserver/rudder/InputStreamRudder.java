@@ -1,10 +1,10 @@
-package yokohama.baykit.bayserver.common;
+package yokohama.baykit.bayserver.rudder;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-public class InputStreamRudder implements Rudder{
+public class InputStreamRudder implements Rudder {
     public final InputStream input;
 
     public InputStreamRudder(InputStream in) {
@@ -23,6 +23,11 @@ public class InputStreamRudder implements Rudder{
     @Override
     public Object key() {
         return input;
+    }
+
+    @Override
+    public void setNonBlocking() throws IOException {
+        throw new IOException("Not supported");
     }
 
     @Override

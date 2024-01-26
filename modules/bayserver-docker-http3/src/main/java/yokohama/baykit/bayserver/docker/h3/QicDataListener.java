@@ -11,7 +11,7 @@ import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.common.Multiplexer;
-import yokohama.baykit.bayserver.common.Rudder;
+import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 

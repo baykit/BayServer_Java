@@ -7,6 +7,7 @@ import java.lang.reflect.Method;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.net.StandardProtocolFamily;
+import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
@@ -105,6 +106,18 @@ public class SysUtil {
         }
         catch(Exception e) {
             throw new IOException("Cannot connect to unix domain server socket", e);
+        }
+    }
+
+    public static AsynchronousServerSocketChannel openUnixDomainAsynchronousServerSocketChannel() throws IOException {
+
+        try {
+            Method m = AsynchronousServerSocketChannel.class.getMethod("open", ProtocolFamily.class);
+
+            return (AsynchronousServerSocketChannel) m.invoke(null, StandardProtocolFamily.valueOf("UNIX"));
+        }
+        catch(Exception e) {
+            throw new IOException("Cannot open unix domain asynchronous server socket", e);
         }
     }
 }

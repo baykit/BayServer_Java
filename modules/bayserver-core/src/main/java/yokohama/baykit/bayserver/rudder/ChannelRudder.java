@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.common;
+package yokohama.baykit.bayserver.rudder;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -6,7 +6,7 @@ import java.nio.channels.Channel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
-public class ChannelRudder implements Rudder{
+public abstract class ChannelRudder implements Rudder {
     public final Channel channel;
 
     public ChannelRudder(Channel channel) {
@@ -43,7 +43,7 @@ public class ChannelRudder implements Rudder{
     }
 
     ////////////////////////////////////////////
-    // Static functions
+    // Static methods
     ////////////////////////////////////////////
 
     public static Channel getChannel(Rudder rd) {

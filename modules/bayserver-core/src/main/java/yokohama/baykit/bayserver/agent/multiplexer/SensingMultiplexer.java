@@ -2,10 +2,10 @@ package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.*;
-import yokohama.baykit.bayserver.common.ChannelRudder;
+import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.common.Multiplexer;
-import yokohama.baykit.bayserver.common.Rudder;
+import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 
