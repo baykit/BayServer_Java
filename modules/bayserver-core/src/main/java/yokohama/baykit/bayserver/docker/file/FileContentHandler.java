@@ -94,7 +94,7 @@ public class FileContentHandler implements ReqContentHandler {
             Rudder rd = new ChannelRudder(ch);
             int bufsize = tur.ship.protocolHandler.maxResPacketDataSize();
 
-            switch(BayServer.harbor.fileSendMethod()) {
+            switch(BayServer.harbor.fileMultiplexer()) {
                 case Spin: {
                     GrandAgent agt = GrandAgent.get(tur.ship.agentId);
                     sendFileShip.init(rd, agt.multiplexer, tur);

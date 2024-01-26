@@ -7,6 +7,7 @@ import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.common.WriteChannelTaxi;
 import yokohama.baykit.bayserver.docker.Docker;
+import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.Log;
 import yokohama.baykit.bayserver.docker.base.DockerBase;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
@@ -54,12 +55,8 @@ public class BuiltInLogDocker extends DockerBase implements Log {
         }
     }
 
-    enum LogWriteMethod {
-        Select,
-        Spin,
-        Taxi
-    }
-    public static LogWriteMethod DEFAULT_LOG_WRITE_METHOD = LogWriteMethod.Taxi;
+
+    public static Harbor.MultiPlexerType DEFAULT_LOG_MULTIPLEXER = Harbor.MultiPlexerType.Taxi;
 
     /** Mapping table for format */
     static HashMap<String, LogItemFactory> map = new HashMap<>();
@@ -80,7 +77,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
     LogItem[] logItems;
 
     /** Log write method */
-    LogWriteMethod logWriteMethod = DEFAULT_LOG_WRITE_METHOD;
+    Harbor.MultiPlexerType logMultiplexer = DEFAULT_LOG_MULTIPLEXER;
 
     static String lineSep = System.getProperty("line.separator");
 
@@ -152,14 +149,15 @@ public class BuiltInLogDocker extends DockerBase implements Log {
         logItems = list.toArray(new LogItem[0]);
 
         // Check log write method
-        if(logWriteMethod == LogWriteMethod.Select && !SysUtil.supportSelectFile()) {
-            BayLog.warn(BayMessage.get(Symbol.CFG_LOG_WRITE_METHOD_SELECT_NOT_SUPPORTED));
-            logWriteMethod = LogWriteMethod.Taxi;
-        }
-
-        if(logWriteMethod == LogWriteMethod.Spin && !SysUtil.supportNonblockFileWrite()) {
-            BayLog.warn(BayMessage.get(Symbol.CFG_LOG_WRITE_METHOD_SPIN_NOT_SUPPORTED));
-            logWriteMethod = LogWriteMethod.Taxi;
+        if((logMultiplexer == Harbor.MultiPlexerType.Sensor && !SysUtil.supportSelectFile()) ||
+                (logMultiplexer == Harbor.MultiPlexerType.Spin && !SysUtil.supportNonblockFileWrite()) ||
+                (logMultiplexer == Harbor.MultiPlexerType.Train)) {
+            BayLog.warn(
+                    BayMessage.get(
+                            Symbol.CFG_LOG_MULTIPLEXER_NOT_SUPPORTED,
+                            Harbor.getMultiplexerTypeName(logMultiplexer),
+                            Harbor.getMultiplexerTypeName(DEFAULT_LOG_MULTIPLEXER)));
+            logMultiplexer = DEFAULT_LOG_MULTIPLEXER;
         }
 
         GrandAgent.addLifecycleListener(new AgentListener());
@@ -175,20 +173,15 @@ public class BuiltInLogDocker extends DockerBase implements Log {
                 format = kv.value;
                 break;
 
-            case "logwritemethod":
-                switch(kv.value.toLowerCase()) {
-                    case "select":
-                        logWriteMethod = LogWriteMethod.Select;
-                        break;
-                    case "spin":
-                        logWriteMethod = LogWriteMethod.Spin;
-                        break;
-                    case "taxi":
-                        logWriteMethod = LogWriteMethod.Taxi;
-                        break;
-                    default:
-                        throw new ConfigException(kv.fileName, kv.lineNo, BayMessage.CFG_INVALID_PARAMETER_VALUE(kv.value));
+            case "logmultiplexer":
+                try {
+                    logMultiplexer = Harbor.getMultiplexerType(kv.value.toLowerCase());
                 }
+                catch(IllegalArgumentException e) {
+                    BayLog.error(e);
+                    throw new ConfigException(kv.fileName, kv.lineNo, BayMessage.CFG_INVALID_PARAMETER_VALUE(kv.value));
+                }
+                break;
         }
         return true;
     }
