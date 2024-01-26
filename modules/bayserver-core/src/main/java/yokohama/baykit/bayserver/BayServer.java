@@ -4,7 +4,9 @@ import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.GrandAgentMonitor;
 import yokohama.baykit.bayserver.agent.signal.SignalAgent;
 import yokohama.baykit.bayserver.agent.signal.SignalSender;
+import yokohama.baykit.bayserver.common.ChannelRudder;
 import yokohama.baykit.bayserver.common.Cities;
+import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.train.TrainRunner;
 import yokohama.baykit.bayserver.protocol.PacketStore;
@@ -70,9 +72,9 @@ public class BayServer {
     /** BayAgent */
     public static SignalAgent signalAgent;
 
-    public static final Map<ServerSocketChannel, Port> anchorablePortMap = new HashMap<>();
+    public static final Map<Rudder, Port> anchorablePortMap = new HashMap<>();
 
-    public static final Map<DatagramChannel, Port> unanchorablePortMap = new HashMap<>();
+    public static final Map<Rudder, Port> unanchorablePortMap = new HashMap<>();
 
     /**
      * Date format for debug
@@ -284,7 +286,7 @@ public class BayServer {
                     BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
                     return;
                 }
-                anchorablePortMap.put(ch, portDkr);
+                anchorablePortMap.put(new ChannelRudder(ch), portDkr);
             }
             else {
                 BayLog.info(BayMessage.get(Symbol.MSG_OPENING_UDP_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), portDkr.protocol()));
@@ -296,7 +298,7 @@ public class BayServer {
                     BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
                     return;
                 }
-                unanchorablePortMap.put(ch, portDkr);
+                unanchorablePortMap.put(new ChannelRudder(ch), portDkr);
             }
         }
 
