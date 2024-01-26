@@ -88,9 +88,8 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
 
             // Set up unanchorable channel
             if(!anchorable) {
-                for (DatagramChannel ch : BayServer.unanchorablePortMap.keySet()) {
-                    Port p = BayServer.unanchorablePortMap.get(ch);
-                    Rudder rd = new ChannelRudder(ch);
+                for (Rudder rd : BayServer.unanchorablePortMap.keySet()) {
+                    Port p = BayServer.unanchorablePortMap.get(rd);
                     DataListener lis = p.newDataListener(agent.agentId, rd);
                     Transporter tp = p.newTransporter(agent.agentId, rd);
                     RudderState st = new RudderState(rd, lis, tp);
@@ -503,8 +502,8 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
 
     public synchronized void onBusy() {
         BayLog.debug("%s AcceptHandler:onBusy", agent);
-        for(ServerSocketChannel ch: BayServer.anchorablePortMap.keySet()) {
-            SelectionKey key = ch.keyFor(selector);
+        for(Rudder rd: BayServer.anchorablePortMap.keySet()) {
+            SelectionKey key = ((ServerSocketChannel)ChannelRudder.getChannel(rd)).keyFor(selector);
             if(key != null)
                 key.cancel();
         }
@@ -515,9 +514,9 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
         if(agent.aborted)
             return;
 
-        for(ServerSocketChannel ch: BayServer.anchorablePortMap.keySet()) {
+        for(Rudder rd: BayServer.anchorablePortMap.keySet()) {
             try {
-                ch.register(selector, SelectionKey.OP_ACCEPT);
+                ((ServerSocketChannel)ChannelRudder.getChannel(rd)).register(selector, SelectionKey.OP_ACCEPT);
             }
             catch(ClosedChannelException e) {
                 BayLog.error(e);

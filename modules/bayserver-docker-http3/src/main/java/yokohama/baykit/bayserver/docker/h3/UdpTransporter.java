@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.docker.h3;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.common.ChannelRudder;
 import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.agent.multiplexer.TransporterBase;
 import yokohama.baykit.bayserver.common.Rudder;
@@ -52,7 +53,7 @@ public class UdpTransporter extends TransporterBase {
 
         // read data
         readBuf.clear();
-        InetSocketAddress sender = (InetSocketAddress) ((DatagramChannel) rd).receive(readBuf);
+        InetSocketAddress sender = (InetSocketAddress) ((DatagramChannel) ChannelRudder.getChannel(rd)).receive(readBuf);
         if (sender == null) {
             BayLog.trace("%s Empty packet data (Maybe another agent received data)", this);
             return null;
@@ -68,7 +69,7 @@ public class UdpTransporter extends TransporterBase {
     protected boolean writeNonBlock(Rudder rd, InetSocketAddress adr, ByteBuffer buf) throws IOException {
         int pos = buf.position();
 
-        int len = ((DatagramChannel) rd).send(buf, adr);
+        int len = ((DatagramChannel)ChannelRudder.getChannel(rd)).send(buf, adr);
         BayLog.trace("%s wrote %d bytes remain=%d", this,  (buf.position() - pos), buf.remaining());
 
         return !buf.hasRemaining();
