@@ -11,6 +11,7 @@ import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.bcf.ParseException;
 import yokohama.baykit.bayserver.common.ChannelRudder;
 import yokohama.baykit.bayserver.docker.Docker;
+import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.base.ClubBase;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.train.TrainRunner;
@@ -28,14 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 public class CgiDocker extends ClubBase {
 
-    enum ProcReadMethod {
-        Select,
-        Spin,
-        Taxi,
-        Train
-    };
-
-    public static final ProcReadMethod DEFAULT_PROC_READ_METHOD = ProcReadMethod.Taxi;
+    public static final Harbor.MultiPlexerType DEFAULT_CGI_MULTIPLEXER = Harbor.MultiPlexerType.Taxi;
     public static final int DEFAULT_TIMEOUT_SEC = 60;
 
     public String interpreter;
@@ -44,7 +38,7 @@ public class CgiDocker extends ClubBase {
     public int timeoutSec = DEFAULT_TIMEOUT_SEC;
 
     /** Method to read stdin/stderr */
-    public ProcReadMethod procReadMethod = DEFAULT_PROC_READ_METHOD;
+    Harbor.MultiPlexerType cgiMultiplexer = DEFAULT_CGI_MULTIPLEXER;
 
     ///////////////////////////////////////////////////////////////////////
     // Implements Docker
@@ -54,17 +48,19 @@ public class CgiDocker extends ClubBase {
     public void init(BcfElement elm, Docker parent) throws ConfigException {
         super.init(elm, parent);
 
-        if(procReadMethod == ProcReadMethod.Select && !SysUtil.supportSelectPipe()) {
-            BayLog.warn(ConfigException.createMessage(CgiMessage.get(CgiSymbol.CGI_PROC_READ_METHOD_SELECT_NOT_SUPPORTED), elm.fileName, elm.lineNo));
-            procReadMethod = ProcReadMethod.Taxi;
-        }
-
-        if(procReadMethod == ProcReadMethod.Spin && !SysUtil.supportNonblockPipeRead()) {
-            BayLog.warn(ConfigException.createMessage(CgiMessage.get(CgiSymbol.CGI_PROC_READ_METHOD_SPIN_NOT_SUPPORTED), elm.fileName, elm.lineNo));
-            procReadMethod = ProcReadMethod.Taxi;
-        }
+        if (cgiMultiplexer == Harbor.MultiPlexerType.Sensor ||
+                cgiMultiplexer == Harbor.MultiPlexerType.Spin ||
+                cgiMultiplexer == Harbor.MultiPlexerType.Pigeon)
+            BayLog.warn(ConfigException.createMessage(
+                    CgiMessage.get(
+                            CgiSymbol.CFG_CGI_MULTIPLEXER_NOT_SUPPORTED,
+                            Harbor.getMultiplexerTypeName(cgiMultiplexer),
+                            Harbor.getMultiplexerTypeName(DEFAULT_CGI_MULTIPLEXER)),
+                    elm.fileName,
+                    elm.lineNo));
+        cgiMultiplexer = DEFAULT_CGI_MULTIPLEXER;
     }
-
+    
 
     ///////////////////////////////////////////////////////////////////////
     // Implements DockerBase
@@ -88,25 +84,17 @@ public class CgiDocker extends ClubBase {
                 docRoot = kv.value;
                 break;
 
-            case "processreadmethod":
-                switch(kv.value.toLowerCase()) {
-                    case "select":
-                        procReadMethod = ProcReadMethod.Select;
-                        break;
-                    case "spin":
-                        procReadMethod = ProcReadMethod.Spin;
-                        break;
-                    case "taxi":
-                        procReadMethod = ProcReadMethod.Taxi;
-                        break;
-                    case "train":
-                        procReadMethod = ProcReadMethod.Train;
-                        break;
-                    default:
-                        throw new ConfigException(kv.fileName, kv.lineNo, BayMessage.CFG_INVALID_PARAMETER_VALUE(kv.value));
+            case "cgimultiplexer": {
+                try {
+                    cgiMultiplexer = Harbor.getMultiplexerType(kv.value.toLowerCase());
+                } 
+                catch (IllegalArgumentException e) {
+                    BayLog.error(e);
+                    throw new ConfigException(kv.fileName, kv.lineNo, BayMessage.CFG_INVALID_PARAMETER_VALUE(kv.value));
                 }
                 break;
-
+            }
+            
             case "timeout":
                 timeoutSec = Integer.parseInt(kv.value);
                 break;
@@ -165,7 +153,7 @@ public class CgiDocker extends ClubBase {
 
         GrandAgent agt = GrandAgent.get(tur.ship.agentId);
 
-        switch(procReadMethod) {
+        switch(cgiMultiplexer) {
             case Spin: {
                 EOFChecker eofChecker = () -> {
                     try {

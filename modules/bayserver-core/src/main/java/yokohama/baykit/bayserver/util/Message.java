@@ -59,7 +59,7 @@ public class Message {
         }
         catch(Exception e) {
             BayLog.error(e);
-            pw.print(msg);
+            return msg;
         }
         pw.flush();
         return sw.toString();
