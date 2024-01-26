@@ -85,7 +85,7 @@ public abstract class Ship implements Reusable {
 
     public void resumeRead(int chkId) {
         checkShipId(chkId);
-        BayLog.debug("%s open write valve", this);
+        BayLog.debug("%s resume read", this);
         multiplexer.reqRead(rudder);
     }
 
