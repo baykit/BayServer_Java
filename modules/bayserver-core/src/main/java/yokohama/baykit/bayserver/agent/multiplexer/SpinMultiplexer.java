@@ -189,7 +189,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
 
         try {
             boolean eof = false;
-            InputStream in = ((InputStreamRudder) st.rudder).input;
+            InputStream in = InputStreamRudder.getInputStream(st.rudder);
             int len = in.available();
             if (len == 0) {
                 if (st.eofChecker != null)

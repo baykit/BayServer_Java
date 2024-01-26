@@ -87,7 +87,7 @@ public class CgiTrain extends Train {
         try {
             while (true) {
                 buf.clear();
-                InputStream input = ((InputStreamRudder)rd).input;
+                InputStream input = InputStreamRudder.getInputStream(rd);
                 int len = input.read(buf.array());
                 if (len == -1)
                     len = 0;

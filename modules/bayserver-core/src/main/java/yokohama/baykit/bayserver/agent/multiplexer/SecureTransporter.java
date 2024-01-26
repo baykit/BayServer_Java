@@ -190,7 +190,7 @@ public class SecureTransporter extends TransporterBase {
             netIn.clear();
 
         int oldPos = netIn.position();
-        int c = ((SocketChannel) ((ChannelRudder)rd).channel).read(netIn);
+        int c = ((SocketChannel) ChannelRudder.getChannel(rd)).read(netIn);
         if (c == -1) {
             throw new EOFException("Closed by peer.");
         }
@@ -201,7 +201,7 @@ public class SecureTransporter extends TransporterBase {
 
     private void writeNetOut(Rudder rd) throws IOException {
         int npos = netOut.position();
-        ((SocketChannel) ((ChannelRudder)rd).channel).write(netOut);
+        ((SocketChannel) ChannelRudder.getChannel(rd)).write(netOut);
         if (BayLog.isTraceMode())
             BayLog.trace(this + " Wrote " + (netOut.position() - npos) + " encrypted bytes(" + netOut.position() + "/" + netOut.limit() + ")");
     }

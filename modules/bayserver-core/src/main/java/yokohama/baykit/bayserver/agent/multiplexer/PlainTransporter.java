@@ -48,7 +48,7 @@ public class PlainTransporter extends TransporterBase {
 
         // read data
         readBuf.clear();
-        int c = ((ReadableByteChannel)((ChannelRudder)rd).channel).read(readBuf);
+        int c = ((ReadableByteChannel)ChannelRudder.getChannel(rd)).read(readBuf);
         if (c == -1)
             throw new EOFException();
         readBuf.flip();
@@ -60,7 +60,7 @@ public class PlainTransporter extends TransporterBase {
     @Override
     protected boolean writeNonBlock(Rudder rd, InetSocketAddress adr, ByteBuffer buf) throws IOException {
         int pos = buf.position();
-        ((WritableByteChannel)((ChannelRudder)rd).channel).write(buf);
+        ((WritableByteChannel)ChannelRudder.getChannel(rd)).write(buf);
         BayLog.trace(this + " wrote " + (buf.position() - pos) + " bytes");
 
         return !buf.hasRemaining();

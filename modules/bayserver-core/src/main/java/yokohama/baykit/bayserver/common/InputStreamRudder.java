@@ -28,4 +28,12 @@ public class InputStreamRudder implements Rudder{
     public void close() throws IOException {
         input.close();
     }
+
+    ////////////////////////////////////////////
+    // Static functions
+    ////////////////////////////////////////////
+
+    public static InputStream getInputStream(Rudder rd) {
+        return ((InputStreamRudder)rd).input;
+    }
 }

@@ -97,7 +97,7 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
         TaxiRunner.post(agent.agentId, new Taxi() {
             @Override
             protected void depart() {
-                if(((ChannelRudder)st.rudder).channel instanceof ReadableByteChannel)
+                if(ChannelRudder.getChannel(st.rudder) instanceof ReadableByteChannel)
                     nextRead(st.rudder);
                 else
                     nextWrite(st.rudder);
@@ -115,7 +115,7 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
 
         try {
             ByteBuffer buf = ByteBuffer.allocate(8192);
-            int len = ((ReadableByteChannel)((ChannelRudder)rd).channel).read(buf);
+            int len = ((ReadableByteChannel)ChannelRudder.getChannel(rd)).read(buf);
             NextSocketAction act;
             if (len <= 0) {
                 act = st.listener.notifyEof();
@@ -153,7 +153,7 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
         st.access();
 
         try {
-            ((WritableByteChannel)((ChannelRudder)rd).channel).write(st.readBuf);
+            ((WritableByteChannel)ChannelRudder.getChannel(rd)).write(st.readBuf);
         }
         catch(IOException e) {
             BayLog.error(e);
