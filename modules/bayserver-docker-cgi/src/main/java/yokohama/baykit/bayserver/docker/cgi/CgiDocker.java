@@ -9,16 +9,16 @@ import yokohama.baykit.bayserver.common.SimpleDataListener;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.bcf.ParseException;
-import yokohama.baykit.bayserver.common.ChannelRudder;
+import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.base.ClubBase;
+import yokohama.baykit.bayserver.rudder.ReadableByteChannelRudder;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.train.TrainRunner;
 import yokohama.baykit.bayserver.util.CGIUtil;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.StringUtil;
-import yokohama.baykit.bayserver.util.SysUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -148,8 +148,8 @@ public class CgiDocker extends ClubBase {
 
         ReadableByteChannel outCh = Channels.newChannel(handler.process.getInputStream());
         ReadableByteChannel errCh = Channels.newChannel(handler.process.getErrorStream());
-        ChannelRudder outRd = new ChannelRudder(outCh);
-        ChannelRudder errRd = new ChannelRudder(errCh);
+        ChannelRudder outRd = new ReadableByteChannelRudder(outCh);
+        ChannelRudder errRd = new ReadableByteChannelRudder(errCh);
 
         GrandAgent agt = GrandAgent.get(tur.ship.agentId);
 

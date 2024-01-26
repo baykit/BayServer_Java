@@ -1,22 +1,23 @@
 package yokohama.baykit.bayserver.docker.base;
 
 import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.agent.multiplexer.*;
-import yokohama.baykit.bayserver.common.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
+import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
+import yokohama.baykit.bayserver.common.*;
 import yokohama.baykit.bayserver.docker.*;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
-import yokohama.baykit.bayserver.util.IOUtil;
+import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
+import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.SysUtil;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -203,9 +204,9 @@ public abstract class PortBase extends DockerBase implements Port {
     }
 
     @Override
-    public final void checkAdmitted(SocketChannel ch) throws HttpException {
+    public final void checkAdmitted(NetworkChannelRudder rd) throws HttpException {
         for(Permission p : permissionList) {
-            p.socketAdmitted(ch);
+            p.socketAdmitted(rd);
         }
     }
 
@@ -236,7 +237,7 @@ public abstract class PortBase extends DockerBase implements Port {
         else {
             int size;
             try {
-                size = IOUtil.getSockRecvBufSize((SocketChannel) ChannelRudder.getChannel(rd));
+                size = ((NetworkChannelRudder)rd).getSocketReceiveBufferSize();
             }
             catch(IOException e) {
                 size = 8192;

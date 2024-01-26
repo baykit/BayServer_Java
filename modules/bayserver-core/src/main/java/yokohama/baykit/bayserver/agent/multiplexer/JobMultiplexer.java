@@ -4,11 +4,12 @@ import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.TimerHandler;
-import yokohama.baykit.bayserver.common.ChannelRudder;
+import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.common.Multiplexer;
-import yokohama.baykit.bayserver.common.Rudder;
+import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.docker.Port;
+import yokohama.baykit.bayserver.rudder.SocketChannelRudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 
 import java.io.IOException;
@@ -168,7 +169,7 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                 synchronized (st.writeQueue) {
                     unit = st.writeQueue.get(0);
                     BayLog.debug("%s Try to write: pkt=%s buflen=%d valid=%b", this, unit.tag, unit.buf.limit(), st.valid);
-                    //BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
+                    BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
 
                     int n = 0;
                     if(st.valid && unit.buf.limit() > 0) {
@@ -322,8 +323,10 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                 try {
                     ch = ((ServerSocketChannel) ChannelRudder.getChannel(rd)).accept();
 
+                    SocketChannelRudder clientRd = new SocketChannelRudder(ch);
+
                     try {
-                        p.checkAdmitted(ch);
+                        p.checkAdmitted(clientRd);
                     } catch (HttpException e) {
                         BayLog.error(e);
                         try {
@@ -333,7 +336,6 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                         return;
                     }
 
-                    Rudder clientRd = new ChannelRudder(ch);
 
                     DataListener lis = p.newDataListener(agent.agentId, clientRd);
                     Transporter tp = p.newTransporter(agent.agentId, clientRd);

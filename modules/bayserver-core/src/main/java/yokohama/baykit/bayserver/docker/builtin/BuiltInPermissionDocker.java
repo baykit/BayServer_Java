@@ -1,21 +1,25 @@
 package yokohama.baykit.bayserver.docker.builtin;
 
-import yokohama.baykit.bayserver.common.Groups;
-import yokohama.baykit.bayserver.tour.Tour;
-import yokohama.baykit.bayserver.bcf.BcfElement;
-import yokohama.baykit.bayserver.bcf.BcfKeyVal;
-import yokohama.baykit.bayserver.docker.Docker;
-import yokohama.baykit.bayserver.docker.Permission;
-import yokohama.baykit.bayserver.docker.base.DockerBase;
-import yokohama.baykit.bayserver.util.*;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayMessage;
 import yokohama.baykit.bayserver.ConfigException;
 import yokohama.baykit.bayserver.HttpException;
+import yokohama.baykit.bayserver.bcf.BcfElement;
+import yokohama.baykit.bayserver.bcf.BcfKeyVal;
+import yokohama.baykit.bayserver.common.Groups;
+import yokohama.baykit.bayserver.docker.Docker;
+import yokohama.baykit.bayserver.docker.Permission;
+import yokohama.baykit.bayserver.docker.base.DockerBase;
+import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
+import yokohama.baykit.bayserver.tour.Tour;
+import yokohama.baykit.bayserver.util.Headers;
+import yokohama.baykit.bayserver.util.HostMatcher;
+import yokohama.baykit.bayserver.util.HttpStatus;
+import yokohama.baykit.bayserver.util.IpMatcher;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
@@ -35,8 +39,8 @@ public class BuiltInPermissionDocker extends DockerBase implements Permission {
             this.admit = admit;
         }
 
-        public boolean admitted(SocketChannel ch) {
-            return matcher.match(ch) == admit;
+        public boolean admitted(NetworkChannelRudder rd) {
+            return matcher.match(rd) == admit;
         }
 
         public boolean admitted(Tour tour) {
@@ -45,7 +49,7 @@ public class BuiltInPermissionDocker extends DockerBase implements Permission {
     }
     
     private interface PermissionMatcher {
-        boolean match(SocketChannel ch);
+        boolean match(NetworkChannelRudder rd);
         boolean match(Tour tour);
     }
     
@@ -57,8 +61,14 @@ public class BuiltInPermissionDocker extends DockerBase implements Permission {
             this.mch = new HostMatcher(hostPtn);
         }
 
-        public boolean match(SocketChannel ch)  {
-            return mch.match(ch.socket().getInetAddress().getHostName());
+        public boolean match(NetworkChannelRudder rd)  {
+            try {
+                return mch.match(rd.getRemoteAddress().getHostName());
+            }
+            catch(IOException e) {
+                BayLog.error(e);
+                return false;
+            }
         }
 
         public boolean match(Tour tour) {
@@ -74,8 +84,14 @@ public class BuiltInPermissionDocker extends DockerBase implements Permission {
             this.mch = new IpMatcher(ipDesc);
         }
 
-        public boolean match(SocketChannel ch)  {
-            return mch.match(ch.socket().getInetAddress());
+        public boolean match(NetworkChannelRudder rd)  {
+            try {
+                return mch.match(rd.getRemoteAddress());
+            }
+            catch(IOException e) {
+                BayLog.error(e);
+                return false;
+            }
         }
 
         public boolean match(Tour tour) {
@@ -94,7 +110,7 @@ public class BuiltInPermissionDocker extends DockerBase implements Permission {
     // Override methods
     /////////////////////////////////////////////////////////////////
     @Override
-    public void socketAdmitted(SocketChannel ch) throws HttpException {
+    public void socketAdmitted(NetworkChannelRudder ch) throws HttpException {
         // Check remote host
         boolean isOk = true;
         for (CheckItem chk : checkList) {

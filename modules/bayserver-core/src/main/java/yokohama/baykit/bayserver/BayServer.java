@@ -4,14 +4,12 @@ import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.GrandAgentMonitor;
 import yokohama.baykit.bayserver.agent.signal.SignalAgent;
 import yokohama.baykit.bayserver.agent.signal.SignalSender;
-import yokohama.baykit.bayserver.common.ChannelRudder;
-import yokohama.baykit.bayserver.common.Cities;
-import yokohama.baykit.bayserver.common.Rudder;
+import yokohama.baykit.bayserver.common.*;
+import yokohama.baykit.bayserver.rudder.*;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.train.TrainRunner;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
-import yokohama.baykit.bayserver.common.InboundShipStore;
 import yokohama.baykit.bayserver.tour.TourStore;
 import yokohama.baykit.bayserver.docker.builtin.BuiltInHarborDocker;
 import yokohama.baykit.bayserver.util.*;
@@ -72,9 +70,9 @@ public class BayServer {
     /** BayAgent */
     public static SignalAgent signalAgent;
 
-    public static final Map<Rudder, Port> anchorablePortMap = new HashMap<>();
+    public static final Map<NetworkChannelRudder, Port> anchorablePortMap = new HashMap<>();
 
-    public static final Map<Rudder, Port> unanchorablePortMap = new HashMap<>();
+    public static final Map<NetworkChannelRudder, Port> unanchorablePortMap = new HashMap<>();
 
     /**
      * Date format for debug
@@ -269,23 +267,41 @@ public class BayServer {
 
             if(portDkr.anchored()) {
                 BayLog.info(BayMessage.get(Symbol.MSG_OPENING_TCP_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), portDkr.protocol()));
-                ServerSocketChannel ch;
-                if(adr instanceof InetSocketAddress)
-                    ch = ServerSocketChannel.open();
+                AsynchronousServerSocketChannel ach = null;
+                ServerSocketChannel ch = null;
+                if(adr instanceof InetSocketAddress) {
+                    if (harbor.netMultiplexer() == Harbor.MultiPlexerType.Pigeon) {
+                        ach = AsynchronousServerSocketChannel.open();
+                    }
+                    else {
+                        ch = ServerSocketChannel.open();
+                    }
+                }
                 else {
                     File f = new File(portDkr.socketPath());
                     if(f.exists())
                         f.delete();
-                    ch = SysUtil.openUnixDomainServerSocketChannel();
+                    if (harbor.netMultiplexer() == Harbor.MultiPlexerType.Pigeon) {
+                        ach = SysUtil.openUnixDomainAsynchronousServerSocketChannel();
+                    }
+                    else {
+                        ch = SysUtil.openUnixDomainServerSocketChannel();
+                    }
                 }
 
                 try {
-                    ch.bind(adr);
+                    if(ch != null) {
+                        ch.bind(adr);
+                        anchorablePortMap.put(new ServerSocketChannelRudder(ch), portDkr);
+                    }
+                    else {
+                        ach.bind(adr);
+                        anchorablePortMap.put(new AsynchronousServerSocketChannelRudder(ach), portDkr);
+                    }
                 } catch (SocketException e) {
                     BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
                     return;
                 }
-                anchorablePortMap.put(new ChannelRudder(ch), portDkr);
             }
             else {
                 BayLog.info(BayMessage.get(Symbol.MSG_OPENING_UDP_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), portDkr.protocol()));
@@ -297,7 +313,7 @@ public class BayServer {
                     BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
                     return;
                 }
-                unanchorablePortMap.put(new ChannelRudder(ch), portDkr);
+                unanchorablePortMap.put(new DatagramChannelRudder(ch), portDkr);
             }
         }
 

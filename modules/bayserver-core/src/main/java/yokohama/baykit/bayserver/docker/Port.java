@@ -1,15 +1,15 @@
 package yokohama.baykit.bayserver.docker;
 
 import yokohama.baykit.bayserver.HttpException;
-import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
+import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.common.InboundShip;
-import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
+import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
+import yokohama.baykit.bayserver.rudder.Rudder;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -31,7 +31,7 @@ public interface Port {
 
     int timeoutSec();
 
-    void checkAdmitted(SocketChannel ch) throws HttpException;
+    void checkAdmitted(NetworkChannelRudder rd) throws HttpException;
 
     ArrayList<String[]> additionalHeaders();
 
