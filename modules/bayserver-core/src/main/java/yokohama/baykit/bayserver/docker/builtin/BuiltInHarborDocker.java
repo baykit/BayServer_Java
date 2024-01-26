@@ -26,7 +26,8 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     public static final int DEFAULT_TOUR_BUFFER_SIZE = 1024 * 1024;  // 1M
     public static final String DEFAULT_CHARSET = "UTF-8";
     public static final int DEFAULT_CONTROL_PORT = -1;
-    public static final FileSendMethod DEFAULT_SEND_FILE_METHOD = FileSendMethod.Taxi;
+    public static final MultiPlexerType DEFAULT_NET_MULTIPLEXER = MultiPlexerType.Sensor;
+    public static final MultiPlexerType DEFAULT_FILE_MULTIPLEXER = MultiPlexerType.Taxi;
     public static final boolean DEFAULT_MULTI_CORE = true;
     public static final boolean DEFAULT_GZIP_COMP = false;
     public static final String DEFAULT_PID_FILE = "bayserver.pid";
@@ -76,8 +77,11 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     /** Multi core flag */
     boolean multiCore = DEFAULT_MULTI_CORE;
 
-    /** Method to send file */
-    FileSendMethod fileSendMethod = DEFAULT_SEND_FILE_METHOD;
+    /** Multiplexer of network I/O */
+    MultiPlexerType netMultiplexer = DEFAULT_NET_MULTIPLEXER;
+
+    /** Multiplexer of file read */
+    MultiPlexerType fileMultiplexer = DEFAULT_FILE_MULTIPLEXER;
 
     /** PID file name */
     String pidFile = DEFAULT_PID_FILE;
@@ -107,14 +111,27 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
             multiCore = true;
         }
 
-        if (fileSendMethod == FileSendMethod.Select && !SysUtil.supportSelectFile()) {
-            BayLog.warn(BayMessage.get(Symbol.CFG_FILE_SEND_METHOD_SELECT_NOT_SUPPORTED));
-            fileSendMethod = FileSendMethod.Taxi;
+        if (netMultiplexer == MultiPlexerType.Taxi ||
+                netMultiplexer == MultiPlexerType.Train ||
+                netMultiplexer == MultiPlexerType.Spin ||
+                netMultiplexer == MultiPlexerType.Pigeon) {
+            BayLog.warn(
+                    BayMessage.get(
+                            Symbol.CFG_NET_MULTIPLEXER_NOT_SUPPORTED,
+                            Harbor.getMultiplexerTypeName(netMultiplexer),
+                            Harbor.getMultiplexerTypeName(DEFAULT_NET_MULTIPLEXER)));
+            netMultiplexer = DEFAULT_NET_MULTIPLEXER;
         }
 
-        if (fileSendMethod == FileSendMethod.Spin && !SysUtil.supportNonblockFileRead()) {
-            BayLog.warn(BayMessage.get(Symbol.CFG_FILE_SEND_METHOD_SPIN_NOT_SUPPORTED));
-            fileSendMethod = FileSendMethod.Taxi;
+        if ((fileMultiplexer == MultiPlexerType.Sensor && !SysUtil.supportSelectFile()) ||
+                (fileMultiplexer == MultiPlexerType.Spin && !SysUtil.supportNonblockFileRead()) ||
+                (fileMultiplexer == MultiPlexerType.Train)) {
+            BayLog.warn(
+                    BayMessage.get(
+                            Symbol.CFG_FILE_MULTIPLEXER_NOT_SUPPORTED,
+                            Harbor.getMultiplexerTypeName(fileMultiplexer),
+                            Harbor.getMultiplexerTypeName(DEFAULT_FILE_MULTIPLEXER)));
+            fileMultiplexer = DEFAULT_FILE_MULTIPLEXER;
         }
     }
 
@@ -212,20 +229,25 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                 gzipComp = StringUtil.parseBool(kv.value);
                 break;
 
-            case "sendfilemethod":
-                switch(kv.value.toLowerCase()) {
-                    case "select":
-                        fileSendMethod = FileSendMethod.Select;
-                        break;
-                    case "spin":
-                        fileSendMethod = FileSendMethod.Spin;
-                        break;
-                    case "taxi":
-                        fileSendMethod = FileSendMethod.Taxi;
-                        break;
-                    default:
-                        throw new ConfigException(kv.fileName, kv.lineNo, BayMessage.CFG_INVALID_PARAMETER_VALUE(kv.value));
+            case "netmultiplexer":
+                try {
+                    netMultiplexer = Harbor.getMultiplexerType(kv.value.toLowerCase());
                 }
+                catch(IllegalArgumentException e) {
+                    BayLog.error(e);
+                    throw new ConfigException(kv.fileName, kv.lineNo, BayMessage.CFG_INVALID_PARAMETER_VALUE(kv.value));
+                }
+                break;
+
+            case "filemultiplexer":
+                try {
+                    fileMultiplexer = Harbor.getMultiplexerType(kv.value.toLowerCase());
+                }
+                catch(IllegalArgumentException e) {
+                    BayLog.error(e);
+                    throw new ConfigException(kv.fileName, kv.lineNo, BayMessage.CFG_INVALID_PARAMETER_VALUE(kv.value));
+                }
+
                 break;
 
             case "pidfile":
@@ -311,8 +333,8 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     }
 
     @Override
-    public FileSendMethod fileSendMethod() {
-        return fileSendMethod;
+    public MultiPlexerType fileMultiplexer() {
+        return fileMultiplexer;
     }
 
     @Override
