@@ -3,25 +3,25 @@ package yokohama.baykit.bayserver.docker.http.h1;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.UpgradeException;
-import yokohama.baykit.bayserver.common.ChannelRudder;
-import yokohama.baykit.bayserver.docker.http.h2.H2ProtocolHandler;
-import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.common.InboundHandler;
-import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.common.InboundShip;
-import yokohama.baykit.bayserver.tour.ReqContentHandler;
-import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.docker.http.HtpDocker;
 import yokohama.baykit.bayserver.docker.http.HtpPortDocker;
 import yokohama.baykit.bayserver.docker.http.h1.command.CmdContent;
 import yokohama.baykit.bayserver.docker.http.h1.command.CmdEndContent;
 import yokohama.baykit.bayserver.docker.http.h1.command.CmdHeader;
+import yokohama.baykit.bayserver.docker.http.h2.H2ProtocolHandler;
+import yokohama.baykit.bayserver.protocol.*;
+import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
+import yokohama.baykit.bayserver.tour.ReqContentHandler;
+import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.tour.TourReq;
-import yokohama.baykit.bayserver.util.*;
+import yokohama.baykit.bayserver.util.DataConsumeListener;
+import yokohama.baykit.bayserver.util.Headers;
+import yokohama.baykit.bayserver.util.HttpStatus;
+import yokohama.baykit.bayserver.util.URLEncoder;
 
 import java.io.IOException;
-import java.net.Socket;
-import java.nio.channels.SocketChannel;
 
 import static yokohama.baykit.bayserver.docker.http.h1.H1InboundHandler.CommandState.*;
 
@@ -377,12 +377,12 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         }
         else {
             try {
-                Socket skt = ((SocketChannel) ChannelRudder.getChannel(ship().rudder)).socket();
-                tur.req.remotePort = skt.getPort();
-                tur.req.remoteAddress = skt.getInetAddress().getHostAddress();
-                tur.req.serverAddress = skt.getLocalAddress().getHostAddress();
+                NetworkChannelRudder nrd = (NetworkChannelRudder) ship().rudder;
+                tur.req.remotePort = nrd.getRemotePort();
+                tur.req.remoteAddress = nrd.getRemoteAddress().getHostAddress();
+                tur.req.serverAddress = nrd.getLocalAddress().getHostAddress();
             }
-            catch(UnsupportedOperationException e) {
+            catch(IOException e) {
                 // Unix domain socket
                 tur.req.remotePort = -1;
                 tur.req.remoteAddress = null;

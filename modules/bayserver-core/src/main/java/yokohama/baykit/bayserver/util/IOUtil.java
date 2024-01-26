@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.util;
 import java.io.IOException;
 import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
@@ -10,6 +11,10 @@ import java.nio.channels.WritableByteChannel;
 public class IOUtil {
 
     public static int getSockRecvBufSize(SocketChannel ch) throws IOException {
+        return ch.getOption(StandardSocketOptions.SO_RCVBUF);
+    }
+
+    public static int getSockRecvBufSize(AsynchronousSocketChannel ch) throws IOException {
         return ch.getOption(StandardSocketOptions.SO_RCVBUF);
     }
 

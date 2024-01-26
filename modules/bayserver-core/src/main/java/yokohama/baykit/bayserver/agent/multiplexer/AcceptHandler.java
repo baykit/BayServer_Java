@@ -5,9 +5,11 @@ import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.common.DataListener;
-import yokohama.baykit.bayserver.common.ChannelRudder;
-import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.docker.Port;
+import yokohama.baykit.bayserver.rudder.ChannelRudder;
+import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
+import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.rudder.SocketChannelRudder;
 
 import java.io.IOException;
 import java.nio.channels.Channel;
@@ -24,9 +26,9 @@ public class AcceptHandler {
     public AcceptHandler(GrandAgent agent) {
         this.agent = agent;
 
-        for(Rudder rd: BayServer.anchorablePortMap.keySet()) {
+        for(NetworkChannelRudder rd: BayServer.anchorablePortMap.keySet()) {
             try {
-                ((SocketChannel)ChannelRudder.getChannel(rd)).configureBlocking(false);
+                rd.setNonBlocking();
             }
             catch(IOException e) {
                 BayLog.error(e);
@@ -51,8 +53,12 @@ public class AcceptHandler {
                     // Another agent caught client socket
                     return;
                 }
+
+                SocketChannelRudder rd = new SocketChannelRudder(ch);
+                rd.setNonBlocking();
+
                 try {
-                    p.checkAdmitted(ch);
+                    p.checkAdmitted(rd);
                 } catch (HttpException e) {
                     BayLog.error(e);
                     try {
@@ -62,8 +68,6 @@ public class AcceptHandler {
                     return;
                 }
                 //BayServer.debug(ch + " accepted");
-                ch.configureBlocking(false);
-                Rudder rd = new ChannelRudder(ch);
 
                 DataListener lis = p.newDataListener(agent.agentId, rd);
                 Transporter tp = p.newTransporter(agent.agentId, rd);

@@ -4,10 +4,7 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.MemUsage;
 import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.agent.multiplexer.JobMultiplexer;
-import yokohama.baykit.bayserver.agent.multiplexer.SensingMultiplexer;
-import yokohama.baykit.bayserver.agent.multiplexer.SpinMultiplexer;
-import yokohama.baykit.bayserver.agent.multiplexer.TaxiMultiplexer;
+import yokohama.baykit.bayserver.agent.multiplexer.*;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.Port;
@@ -41,6 +38,7 @@ public class GrandAgent {
     public Multiplexer netMultiplexer;
     public Multiplexer taxiMultiplexer;
     public SpinMultiplexer spinMultiplexer;
+    public Multiplexer pegionMultiplexer;
 
     public final int maxInboundShips;
     public boolean aborted;
@@ -53,6 +51,10 @@ public class GrandAgent {
         this.agentId = agentId;
 
         this.maxInboundShips = maxShips > 0 ? maxShips : 1;
+        this.taxiMultiplexer = new TaxiMultiplexer(this);
+        this.spinMultiplexer = new SpinMultiplexer(this);
+        this.pegionMultiplexer = new PigeonMultiplexer(this, anchorable);
+
         switch(BayServer.harbor.netMultiplexer()) {
             case Sensor:
                 this.netMultiplexer = new SensingMultiplexer(this, anchorable);
@@ -62,17 +64,15 @@ public class GrandAgent {
                 this.netMultiplexer = new JobMultiplexer(this, anchorable);
                 break;
 
-            case Taxi:
-                this.netMultiplexer = new TaxiMultiplexer(this);
+            case Pigeon:
+                this.netMultiplexer = this.pegionMultiplexer;
                 break;
 
             case Spin:
-            case Pigeon:
+            case Taxi:
             case Train:
                 throw new Sink("Multiplexer not supported: %s", Harbor.getMultiplexerTypeName(BayServer.harbor.netMultiplexer()));
         }
-        this.taxiMultiplexer = new TaxiMultiplexer(this);
-        this.spinMultiplexer = new SpinMultiplexer(this);
     }
 
     public String toString() {

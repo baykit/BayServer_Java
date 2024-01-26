@@ -8,6 +8,7 @@ import yokohama.baykit.bayserver.docker.Warp;
 import yokohama.baykit.bayserver.protocol.Command;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
+import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.HttpStatus;
@@ -16,7 +17,6 @@ import yokohama.baykit.bayserver.ship.Ship;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;

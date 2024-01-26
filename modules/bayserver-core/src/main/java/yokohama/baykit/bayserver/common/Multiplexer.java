@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
+import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 
 import java.io.IOException;

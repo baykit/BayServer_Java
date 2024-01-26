@@ -2,7 +2,7 @@ package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.common.EOFChecker;
-import yokohama.baykit.bayserver.common.Rudder;
+import yokohama.baykit.bayserver.rudder.Rudder;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -18,6 +18,9 @@ public class RudderState {
     ByteBuffer readBuf = ByteBuffer.allocate(8192);
     public ArrayList<WriteUnit> writeQueue = new ArrayList<>();
     public boolean reading[] = new boolean[]{false};
+    public boolean writing[] = new boolean[]{false};
+    public int bytesRead;
+    public int bytesWrote;
     public boolean valid;
     public boolean finale;
     EOFChecker eofChecker;

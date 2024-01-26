@@ -3,8 +3,8 @@ package yokohama.baykit.bayserver.agent.multiplexer;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.*;
-import yokohama.baykit.bayserver.common.InputStreamRudder;
-import yokohama.baykit.bayserver.common.Rudder;
+import yokohama.baykit.bayserver.rudder.InputStreamRudder;
+import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 
 import java.io.IOException;

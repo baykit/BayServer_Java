@@ -113,8 +113,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
 
         if (netMultiplexer == MultiPlexerType.Taxi ||
                 netMultiplexer == MultiPlexerType.Train ||
-                netMultiplexer == MultiPlexerType.Spin ||
-                netMultiplexer == MultiPlexerType.Pigeon) {
+                netMultiplexer == MultiPlexerType.Spin) {
             BayLog.warn(
                     BayMessage.get(
                             Symbol.CFG_NET_MULTIPLEXER_NOT_SUPPORTED,
@@ -132,6 +131,11 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                             Harbor.getMultiplexerTypeName(fileMultiplexer),
                             Harbor.getMultiplexerTypeName(DEFAULT_FILE_MULTIPLEXER)));
             fileMultiplexer = DEFAULT_FILE_MULTIPLEXER;
+        }
+
+        if (netMultiplexer == MultiPlexerType.Pigeon) {
+            BayLog.warn("Pigeon needs only one grand agent");
+            grandAgents = 1;
         }
     }
 
