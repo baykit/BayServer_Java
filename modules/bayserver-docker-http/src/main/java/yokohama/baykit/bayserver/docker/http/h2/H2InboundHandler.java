@@ -430,7 +430,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
 
         tur.req.protocol = httpProtocol;
 
-        Socket skt = ((SocketChannel)((ChannelRudder)sip.rudder).channel).socket();
+        Socket skt = ((SocketChannel)ChannelRudder.getChannel(sip.rudder)).socket();
         tur.req.remotePort = skt.getPort();
 
         tur.req.remoteAddress = skt.getInetAddress().getHostAddress();

@@ -236,7 +236,7 @@ public abstract class PortBase extends DockerBase implements Port {
         else {
             int size;
             try {
-                size = IOUtil.getSockRecvBufSize((SocketChannel) ((ChannelRudder)rd).channel);
+                size = IOUtil.getSockRecvBufSize((SocketChannel) ChannelRudder.getChannel(rd));
             }
             catch(IOException e) {
                 size = 8192;

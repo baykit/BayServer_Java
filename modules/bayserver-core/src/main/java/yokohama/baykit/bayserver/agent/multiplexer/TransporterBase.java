@@ -57,7 +57,7 @@ public abstract class TransporterBase implements Transporter, Reusable {
         BayLog.trace("%s onConnectable", this);
 
         try {
-            ((SocketChannel)((ChannelRudder)st.rudder).channel).finishConnect();
+            ((SocketChannel)ChannelRudder.getChannel(st.rudder)).finishConnect();
         }
         catch(IOException e) {
             BayLog.error("Connect failed: %s", e);
