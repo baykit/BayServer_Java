@@ -279,7 +279,7 @@ public class InboundShip extends Ship {
 
         synchronized (tourStore) {
             if (!activeTours.contains(tur))
-                throw new Sink("Tour is not in acive list: %s", tur);
+                throw new Sink("Tour is not in active list: %s", tur);
             tourStore.Return(uniqKey(shipId, tur.req.key));
             activeTours.remove(tur);
 
