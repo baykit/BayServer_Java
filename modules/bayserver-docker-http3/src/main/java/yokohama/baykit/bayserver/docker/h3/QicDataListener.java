@@ -136,6 +136,11 @@ public final class QicDataListener implements DataListener {
     }
 
     @Override
+    public void notifyError(Throwable e) {
+        BayLog.error(e);
+    }
+
+    @Override
     public void notifyClose() {
 
     }
@@ -198,9 +203,9 @@ public final class QicDataListener implements DataListener {
         BayLog.info("%s New connection scid=%s odcid=%s ref=%d", this, Utils.asHex(srcConId), Utils.asHex(odcid), con.getPointer());
 
         GrandAgent agt = GrandAgent.get(agentId);
-        QicProtocolHandler hnd = new QicProtocolHandler(con, adr, h3Config, agt.multiplexer);
+        QicProtocolHandler hnd = new QicProtocolHandler(con, adr, h3Config, agt.netMultiplexer);
         InboundShip sip = new InboundShip();
-        sip.initInbound(rudder, agentId, agt.multiplexer, portDkr, hnd);
+        sip.initInbound(rudder, agentId, agt.netMultiplexer, portDkr, hnd);
         hnd.setShip(sip);
 
         addShip(srcConId, sip);

@@ -1,5 +1,6 @@
 package yokohama.baykit.bayserver.common;
 
+import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.ship.Ship;
@@ -48,6 +49,11 @@ public class SimpleDataListener implements DataListener {
     @Override
     public boolean notifyProtocolError(ProtocolException e) throws IOException {
         return ship.notifyProtocolError(e);
+    }
+
+    @Override
+    public void notifyError(Throwable e) {
+        BayLog.debug(e);
     }
 
     @Override

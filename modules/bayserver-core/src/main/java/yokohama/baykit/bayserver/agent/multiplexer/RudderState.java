@@ -13,11 +13,11 @@ public class RudderState {
     public final DataListener listener;
     public final Transporter transporter;
 
-    boolean accepted;
     long lastAccessTime;
     boolean closing;
     ByteBuffer readBuf = ByteBuffer.allocate(8192);
     public ArrayList<WriteUnit> writeQueue = new ArrayList<>();
+    public boolean reading[] = new boolean[]{false};
     public boolean valid;
     public boolean finale;
     EOFChecker eofChecker;
@@ -34,7 +34,6 @@ public class RudderState {
         this.rudder = rd;
         this.listener = lis;
         this.transporter = tp;
-        this.accepted = false;
         this.valid = true;
     }
 

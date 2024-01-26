@@ -94,7 +94,6 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
                     Transporter tp = p.newTransporter(agent.agentId, rd);
                     RudderState st = new RudderState(rd, lis, tp);
                     addState(rd, st);
-                    reqStart(rd);
                     reqRead(rd);
                 }
             }
@@ -183,12 +182,9 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
     // Implements Multiplexer
     ////////////////////////////////////////////
 
-    public void reqStart(Rudder rd) {
-        BayLog.debug("%s askToStart: rd=%s", agent, rd);
-
-        RudderState chState = findRudderState(rd);
-        chState.accepted = true;
-        //askToRead(ch);
+    @Override
+    public void start() {
+        new Thread(this).start();
     }
 
     public void reqConnect(Rudder rd, SocketAddress addr) throws IOException {

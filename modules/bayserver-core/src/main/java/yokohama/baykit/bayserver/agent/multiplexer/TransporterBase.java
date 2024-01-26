@@ -9,7 +9,6 @@ import yokohama.baykit.bayserver.common.Rudder;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.Reusable;
 
-import javax.net.ssl.SSLException;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -181,16 +180,7 @@ public abstract class TransporterBase implements Transporter, Reusable {
     @Override
     public void onError(RudderState st, Throwable e) {
         //BayLog.trace("%s onError: %s", this, e);
-
-        if(e instanceof SSLException) {
-            if(traceSSL)
-                BayLog.error(e, "%s SSL Error: %s", this, e);
-            else
-                BayLog.debug(e, "%s SSL Error: %s", this, e);
-        }
-        else {
-            BayLog.error(e);
-        }
+        st.listener.notifyError(e);
     }
 
     @Override

@@ -100,7 +100,7 @@ public class H3PortDocker extends PortBase implements H3Docker {
     public DataListener newDataListener(int agentId, Rudder rd) {
         QicDataListener lis = new QicDataListener();
         GrandAgent agt = GrandAgent.get(agentId);
-        lis.initUdp(agentId, rd, agt.multiplexer, this);
+        lis.initUdp(agentId, rd, agt.netMultiplexer, this);
         return lis;
     }
 

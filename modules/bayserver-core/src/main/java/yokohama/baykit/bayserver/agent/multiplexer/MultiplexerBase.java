@@ -42,11 +42,6 @@ public abstract class MultiplexerBase implements Multiplexer {
     }
 
     @Override
-    public void reqStart(Rudder rd) {
-        throw new Sink();
-    }
-
-    @Override
     public void reqConnect(Rudder rd, SocketAddress addr) throws IOException {
         throw new Sink();
     }

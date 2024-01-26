@@ -130,7 +130,7 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
         cmd = new CmdEndRequest(tur.req.key);
         Runnable ensureFunc = () -> {
             if(!keepAlive)
-                ship().postEnd();
+                ship().postClose();
         };
 
         try {

@@ -97,7 +97,7 @@ public class FileContentHandler implements ReqContentHandler {
             switch(BayServer.harbor.fileMultiplexer()) {
                 case Spin: {
                     GrandAgent agt = GrandAgent.get(tur.ship.agentId);
-                    sendFileShip.init(rd, agt.multiplexer, tur);
+                    sendFileShip.init(rd, agt.netMultiplexer, tur);
                     agt.spinMultiplexer.addState(rd, new RudderState(rd, new SimpleDataListener(sendFileShip)));
 
                     int sid = sendFileShip.id();
