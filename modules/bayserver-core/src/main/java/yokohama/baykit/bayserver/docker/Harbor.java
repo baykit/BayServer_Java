@@ -4,10 +4,13 @@ import java.util.Locale;
 
 public interface Harbor {
 
-    enum FileSendMethod {
-        Select,
+    enum MultiPlexerType {
+        Sensor,
         Spin,
+        Pigeon,
+        Job,
         Taxi,
+        Train,
     };
 
     /** Default charset */
@@ -53,11 +56,51 @@ public interface Harbor {
     boolean gzipComp();
 
     /** Method to send file */
-    FileSendMethod fileSendMethod();
+    MultiPlexerType fileMultiplexer();
 
     /** PID file name */
     String pidFile();
 
     /** Multi core flag */
     boolean multiCore();
+
+
+    static String getMultiplexerTypeName(MultiPlexerType type) {
+        switch (type) {
+            case Sensor:
+                return "sensor";
+            case Spin:
+                return "spin";
+            case Pigeon:
+                return "pigeon";
+            case Job:
+                return "job";
+            case Taxi:
+                return "taxi";
+            case Train:
+                return "train";
+            default:
+                return null;
+        }
+    }
+
+    static MultiPlexerType getMultiplexerType(String type) {
+        switch (type) {
+            case "sensor":
+                return MultiPlexerType.Sensor;
+            case "spin":
+                return MultiPlexerType.Spin;
+            case "pigeon":
+                return MultiPlexerType.Pigeon;
+            case "job":
+                return MultiPlexerType.Job;
+            case "taxi":
+                return MultiPlexerType.Taxi;
+            case "train":
+                return MultiPlexerType.Train;
+            default:
+                throw new IllegalArgumentException();
+        }
+    }
+
 }
