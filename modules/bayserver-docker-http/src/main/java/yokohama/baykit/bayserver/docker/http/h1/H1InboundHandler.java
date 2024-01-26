@@ -150,7 +150,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
                 ship.resumeRead(sid);
             }
             else
-                ship.postEnd();
+                ship.postClose();
         };
 
         try {

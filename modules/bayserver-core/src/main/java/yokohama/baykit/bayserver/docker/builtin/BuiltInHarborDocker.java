@@ -333,6 +333,11 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     }
 
     @Override
+    public MultiPlexerType netMultiplexer() {
+        return netMultiplexer;
+    }
+
+    @Override
     public MultiPlexerType fileMultiplexer() {
         return fileMultiplexer;
     }

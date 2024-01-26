@@ -139,7 +139,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
         cmd.debugData = "Thank you!".getBytes(StandardCharsets.UTF_8);
         try {
             protocolHandler.post(cmd);
-            protocolHandler.ship.postEnd();
+            protocolHandler.ship.postClose();
         }
         catch(IOException ex) {
             BayLog.error(ex);

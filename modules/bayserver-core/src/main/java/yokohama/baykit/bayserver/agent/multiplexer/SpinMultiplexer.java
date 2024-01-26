@@ -47,6 +47,11 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
     ////////////////////////////////////////////
 
     @Override
+    public void start() {
+        throw new Sink();
+    }
+
+    @Override
     public void reqRead(Rudder rd) {
         RudderState st = findRudderState(rd);
         synchronized (runningList) {

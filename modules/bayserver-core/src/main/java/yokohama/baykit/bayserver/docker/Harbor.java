@@ -55,7 +55,10 @@ public interface Harbor {
     /** Gzip compression flag */
     boolean gzipComp();
 
-    /** Method to send file */
+    /** Multiplexer of Network I/O */
+    MultiPlexerType netMultiplexer();
+
+    /** Multiplexer of File I/O */
     MultiPlexerType fileMultiplexer();
 
     /** PID file name */

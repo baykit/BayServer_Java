@@ -165,7 +165,7 @@ public abstract class WarpBase extends ClubBase implements Warp {
                 Rudder rd = new ChannelRudder(ch);
                 tp = newTransporter(agt, ch);
                 ProtocolHandler protoHnd = ProtocolHandlerStore.getStore(protocol(), false, agt.agentId).rent();
-                wsip.initWarp(rd, agt.agentId, agt.multiplexer, this, protoHnd);
+                wsip.initWarp(rd, agt.agentId, agt.netMultiplexer, this, protoHnd);
 
                 BayLog.debug("%s init warp ship", wsip);
                 needConnect = true;
@@ -178,8 +178,8 @@ public abstract class WarpBase extends ClubBase implements Warp {
             wsip.startWarpTour(tour);
 
             if(needConnect) {
-                agt.multiplexer.addState(wsip.rudder, new RudderState(wsip.rudder, new SimpleDataListener(wsip), tp));
-                agt.multiplexer.reqConnect(wsip.rudder, hostAddr);
+                agt.netMultiplexer.addState(wsip.rudder, new RudderState(wsip.rudder, new SimpleDataListener(wsip), tp));
+                agt.netMultiplexer.reqConnect(wsip.rudder, hostAddr);
             }
 
         }

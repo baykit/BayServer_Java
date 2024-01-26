@@ -30,7 +30,7 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
     ////////////////////////////////////////////
 
     @Override
-    public void reqStart(Rudder rd) {
+    public void start() {
         throw new Sink();
     }
 
@@ -165,5 +165,4 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
             throw e;
         }
     }
-
 }
