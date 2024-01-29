@@ -140,10 +140,10 @@ public abstract class TransporterBase implements Transporter, Reusable {
         while(!st.writeQueue.isEmpty()) {
             WriteUnit wUnit = st.writeQueue.get(0);
 
-            BayLog.debug("%s Try to write: pkt=%s pos=%d len=%d chValid=%b adr=%s", this, wUnit.tag, wUnit.buf.position(), wUnit.buf.limit(), st.valid, wUnit.adr);
+            BayLog.debug("%s Try to write: pkt=%s pos=%d len=%d closed=%b adr=%s", this, wUnit.tag, wUnit.buf.position(), wUnit.buf.limit(), st.closed, wUnit.adr);
             //BayLog.debug(this + " " + new String(wUnit.buf.array(), 0, wUnit.buf.limit()));
 
-            if (st.valid && wUnit.buf.hasRemaining()) {
+            if (!st.closed && wUnit.buf.hasRemaining()) {
                 if (!writeNonBlock(st.rudder, wUnit.adr, wUnit.buf)) {
                     // Data remains
                     BayLog.debug("%s data remains", this);
