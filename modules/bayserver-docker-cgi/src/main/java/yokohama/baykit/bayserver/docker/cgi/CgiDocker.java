@@ -50,7 +50,7 @@ public class CgiDocker extends ClubBase {
 
         if (cgiMultiplexer == Harbor.MultiPlexerType.Sensor ||
                 cgiMultiplexer == Harbor.MultiPlexerType.Spin ||
-                cgiMultiplexer == Harbor.MultiPlexerType.Pigeon)
+                cgiMultiplexer == Harbor.MultiPlexerType.Pigeon) {
             BayLog.warn(ConfigException.createMessage(
                     CgiMessage.get(
                             CgiSymbol.CFG_CGI_MULTIPLEXER_NOT_SUPPORTED,
@@ -58,7 +58,8 @@ public class CgiDocker extends ClubBase {
                             Harbor.getMultiplexerTypeName(DEFAULT_CGI_MULTIPLEXER)),
                     elm.fileName,
                     elm.lineNo));
-        cgiMultiplexer = DEFAULT_CGI_MULTIPLEXER;
+            cgiMultiplexer = DEFAULT_CGI_MULTIPLEXER;
+        }
     }
     
 
