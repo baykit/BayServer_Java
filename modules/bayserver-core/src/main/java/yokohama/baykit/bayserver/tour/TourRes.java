@@ -79,6 +79,7 @@ public class TourRes implements Reusable {
             return;
 
         this.bytesLimit = headers.contentLength();
+        BayLog.debug("%s content length: %s", this, this.bytesLimit);
 
         // Compress check
         if (BayServer.harbor.gzipComp() &&

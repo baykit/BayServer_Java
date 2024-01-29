@@ -53,7 +53,7 @@ public class SimpleDataListener implements DataListener {
 
     @Override
     public void notifyError(Throwable e) {
-        BayLog.debug(e);
+        BayLog.debug(e, "%s Error notified", this);
     }
 
     @Override
