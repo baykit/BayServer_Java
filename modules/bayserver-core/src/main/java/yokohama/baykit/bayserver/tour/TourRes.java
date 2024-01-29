@@ -440,7 +440,7 @@ public class TourRes implements Reusable {
             resume = true;
         }
 
-        if(!tour.isRunning()) {
+        if(!tour.isZombie()) {
             resConsumeListener.contentConsumed(length, resume);
         }
     }
