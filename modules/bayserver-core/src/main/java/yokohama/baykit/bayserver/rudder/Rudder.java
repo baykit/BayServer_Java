@@ -8,7 +8,9 @@ public interface Rudder {
 
     void setNonBlocking() throws IOException;
 
+    // Returns -1 when reached EOF
     int read(ByteBuffer buf) throws IOException;
+
     int write(ByteBuffer buf) throws IOException;
 
     void close() throws IOException;
