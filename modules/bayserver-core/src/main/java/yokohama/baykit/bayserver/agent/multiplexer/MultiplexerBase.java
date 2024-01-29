@@ -109,7 +109,13 @@ public abstract class MultiplexerBase implements Multiplexer {
     }
 
     protected final void closeRudder(RudderState chState) {
-        BayLog.debug("%s close ch %s chState=%s", agent, chState.rudder, chState);
+        BayLog.debug("%s close ch %s chState=%s closed=%b", agent, chState.rudder, chState, chState.closed);
+
+        synchronized (this) {
+            if(chState.closed)
+                return;
+            chState.closed = true;
+        }
 
         try {
             chState.rudder.close();
@@ -117,7 +123,6 @@ public abstract class MultiplexerBase implements Multiplexer {
         catch(IOException e) {
             BayLog.error(e);
         }
-        chState.invalidate();
 
         synchronized (chState.writeQueue) {
             // Clear queue
