@@ -130,7 +130,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
                     count = selector.selectNow();
                 }
                 else {
-                    count = selector.select(agent.selectTimeoutSec * 1000L);
+                    count = selector.select(agent.timeoutSec * 1000L);
                 }
 
                 if(agent.aborted) {
@@ -161,9 +161,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
 
                 if(!processed) {
                     // timeout check if there is nothing to do
-                    for(TimerHandler th: agent.timerHandlers) {
-                        th.onTimer();
-                    }
+                    agent.ring();
                 }
             }
         }
@@ -231,7 +229,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
         //BayLog.debug("askToWrite");
         RudderState st = findRudderState(rd);
         BayLog.debug("%s askToWrite chState=%s len=%d", agent, st, buf.remaining());
-        if(st == null || !st.valid) {
+        if(st == null || st.closed) {
             throw new IOException("Invalid channel");
         }
 

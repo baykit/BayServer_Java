@@ -11,10 +11,7 @@ import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.docker.base.PortBase;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class GrandAgent {
 
@@ -33,7 +30,7 @@ public class GrandAgent {
     public static Map<Integer, GrandAgent> agents = new HashMap<>();
     public static List<LifecycleListener> listeners = new ArrayList<>();
 
-    public int selectTimeoutSec = SELECT_TIMEOUT_SEC;
+    public int timeoutSec = SELECT_TIMEOUT_SEC;
     public final int agentId;
     public Multiplexer netMultiplexer;
     public Multiplexer taxiMultiplexer;
@@ -42,7 +39,7 @@ public class GrandAgent {
 
     public final int maxInboundShips;
     public boolean aborted;
-    public ArrayList<TimerHandler> timerHandlers = new ArrayList<>();
+    private ArrayList<TimerHandler> timerHandlers = new ArrayList<>();
 
     public GrandAgent(
             int agentId,
@@ -72,6 +69,25 @@ public class GrandAgent {
             case Taxi:
             case Train:
                 throw new Sink("Multiplexer not supported: %s", Harbor.getMultiplexerTypeName(BayServer.harbor.netMultiplexer()));
+        }
+
+        if(!(netMultiplexer instanceof SensingMultiplexer)) {
+            Timer timer = new Timer();
+            TimerTask task = new TimerTask() {
+                @Override
+                public void run() {
+                    try {
+                        ring();
+                    }
+                    catch(Throwable e) {
+                        BayLog.fatal(e);
+                        abort();
+                    }
+                }
+            };
+
+            long period = timeoutSec * 1000; // 10seconds
+            timer.scheduleAtFixedRate(task, 0, period);
         }
     }
 
@@ -133,6 +149,14 @@ public class GrandAgent {
         timerHandlers.remove(th);
     }
 
+    // The timer goes off
+    public void ring() {
+        for(TimerHandler th: timerHandlers) {
+            th.onTimer();
+        }
+    }
+
+
 
     /////////////////////////////////////////////////////////////////////////////
     // static methods                                                          //
@@ -166,7 +190,6 @@ public class GrandAgent {
     public static void addLifecycleListener(LifecycleListener lis) {
         listeners.add(lis);
     }
-
 
 
     /////////////////////////////////////////////////////////////////////////////

@@ -89,7 +89,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
 
         RudderState state = findRudderState(rd);
         BayLog.debug("%s reqWrite chState=%s len=%d", agent, state, buf.remaining());
-        if(state == null || !state.valid) {
+        if(state == null || state.closed) {
             throw new IOException("Invalid rudder");
         }
         WriteUnit unt = new WriteUnit(buf, adr, tag, listener);
@@ -301,10 +301,10 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
 
     private void nextFileWrite(RudderState state) {
         WriteUnit unit = state.writeQueue.get(0);
-        BayLog.debug("%s Try to write: pkt=%s buflen=%d valid=%b", this, unit.tag, unit.buf.limit(), state.valid);
+        BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b", this, unit.tag, unit.buf.limit(), state.closed);
         //BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
 
-        if(state.valid && unit.buf.limit() > 0) {
+        if(state.closed && unit.buf.limit() > 0) {
             AsynchronousFileChannel ch = (AsynchronousFileChannel)ChannelRudder.getChannel(state.rudder);
             state.readBuf.clear();
             ch.write(
@@ -324,7 +324,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
         state.readBuf.clear();
         ch.read(
                 state.readBuf,
-                agent.selectTimeoutSec,
+                agent.timeoutSec,
                 TimeUnit.MINUTES,
                 state.rudder,
                 new ReadCompletionHandler());
@@ -332,15 +332,15 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
 
     private void nextNetworkWrite(RudderState state) {
         WriteUnit unit = state.writeQueue.get(0);
-        BayLog.debug("%s Try to write: pkt=%s buflen=%d valid=%b", this, unit.tag, unit.buf.limit(), state.valid);
+        BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b", this, unit.tag, unit.buf.limit(), state.closed);
         //BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
 
-        if(state.valid && unit.buf.limit() > 0) {
+        if(state.closed && unit.buf.limit() > 0) {
             AsynchronousSocketChannel ch = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(state.rudder);
             state.readBuf.clear();
             ch.write(
                     unit.buf,
-                    agent.selectTimeoutSec,
+                    agent.timeoutSec,
                     TimeUnit.MINUTES,
                     new Pair<>(state.rudder, unit),
                     new WriteCompletionHandler());

@@ -21,7 +21,7 @@ public class RudderState {
     public boolean writing[] = new boolean[]{false};
     public int bytesRead;
     public int bytesWrote;
-    public boolean valid;
+    public boolean closed;
     public boolean finale;
     EOFChecker eofChecker;
 
@@ -37,15 +37,11 @@ public class RudderState {
         this.rudder = rd;
         this.listener = lis;
         this.transporter = tp;
-        this.valid = true;
+        this.closed = false;
     }
 
     void access() {
         lastAccessTime = System.currentTimeMillis();
-    }
-
-    void invalidate() {
-        valid = false;
     }
 
     void end() {
