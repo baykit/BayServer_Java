@@ -145,6 +145,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         CmdEndContent cmd = new CmdEndContent();
         int sid = ship.shipId;
         Runnable ensureFunc = () -> {
+            BayLog.debug("%s H1 callback of sendEnd: keep=%s", ship, keepAlive);
             if(keepAlive) {
                 ship.keeping = true;
                 ship.resumeRead(sid);
