@@ -105,7 +105,7 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
 
             @Override
             protected void onTimer() {
-
+                st.listener.checkTimeout(-1);
             }
         });
     }
