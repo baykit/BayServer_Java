@@ -22,7 +22,7 @@ public class AsynchronousFileChannelRudder extends ChannelRudder {
     // Static methods
     ////////////////////////////////////////////
 
-    public static AsynchronousFileChannel SocketChannel(Rudder rd) {
+    public static AsynchronousFileChannel getAsynchronousFileChannel(Rudder rd) {
         return (AsynchronousFileChannel) ((ChannelRudder)rd).channel;
     }
 }

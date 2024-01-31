@@ -1,18 +1,17 @@
 package yokohama.baykit.bayserver.docker.cgi;
 
 import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.common.EOFChecker;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
 import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
-import yokohama.baykit.bayserver.common.SimpleDataListener;
+import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.bcf.ParseException;
-import yokohama.baykit.bayserver.rudder.ChannelRudder;
+import yokohama.baykit.bayserver.common.EOFChecker;
+import yokohama.baykit.bayserver.common.SimpleDataListener;
 import yokohama.baykit.bayserver.docker.Docker;
-import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.base.ClubBase;
+import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.rudder.ReadableByteChannelRudder;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.train.TrainRunner;
@@ -29,7 +28,6 @@ import java.util.concurrent.TimeUnit;
 
 public class CgiDocker extends ClubBase {
 
-    public static final Harbor.MultiPlexerType DEFAULT_CGI_MULTIPLEXER = Harbor.MultiPlexerType.Taxi;
     public static final int DEFAULT_TIMEOUT_SEC = 60;
 
     public String interpreter;
@@ -37,8 +35,6 @@ public class CgiDocker extends ClubBase {
     public String docRoot;
     public int timeoutSec = DEFAULT_TIMEOUT_SEC;
 
-    /** Method to read stdin/stderr */
-    Harbor.MultiPlexerType cgiMultiplexer = DEFAULT_CGI_MULTIPLEXER;
 
     ///////////////////////////////////////////////////////////////////////
     // Implements Docker
@@ -48,18 +44,7 @@ public class CgiDocker extends ClubBase {
     public void init(BcfElement elm, Docker parent) throws ConfigException {
         super.init(elm, parent);
 
-        if (cgiMultiplexer == Harbor.MultiPlexerType.Sensor ||
-                cgiMultiplexer == Harbor.MultiPlexerType.Spin ||
-                cgiMultiplexer == Harbor.MultiPlexerType.Pigeon) {
-            BayLog.warn(ConfigException.createMessage(
-                    CgiMessage.get(
-                            CgiSymbol.CFG_CGI_MULTIPLEXER_NOT_SUPPORTED,
-                            Harbor.getMultiplexerTypeName(cgiMultiplexer),
-                            Harbor.getMultiplexerTypeName(DEFAULT_CGI_MULTIPLEXER)),
-                    elm.fileName,
-                    elm.lineNo));
-            cgiMultiplexer = DEFAULT_CGI_MULTIPLEXER;
-        }
+
     }
     
 
@@ -85,17 +70,6 @@ public class CgiDocker extends ClubBase {
                 docRoot = kv.value;
                 break;
 
-            case "cgimultiplexer": {
-                try {
-                    cgiMultiplexer = Harbor.getMultiplexerType(kv.value.toLowerCase());
-                } 
-                catch (IllegalArgumentException e) {
-                    BayLog.error(e);
-                    throw new ConfigException(kv.fileName, kv.lineNo, BayMessage.CFG_INVALID_PARAMETER_VALUE(kv.value));
-                }
-                break;
-            }
-            
             case "timeout":
                 timeoutSec = Integer.parseInt(kv.value);
                 break;
@@ -154,7 +128,7 @@ public class CgiDocker extends ClubBase {
 
         GrandAgent agt = GrandAgent.get(tur.ship.agentId);
 
-        switch(cgiMultiplexer) {
+        switch(BayServer.harbor.cgiMultiplexer()) {
             case Spin: {
                 EOFChecker eofChecker = () -> {
                     try {

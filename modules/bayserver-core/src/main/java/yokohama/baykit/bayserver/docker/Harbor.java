@@ -61,6 +61,13 @@ public interface Harbor {
     /** Multiplexer of File I/O */
     MultiPlexerType fileMultiplexer();
 
+    /** Multiplexer of Log output */
+    MultiPlexerType logMultiplexer();
+
+    /** Multiplexer of CGI input */
+    MultiPlexerType cgiMultiplexer();
+
+
     /** PID file name */
     String pidFile();
 
