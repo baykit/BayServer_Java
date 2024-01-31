@@ -97,9 +97,9 @@ public class FileContentHandler implements ReqContentHandler {
 
             switch(BayServer.harbor.fileMultiplexer()) {
                 case Spin: {
-                    InputStream in = new FileInputStream(file);
-                    ReadableByteChannel ch = Channels.newChannel(in);
-                    Rudder rd = new ReadableByteChannelRudder(ch);
+                    AsynchronousFileChannel ch =
+                            AsynchronousFileChannel.open(Paths.get(file.getPath()), StandardOpenOption.READ);
+                    Rudder rd = new AsynchronousFileChannelRudder(ch);
 
                     GrandAgent agt = GrandAgent.get(tur.ship.agentId);
                     sendFileShip.init(rd, agt.netMultiplexer, tur);
