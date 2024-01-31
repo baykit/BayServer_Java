@@ -190,7 +190,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
             throw new NullPointerException();
 
         RudderState chState = findRudderState(rd);
-        BayLog.debug("%s askToConnect addr=%s rd=%s chState=%s", agent, addr, rd, chState);
+        BayLog.debug("%s reqConnect addr=%s rd=%s chState=%s", agent, addr, rd, chState);
 
         //rd.configureBlocking(false);
         ((SocketChannel)ChannelRudder.getChannel(rd)).connect(addr);
@@ -212,7 +212,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
 
         //BayLog.debug("askToRead");
         RudderState st = findRudderState(rd);
-        BayLog.debug("%s askToRead chState=%s", agent, st);
+        BayLog.debug("%s reqRead chState=%s", agent, st);
         addOperation(rd, OP_READ);
 
         if(st == null)
@@ -228,7 +228,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
 
         //BayLog.debug("askToWrite");
         RudderState st = findRudderState(rd);
-        BayLog.debug("%s askToWrite chState=%s len=%d", agent, st, buf.remaining());
+        BayLog.debug("%s reqWrite chState=%s len=%d", agent, st, buf.remaining());
         if(st == null || st.closed) {
             throw new IOException("Invalid channel");
         }
@@ -258,7 +258,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
             throw new NullPointerException();
 
         RudderState st = findRudderState(rd);
-        BayLog.debug("%s askToClose chState=%s", agent, st);
+        BayLog.debug("%s reqClose chState=%s", agent, st);
         addOperation(rd, OP_WRITE, true);
 
         if(st == null)

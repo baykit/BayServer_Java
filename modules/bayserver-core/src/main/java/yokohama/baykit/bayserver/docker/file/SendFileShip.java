@@ -1,7 +1,6 @@
 package yokohama.baykit.bayserver.docker.file;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.common.ReadOnlyShip;
@@ -90,7 +89,7 @@ public class SendFileShip extends ReadOnlyShip {
 
     @Override
     public final boolean checkTimeout(int durationSec) {
-        throw new Sink();
+        return false;
     }
 
 }

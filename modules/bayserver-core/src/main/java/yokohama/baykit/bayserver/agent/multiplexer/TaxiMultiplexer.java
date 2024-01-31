@@ -6,6 +6,7 @@ import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.rudder.ReadableByteChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.taxi.Taxi;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
@@ -97,7 +98,7 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
         TaxiRunner.post(agent.agentId, new Taxi() {
             @Override
             protected void depart() {
-                if(ChannelRudder.getChannel(st.rudder) instanceof ReadableByteChannel)
+                if(st.rudder instanceof ReadableByteChannelRudder)
                     nextRead(st.rudder);
                 else
                     nextWrite(st.rudder);

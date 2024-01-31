@@ -3,24 +3,32 @@ package yokohama.baykit.bayserver.docker.builtin;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
+import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
-import yokohama.baykit.bayserver.common.WriteChannelTaxi;
+import yokohama.baykit.bayserver.common.DataListener;
+import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.docker.Docker;
-import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.Log;
 import yokohama.baykit.bayserver.docker.base.DockerBase;
-import yokohama.baykit.bayserver.taxi.TaxiRunner;
+import yokohama.baykit.bayserver.protocol.ProtocolException;
+import yokohama.baykit.bayserver.rudder.AsynchronousFileChannelRudder;
+import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.rudder.WritableByteChannelRudder;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.CharUtil;
 import yokohama.baykit.bayserver.util.StringUtil;
-import yokohama.baykit.bayserver.util.SysUtil;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,9 +40,73 @@ public class BuiltInLogDocker extends DockerBase implements Log {
         @Override
         public void add(int agentId) {
             String fileName = filePrefix + "_" + agentId + "." + fileExt;
+            int size = (int)new File(fileName).length();
             try {
-                WritableByteChannel output = new FileOutputStream(fileName).getChannel();
-                channels.put(agentId, output);
+                GrandAgent agt = GrandAgent.get(agentId);
+                switch(BayServer.harbor.logMultiplexer()) {
+                    case Taxi: {
+                        WritableByteChannel output = new FileOutputStream(fileName).getChannel();
+                        rudder = new WritableByteChannelRudder(output);
+                        multiplexer = agt.taxiMultiplexer;
+                        break;
+                    }
+                    case Spin: {
+                        AsynchronousFileChannel ch =
+                                AsynchronousFileChannel.open(
+                                        Paths.get(fileName),
+                                        StandardOpenOption.CREATE,
+                                        StandardOpenOption.WRITE);
+                        rudder = new AsynchronousFileChannelRudder(ch);
+                        multiplexer = agt.spinMultiplexer;
+                        break;
+                    }
+                    default:
+                        throw new Sink("Not supported");
+                }
+
+                RudderState st = new RudderState(rudder, new DataListener() {
+                    @Override
+                    public NextSocketAction notifyConnect() throws IOException {
+                        throw new Sink();
+                    }
+
+                    @Override
+                    public NextSocketAction notifyRead(ByteBuffer buf, InetSocketAddress adr) throws IOException {
+                        throw new Sink();
+                    }
+
+                    @Override
+                    public NextSocketAction notifyEof() {
+                        throw new Sink();
+                    }
+
+                    @Override
+                    public NextSocketAction notifyHandshakeDone(String protocol) throws IOException {
+                        throw new Sink();
+                    }
+
+                    @Override
+                    public boolean notifyProtocolError(ProtocolException e) throws IOException {
+                        throw new Sink();
+                    }
+
+                    @Override
+                    public void notifyError(Throwable e) {
+                        BayLog.error(e);
+                    }
+
+                    @Override
+                    public void notifyClose() {
+
+                    }
+
+                    @Override
+                    public boolean checkTimeout(int durationSec) {
+                        return false;
+                    }
+                });
+                st.bytesWrote = size;
+                multiplexer.addState(rudder, st);
             }
             catch(IOException e) {
                 BayLog.fatal(BayMessage.get(Symbol.INT_CANNOT_OPEN_LOG_FILE, fileName));
@@ -56,8 +128,6 @@ public class BuiltInLogDocker extends DockerBase implements Log {
     }
 
 
-    public static Harbor.MultiPlexerType DEFAULT_LOG_MULTIPLEXER = Harbor.MultiPlexerType.Taxi;
-
     /** Mapping table for format */
     static HashMap<String, LogItemFactory> map = new HashMap<>();
 
@@ -76,8 +146,10 @@ public class BuiltInLogDocker extends DockerBase implements Log {
     /** Log items */
     LogItem[] logItems;
 
-    /** Log write method */
-    Harbor.MultiPlexerType logMultiplexer = DEFAULT_LOG_MULTIPLEXER;
+    Rudder rudder;
+
+    /** Multiplexer to write to file */
+    Multiplexer multiplexer;
 
     static String lineSep = System.getProperty("line.separator");
 
@@ -148,19 +220,8 @@ public class BuiltInLogDocker extends DockerBase implements Log {
         compile(format, list, elm.fileName, elm.lineNo);
         logItems = list.toArray(new LogItem[0]);
 
-        // Check log write method
-        if((logMultiplexer == Harbor.MultiPlexerType.Sensor && !SysUtil.supportSelectFile()) ||
-                (logMultiplexer == Harbor.MultiPlexerType.Spin && !SysUtil.supportNonblockFileWrite()) ||
-                (logMultiplexer == Harbor.MultiPlexerType.Train)) {
-            BayLog.warn(
-                    BayMessage.get(
-                            Symbol.CFG_LOG_MULTIPLEXER_NOT_SUPPORTED,
-                            Harbor.getMultiplexerTypeName(logMultiplexer),
-                            Harbor.getMultiplexerTypeName(DEFAULT_LOG_MULTIPLEXER)));
-            logMultiplexer = DEFAULT_LOG_MULTIPLEXER;
-        }
-
         GrandAgent.addLifecycleListener(new AgentListener());
+
     }
 
     @Override
@@ -171,16 +232,6 @@ public class BuiltInLogDocker extends DockerBase implements Log {
 
             case "format":
                 format = kv.value;
-                break;
-
-            case "logmultiplexer":
-                try {
-                    logMultiplexer = Harbor.getMultiplexerType(kv.value.toLowerCase());
-                }
-                catch(IllegalArgumentException e) {
-                    BayLog.error(e);
-                    throw new ConfigException(kv.fileName, kv.lineNo, BayMessage.CFG_INVALID_PARAMETER_VALUE(kv.value));
-                }
                 break;
         }
         return true;
@@ -206,12 +257,8 @@ public class BuiltInLogDocker extends DockerBase implements Log {
         if (sb.length() > 0) {
             byte[] bytes = StringUtil.toBytes(sb.toString() + CharUtil.LF);
             ByteBuffer buf = ByteBuffer.wrap(bytes, 0, bytes.length);
-            WriteChannelTaxi txi =
-                    new WriteChannelTaxi(
-                            tour.ship.agentId,
-                            channels.get(tour.ship.agentId),
-                            buf);
-            TaxiRunner.post(tour.ship.agentId, txi);
+            multiplexer.reqWrite(
+                    rudder, buf, null, "log", null);
         }
     }
 
