@@ -348,6 +348,9 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                     nextAct = st.listener.notifyRead(st.readBuf, null);
                 }
 
+            } catch (AsynchronousCloseException e) {
+                BayLog.debug(e, "%s Closed by another thread: %s", this, st.rudder);
+                nextAct = NextSocketAction.Close;
             } catch (IOException e) {
                 st.listener.notifyError(e);
                 nextAct = NextSocketAction.Close;
