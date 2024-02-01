@@ -42,20 +42,20 @@ public class FileContentHandler implements ReqContentHandler {
 
     @Override
     public void onReadContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
-        BayLog.debug("%s onReadContent(Ignore) len=%d", tur, len);
+        BayLog.debug("%s file:onReadContent(Ignore) len=%d", tur, len);
         tur.req.consumed(tur.tourId, len, lis);
     }
 
     @Override
     public void onEndContent(Tour tur) throws IOException, HttpException {
-        BayLog.debug("%s endContent", tur);
+        BayLog.debug("%s file:endContent", tur);
         sendFileAsync(tur, path, tur.res.charset());
         abortable = false;
     }
 
     @Override
     public boolean onAbort(Tour tur) {
-        BayLog.debug("%s onAbort aborted=%s", tur, abortable);
+        BayLog.debug("%s file:onAbort aborted=%s", tur, abortable);
         return abortable;
     }
 
@@ -111,6 +111,7 @@ public class FileContentHandler implements ReqContentHandler {
                             sendFileShip.resumeRead(sid);
                         }
                     });
+
                     agt.spinMultiplexer.reqRead(rd);
                     break;
                 }
