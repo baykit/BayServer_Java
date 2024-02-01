@@ -100,49 +100,16 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
         if(state == null)
             return;
 
+        boolean needRead = false;
         synchronized (state.reading) {
             if (!state.reading[0]) {
-                new Thread(() -> {
-                    RudderState st = findRudderState(rd);
-                    if (st == null || st.closing) {
-                        // channel is already closed
-                        BayLog.debug("%s Rudder is already closed: rd=%s", agent, rd);
-                        return;
-                    }
-
-                    NextSocketAction nextAct;
-                    try {
-                        st.readBuf.clear();
-                        BayLog.debug("%s readBuf %s", agent, st.readBuf);
-                        int n = rd.read(st.readBuf);
-                        BayLog.debug("%s read %d bytes", agent, n);
-                        if (n < 0) {
-                            nextAct = st.listener.notifyEof();
-                        }
-                        else if (n == 0) {
-                            // Continue
-                            nextAct = NextSocketAction.Continue;
-                        }
-                        else {
-                            st.readBuf.flip();
-                            nextAct = st.listener.notifyRead(st.readBuf, null);
-                        }
-
-                    } catch (IOException e) {
-                        st.listener.notifyError(e);
-                        nextAct = NextSocketAction.Close;
-                    } catch (Throwable e) {
-                        st.listener.notifyError(e);
-                        agent.reqShutdown();
-                        nextAct = NextSocketAction.Close;
-                    }
-
-                    nextAction(st, nextAct, true);
-                }).start();
+                needRead = true;
                 state.reading[0] = true;
             }
         }
 
+        if(needRead)
+            nextRead(rd);
 
         state.access();
     }
@@ -351,6 +318,46 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                     }
                 }
             }
+        }).start();
+    }
+
+    private void nextRead(Rudder rd) {
+        new Thread(() -> {
+            RudderState st = findRudderState(rd);
+            if (st == null || st.closing) {
+                // channel is already closed
+                BayLog.debug("%s Rudder is already closed: rd=%s", agent, rd);
+                return;
+            }
+
+            NextSocketAction nextAct;
+            try {
+                st.readBuf.clear();
+                BayLog.debug("%s readBuf %s", agent, st.readBuf);
+                int n = rd.read(st.readBuf);
+                BayLog.debug("%s read %d bytes", agent, n);
+                if (n < 0) {
+                    nextAct = st.listener.notifyEof();
+                }
+                else if (n == 0) {
+                    // Continue
+                    nextAct = NextSocketAction.Continue;
+                }
+                else {
+                    st.readBuf.flip();
+                    nextAct = st.listener.notifyRead(st.readBuf, null);
+                }
+
+            } catch (IOException e) {
+                st.listener.notifyError(e);
+                nextAct = NextSocketAction.Close;
+            } catch (Throwable e) {
+                st.listener.notifyError(e);
+                agent.reqShutdown();
+                nextAct = NextSocketAction.Close;
+            }
+
+            nextAction(st, nextAct, true);
         }).start();
     }
 

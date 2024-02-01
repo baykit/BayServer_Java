@@ -170,63 +170,6 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
     // Private methods
     ////////////////////////////////////////////
 
-    private void nextAction(RudderState st, NextSocketAction act, boolean reading) {
-        switch(act) {
-            case Continue:
-                if(reading)
-                    reqRead(st.rudder);
-                break;
-
-            case Read:
-                reqRead(st.rudder);
-                break;
-
-            case Write:
-                if(reading)
-                    cancelRead(st);
-                break;
-
-            case Close:
-                if(reading)
-                    cancelRead(st);
-                closeRudder(st);
-                break;
-
-            case Suspend:
-                if(reading)
-                    cancelRead(st);
-                break;
-        }
-        st.access();
-    }
-
-    private void cancelRead(RudderState st) {
-        synchronized (st.reading) {
-            BayLog.debug("%s Reading off %s", agent, st.rudder);
-            st.reading[0] = false;
-        }
-    }
-
-
-    public void closeTimeoutSockets() {
-        if(rudders.isEmpty())
-            return;
-
-        ArrayList<RudderState> closeList = new ArrayList<>();;
-        synchronized (rudders) {
-            long now = System.currentTimeMillis();
-            for (RudderState st : rudders.values()) {
-                if(st.transporter.checkTimeout(st, (int)(now - st.lastAccessTime) / 1000)) {
-                    BayLog.debug("%s timeout: rd=%s", agent, st.rudder);
-                    closeList.add(st);
-                }
-            }
-        }
-        for (RudderState c : closeList) {
-            closeRudder(c);
-        }
-    }
-
     private void reqAccept(Rudder rd) {
         BayLog.debug("%s reqAccept isShutdown=%b", agent, agent.aborted);
         if (agent.aborted) {
@@ -289,67 +232,26 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
 
     }
 
-    private void nextFileRead(RudderState state) {
-        AsynchronousFileChannel ch = (AsynchronousFileChannel)ChannelRudder.getChannel(state.rudder);
-        state.readBuf.clear();
-        ch.read(
-                state.readBuf,
-                state.bytesRead,
-                state.rudder,
-                new ReadCompletionHandler());
-    }
+    public void closeTimeoutSockets() {
+        if(rudders.isEmpty())
+            return;
 
-    private void nextFileWrite(RudderState state) {
-        WriteUnit unit = state.writeQueue.get(0);
-        BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b", this, unit.tag, unit.buf.limit(), state.closed);
-        //BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
-
-        if(state.closed && unit.buf.limit() > 0) {
-            AsynchronousFileChannel ch = (AsynchronousFileChannel)ChannelRudder.getChannel(state.rudder);
-            state.readBuf.clear();
-            ch.write(
-                    unit.buf,
-                    state.bytesWrote,
-                    new Pair<>(state.rudder, unit),
-                    new WriteCompletionHandler());
-
+        ArrayList<RudderState> closeList = new ArrayList<>();;
+        synchronized (rudders) {
+            long now = System.currentTimeMillis();
+            for (RudderState st : rudders.values()) {
+                if(st.transporter.checkTimeout(st, (int)(now - st.lastAccessTime) / 1000)) {
+                    BayLog.debug("%s timeout: rd=%s", agent, st.rudder);
+                    closeList.add(st);
+                }
+            }
         }
-        else {
-            new WriteCompletionHandler().completed(unit.buf.limit(), new Pair<>(state.rudder, unit));
+        for (RudderState c : closeList) {
+            closeRudder(c);
         }
     }
 
-    private void nextNetworkRead(RudderState state) {
-        AsynchronousSocketChannel ch = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(state.rudder);
-        state.readBuf.clear();
-        ch.read(
-                state.readBuf,
-                agent.timeoutSec,
-                TimeUnit.MINUTES,
-                state.rudder,
-                new ReadCompletionHandler());
-    }
 
-    private void nextNetworkWrite(RudderState state) {
-        WriteUnit unit = state.writeQueue.get(0);
-        BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b", this, unit.tag, unit.buf.limit(), state.closed);
-        //BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
-
-        if(state.closed && unit.buf.limit() > 0) {
-            AsynchronousSocketChannel ch = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(state.rudder);
-            state.readBuf.clear();
-            ch.write(
-                    unit.buf,
-                    agent.timeoutSec,
-                    TimeUnit.MINUTES,
-                    new Pair<>(state.rudder, unit),
-                    new WriteCompletionHandler());
-
-        }
-        else {
-            new WriteCompletionHandler().completed(unit.buf.limit(), new Pair<>(state.rudder, unit));
-        }
-    }
 
 
     private class ReadCompletionHandler implements CompletionHandler<Integer, Rudder> {
@@ -362,7 +264,6 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
                 return;
             }
 
-            cancelRead(st);
             st.bytesRead += n;
 
             NextSocketAction nextAct;
@@ -468,5 +369,105 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
 
     }
 
+    private void nextAction(RudderState st, NextSocketAction act, boolean reading) {
+        boolean cancel = false;
 
+        switch(act) {
+            case Continue:
+                if(reading)
+                    reqRead(st.rudder);
+                break;
+
+            case Read:
+                reqRead(st.rudder);
+                break;
+
+            case Write:
+                if(reading)
+                    cancel = true;
+                break;
+
+            case Close:
+                if(reading)
+                    cancel = true;
+                closeRudder(st);
+                break;
+
+            case Suspend:
+                if(reading)
+                    cancel = true;
+                break;
+        }
+
+        if(cancel) {
+            synchronized (st.reading) {
+                BayLog.debug("%s Reading off %s", agent, st.rudder);
+                st.reading[0] = false;
+            }
+        }
+
+        st.access();
+    }
+
+    private void nextFileRead(RudderState state) {
+        AsynchronousFileChannel ch = (AsynchronousFileChannel)ChannelRudder.getChannel(state.rudder);
+        state.readBuf.clear();
+        ch.read(
+                state.readBuf,
+                state.bytesRead,
+                state.rudder,
+                new ReadCompletionHandler());
+    }
+
+    private void nextFileWrite(RudderState state) {
+        WriteUnit unit = state.writeQueue.get(0);
+        BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b", this, unit.tag, unit.buf.limit(), state.closed);
+        //BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
+
+        if(state.closed && unit.buf.limit() > 0) {
+            AsynchronousFileChannel ch = (AsynchronousFileChannel)ChannelRudder.getChannel(state.rudder);
+            state.readBuf.clear();
+            ch.write(
+                    unit.buf,
+                    state.bytesWrote,
+                    new Pair<>(state.rudder, unit),
+                    new WriteCompletionHandler());
+
+        }
+        else {
+            new WriteCompletionHandler().completed(unit.buf.limit(), new Pair<>(state.rudder, unit));
+        }
+    }
+
+    private void nextNetworkRead(RudderState state) {
+        AsynchronousSocketChannel ch = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(state.rudder);
+        state.readBuf.clear();
+        ch.read(
+                state.readBuf,
+                agent.timeoutSec,
+                TimeUnit.MINUTES,
+                state.rudder,
+                new ReadCompletionHandler());
+    }
+
+    private void nextNetworkWrite(RudderState state) {
+        WriteUnit unit = state.writeQueue.get(0);
+        BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b", this, unit.tag, unit.buf.limit(), state.closed);
+        //BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
+
+        if(state.closed && unit.buf.limit() > 0) {
+            AsynchronousSocketChannel ch = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(state.rudder);
+            state.readBuf.clear();
+            ch.write(
+                    unit.buf,
+                    agent.timeoutSec,
+                    TimeUnit.MINUTES,
+                    new Pair<>(state.rudder, unit),
+                    new WriteCompletionHandler());
+
+        }
+        else {
+            new WriteCompletionHandler().completed(unit.buf.limit(), new Pair<>(state.rudder, unit));
+        }
+    }
 }
