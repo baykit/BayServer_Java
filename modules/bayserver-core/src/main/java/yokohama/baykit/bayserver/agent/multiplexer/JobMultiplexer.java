@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.Pipe;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
@@ -208,48 +209,6 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
     // Private methods
     ////////////////////////////////////////////
 
-    private void nextAction(RudderState st, NextSocketAction act, boolean reading) {
-        try {
-            switch (act) {
-                case Continue:
-                    break;
-
-                case Read:
-                    reqRead(st.rudder);
-                    break;
-
-                case Write:
-                    if (reading)
-                        cancelRead(st);
-                    break;
-
-                case Close:
-                    if (reading)
-                        cancelRead(st);
-                    closeRudder(st);
-                    break;
-
-                case Suspend:
-                    if (reading)
-                        cancelRead(st);
-                    break;
-            }
-            st.access();
-        }
-        catch(Throwable e) {
-            BayLog.fatal(e);
-            agent.shutdown();
-        }
-    }
-
-    private void cancelRead(RudderState st) {
-        synchronized (st.reading) {
-            BayLog.debug("%s Reading off %s", agent, st.rudder);
-            st.reading[0] = false;
-        }
-    }
-
-
     public void closeTimeoutSockets() {
         if(rudders.isEmpty())
             return;
@@ -338,15 +297,14 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                 BayLog.debug("%s read %d bytes", agent, n);
                 if (n < 0) {
                     nextAct = st.listener.notifyEof();
-                }
-                else if (n == 0) {
+                } else if (n == 0) {
                     // Continue
                     nextAct = NextSocketAction.Continue;
-                }
-                else {
+                } else {
                     st.readBuf.flip();
                     nextAct = st.listener.notifyRead(st.readBuf, null);
                 }
+                BayLog.debug("%s Next action %s", agent, nextAct);
 
             } catch (AsynchronousCloseException e) {
                 BayLog.debug(e, "%s Closed by another thread: %s", this, st.rudder);
@@ -419,4 +377,49 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
         }).start();
 
     }
+
+    private void nextAction(RudderState st, NextSocketAction act, boolean reading) {
+        try {
+            switch (act) {
+                case Continue:
+                    if(reading)
+                        nextRead(st.rudder);
+                    break;
+
+                case Read:
+                    nextRead(st.rudder);
+                    break;
+
+                case Write:
+                    if(reading)
+                        cancelRead(st);
+                    nextWrite(st.rudder);
+                    break;
+
+                case Close:
+                    if(reading)
+                        cancelRead(st);
+                    closeRudder(st);
+                    break;
+
+                case Suspend:
+                    if(reading)
+                        cancelRead(st);
+                    break;
+            }
+            st.access();
+        }
+        catch(Throwable e) {
+            BayLog.fatal(e);
+            agent.shutdown();
+        }
+    }
+
+    private void cancelRead(RudderState st) {
+        synchronized (st.reading) {
+            BayLog.debug("%s Reading off %s", agent, st.rudder);
+            st.reading[0] = false;
+        }
+    }
+
 }

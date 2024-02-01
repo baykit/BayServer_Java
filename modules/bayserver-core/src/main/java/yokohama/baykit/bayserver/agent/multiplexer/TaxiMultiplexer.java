@@ -131,6 +131,7 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
             }
             BayLog.debug("Next action: %s", act);
             switch(act) {
+                case Read:
                 case Continue:
                     nextRun(st);
                     break;

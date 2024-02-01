@@ -274,7 +274,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
                 } else {
                     state.readBuf.flip();
                     NextSocketAction act = state.listener.notifyRead(state.readBuf, null);
-                    if(act == NextSocketAction.Continue)
+                    if(act == NextSocketAction.Continue || act == NextSocketAction.Read)
                         next();
                     else
                         cancelRead();

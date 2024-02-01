@@ -331,7 +331,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
             else {
                 try {
                     endReqContent(tourId, tur);
-                    return NextSocketAction.Continue;
+                    return NextSocketAction.Suspend;  // end reading
                 } catch (HttpException e) {
                     tur.res.sendHttpException(tourId, e);
                     resetState();

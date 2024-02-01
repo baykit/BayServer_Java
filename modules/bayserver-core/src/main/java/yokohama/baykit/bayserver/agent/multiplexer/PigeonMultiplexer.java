@@ -4,13 +4,13 @@ import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.TimerHandler;
+import yokohama.baykit.bayserver.common.DataListener;
+import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.rudder.AsynchronousFileChannelRudder;
 import yokohama.baykit.bayserver.rudder.AsynchronousSocketChannelRudder;
 import yokohama.baykit.bayserver.rudder.ChannelRudder;
-import yokohama.baykit.bayserver.common.DataListener;
-import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.rudder.Rudder;
-import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Pair;
 
@@ -72,10 +72,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
         }
 
         if(needRead) {
-            if(state.rudder instanceof AsynchronousFileChannelRudder)
-                nextFileRead(state);
-            else
-                nextNetworkRead(state);
+            nextRead(state);
         }
 
 
@@ -138,13 +135,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
             return;
         }
 
-        try {
-            rd.close();
-        }
-        catch(IOException e) {
-            BayLog.error(e);
-        }
-
+        closeRudder(state);
         state.access();
     }
 
@@ -176,8 +167,6 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
             return;
         }
 
-        Port p = BayServer.anchorablePortMap.get(rd);
-
         try {
             AsynchronousSocketChannel ch = null;
             ((AsynchronousServerSocketChannel) ChannelRudder.getChannel(rd)).accept(
@@ -186,6 +175,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
                         @Override
                         public void completed(AsynchronousSocketChannel clientCh, Rudder serverRd) {
 
+                            Port p = BayServer.anchorablePortMap.get(serverRd);
                             AsynchronousSocketChannelRudder clientRd = new AsynchronousSocketChannelRudder(clientCh);
 
                             try {
@@ -214,6 +204,9 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
                                         BayLog.error(ex);
                                     }
                                 }
+                            } catch (Throwable e) {
+                                BayLog.fatal(e);
+                                agent.shutdown();
                             }
 
                             reqAccept(serverRd);
@@ -236,7 +229,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
         if(rudders.isEmpty())
             return;
 
-        ArrayList<RudderState> closeList = new ArrayList<>();;
+        ArrayList<RudderState> closeList = new ArrayList<>();
         synchronized (rudders) {
             long now = System.currentTimeMillis();
             for (RudderState st : rudders.values()) {
@@ -280,8 +273,8 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
                 st.listener.notifyError(e);
                 nextAct = NextSocketAction.Close;
             } catch (Throwable e) {
-                st.listener.notifyError(e);
-                agent.reqShutdown();
+                BayLog.fatal(e);
+                agent.shutdown();
                 nextAct = NextSocketAction.Close;
             }
 
@@ -376,11 +369,11 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
         switch(act) {
             case Continue:
                 if(reading)
-                    reqRead(st.rudder);
+                    nextRead(st);
                 break;
 
             case Read:
-                reqRead(st.rudder);
+                nextRead(st);
                 break;
 
             case Write:
@@ -410,6 +403,13 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
         st.access();
     }
 
+    private void nextRead(RudderState state) {
+        if(state.rudder instanceof AsynchronousFileChannelRudder)
+            nextFileRead(state);
+        else
+            nextNetworkRead(state);
+    }
+
     private void nextFileRead(RudderState state) {
         AsynchronousFileChannel ch = (AsynchronousFileChannel)ChannelRudder.getChannel(state.rudder);
         state.readBuf.clear();
@@ -425,7 +425,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
         BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b", this, unit.tag, unit.buf.limit(), state.closed);
         //BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
 
-        if(state.closed && unit.buf.limit() > 0) {
+        if(!state.closed && unit.buf.limit() > 0) {
             AsynchronousFileChannel ch = (AsynchronousFileChannel)ChannelRudder.getChannel(state.rudder);
             state.readBuf.clear();
             ch.write(
@@ -456,7 +456,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
         BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b rd=%s", this, unit.tag, unit.buf.limit(), state.closed, state.rudder);
        // BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
 
-        if(state.closed && unit.buf.limit() > 0) {
+        if(!state.closed && unit.buf.limit() > 0) {
             AsynchronousSocketChannel ch = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(state.rudder);
             state.readBuf.clear();
             ch.write(
