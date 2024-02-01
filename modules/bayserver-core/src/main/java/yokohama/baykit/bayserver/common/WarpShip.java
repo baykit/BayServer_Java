@@ -165,7 +165,7 @@ public final class WarpShip extends Ship {
     }
 
     public WarpHandler warpHandler() {
-        return (WarpHandler) protocolHandler;
+        return (WarpHandler) protocolHandler.commandHandler;
     }
 
     public void startWarpTour(Tour tur) throws IOException {
