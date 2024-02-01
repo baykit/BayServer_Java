@@ -217,7 +217,7 @@ public class H1WarpHandler implements WarpHandler, H1Handler {
             cmd.headers.forEach(kv -> BayLog.info("%s warp_http reqHdr: %s=%s", tur, kv[0], kv[1]));
         }
 
-        protocolHandler.post(cmd);
+        ship().post(cmd);
 
     }
 
