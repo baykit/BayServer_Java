@@ -88,7 +88,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
             throw new NullPointerException();
 
         RudderState state = findRudderState(rd);
-        BayLog.debug("%s reqWrite chState=%s len=%d", agent, state, buf.remaining());
+        BayLog.debug("%s reqWrite tag=%s state=%s len=%d", agent, tag, state, buf.remaining());
         if(state == null || state.closed) {
             throw new IOException("Invalid rudder");
         }
@@ -131,7 +131,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
         if(rd == null)
             throw new NullPointerException();
 
-        BayLog.debug("%s askToClose rd=%s", agent, rd);
+        BayLog.debug("%s reqClose rd=%s", agent, rd);
         RudderState state = findRudderState(rd);
         if (state == null) {
             BayLog.debug("%s Rudder state not found: rd=%s", agent, rd);
@@ -318,7 +318,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
                 return;
             }
 
-            BayLog.debug("wrote %d bytes", n);
+            BayLog.debug("%s wrote %d bytes rd=%s", PigeonMultiplexer.this, n, rd);
             st.bytesWrote += n;
 
             try {
@@ -370,6 +370,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
     }
 
     private void nextAction(RudderState st, NextSocketAction act, boolean reading) {
+        BayLog.debug("%s next action: %s (reading=%b)", this, act, reading);
         boolean cancel = false;
 
         switch(act) {
@@ -452,8 +453,8 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
 
     private void nextNetworkWrite(RudderState state) {
         WriteUnit unit = state.writeQueue.get(0);
-        BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b", this, unit.tag, unit.buf.limit(), state.closed);
-        //BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
+        BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b rd=%s", this, unit.tag, unit.buf.limit(), state.closed, state.rudder);
+       // BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
 
         if(state.closed && unit.buf.limit() > 0) {
             AsynchronousSocketChannel ch = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(state.rudder);

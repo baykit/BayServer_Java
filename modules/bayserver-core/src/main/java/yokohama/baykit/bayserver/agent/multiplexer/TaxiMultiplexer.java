@@ -42,12 +42,14 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
 
     @Override
     public void reqRead(Rudder rd) {
+        BayLog.debug("%s TaxiMpx reqRead rd=%s", this, rd);
         RudderState st = findRudderState(rd);
         nextRun(st);
     }
 
     @Override
     public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) throws IOException {
+        BayLog.debug("%s TaxiMpx reqWrite rd=%s", this, rd);
         RudderState st = findRudderState(rd);
         nextRun(st);
     }
@@ -59,6 +61,7 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
 
     @Override
     public void reqClose(Rudder rd) {
+        BayLog.debug("%s TaxiMpx reqClose rd=%s", this, rd);
         RudderState st = findRudderState(rd);
         closeRudder(st);
     }
@@ -117,6 +120,7 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
         try {
             ByteBuffer buf = ByteBuffer.allocate(8192);
             int len = ((ReadableByteChannel)ChannelRudder.getChannel(rd)).read(buf);
+            BayLog.debug("%s Read %d bytes rd=%s", this, len, rd);
             NextSocketAction act;
             if (len <= 0) {
                 act = st.listener.notifyEof();
@@ -125,7 +129,7 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
                 buf.flip();
                 act = st.listener.notifyRead(buf, null);
             }
-
+            BayLog.debug("Next action: %s", act);
             switch(act) {
                 case Continue:
                     nextRun(st);
