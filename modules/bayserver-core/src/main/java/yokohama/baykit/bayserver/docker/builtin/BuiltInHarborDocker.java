@@ -142,7 +142,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
         }
 
         if (fileMultiplexer == MultiPlexerType.Spin && netMultiplexer != MultiPlexerType.Sensor) {
-            BayLog.warn("fileMultiplexer of spin needs netMultiplexer of sensor");
+            BayLog.warn(BayMessage.get(Symbol.CFG_SPIN_MULTIPLEXER_NEEDS_SENSOR));
             fileMultiplexer = DEFAULT_FILE_MULTIPLEXER;
         }
 
@@ -161,7 +161,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                 cgiMultiplexer == Harbor.MultiPlexerType.Pigeon) {
             BayLog.warn(ConfigException.createMessage(
                     BayMessage.get(
-                            Symbol.CFG_LOG_MULTIPLEXER_NOT_SUPPORTED,
+                            Symbol.CFG_CGI_MULTIPLEXER_NOT_SUPPORTED,
                             Harbor.getMultiplexerTypeName(cgiMultiplexer),
                             Harbor.getMultiplexerTypeName(DEFAULT_CGI_MULTIPLEXER)),
                     elm.fileName,
@@ -169,8 +169,9 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
             cgiMultiplexer = DEFAULT_CGI_MULTIPLEXER;
         }
 
-        if (netMultiplexer == MultiPlexerType.Pigeon) {
-            BayLog.warn("Pigeon needs only one grand agent");
+        if (netMultiplexer == MultiPlexerType.Pigeon ||
+            netMultiplexer == MultiPlexerType.Job) {
+            BayLog.warn(BayMessage.get(Symbol.CFG_MULTIPLEXER_NEEDS_A_GRAND_AGENT));
             grandAgents = 1;
         }
     }
