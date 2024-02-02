@@ -144,7 +144,7 @@ public class TourReq implements Reusable {
             return remoteHostFunc.getRemoteHost();
     }
 
-    public synchronized void setContentHandler(ReqContentHandler hnd) {
+    public synchronized void setReqContentHandler(ReqContentHandler hnd) {
         if(hnd == null)
             throw new NullPointerException();
         if(contentHandler != null)
@@ -218,7 +218,11 @@ public class TourReq implements Reusable {
         }
     }
 
-    public boolean postContent(int checkId, byte[] data, int start, int len, ContentConsumeListener lis) throws IOException {
+    /**
+     * This method passes a part of the POST request's content to the ReqContentHandler.
+     * Additionally, it reduces the internal buffer space by the size of the data passed
+     */
+    public boolean postReqContent(int checkId, byte[] data, int start, int len, ContentConsumeListener lis) throws IOException {
         tour.checkTourId(checkId);
 
         boolean dataPassed = false;
@@ -241,7 +245,7 @@ public class TourReq implements Reusable {
         }
 
         else {
-            contentHandler.onReadContent(tour, data, start, len, lis);
+            contentHandler.onReadReqContent(tour, data, start, len, lis);
             dataPassed = true;
         }
 
@@ -262,7 +266,11 @@ public class TourReq implements Reusable {
         return available;
     }
 
-    public void endContent(int checkId) throws IOException, HttpException {
+    /**
+     * When calling this method, it is uncertain whether the response will be synchronous or asynchronous.
+     * If it is synchronous, the tour will be disposed, and no further processing on the tour will be permitted.
+     */
+    public void endReqContent(int checkId) throws IOException, HttpException {
         BayLog.debug("%s endReqContent", tour);
         tour.checkTourId(checkId);
         if (ended)
@@ -272,10 +280,14 @@ public class TourReq implements Reusable {
             throw new ProtocolException("nvalid request data length: " + bytesPosted + "/" + bytesLimit);
         }
         if (contentHandler != null)
-            contentHandler.onEndContent(tour);
+            contentHandler.onEndReqContent(tour);
         ended = true;
     }
 
+    /**
+     * This method is called when the content of a POST request is consumed by the ReqContentHandler.
+     * It then increases the internal buffer space by the amount consumed
+     */
     public void consumed(int checkId, int length, ContentConsumeListener lis) {
         tour.checkTourId(checkId);
 
@@ -306,7 +318,7 @@ public class TourReq implements Reusable {
             boolean aborted = true;
 
             if (contentHandler != null)
-                aborted = contentHandler.onAbort(tour);
+                aborted = contentHandler.onAbortReq(tour);
 
             if (aborted)
                 tour.changeState(tour.tourId, Tour.TourState.ABORTED);

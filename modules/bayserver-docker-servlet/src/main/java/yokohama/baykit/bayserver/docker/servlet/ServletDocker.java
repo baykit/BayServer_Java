@@ -358,7 +358,7 @@ public class ServletDocker extends ClubBase {
                 }
             }
             ServletTrain train = new ServletTrain(this, tour, req, res, cb.chain);
-            tour.req.setContentHandler(train);
+            tour.req.setReqContentHandler(train);
             if(cb.async) {
                 train.depart();
             }

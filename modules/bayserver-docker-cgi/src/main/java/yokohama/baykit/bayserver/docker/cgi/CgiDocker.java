@@ -115,7 +115,7 @@ public class CgiDocker extends ClubBase {
 
         int bufsize = tur.ship.protocolHandler.maxResPacketDataSize();
         CgiReqContentHandler handler = new CgiReqContentHandler(this, tur);
-        tur.req.setContentHandler(handler);
+        tur.req.setReqContentHandler(handler);
         handler.startTour(env);
 
         CgiStdOutShip outShip = new CgiStdOutShip();

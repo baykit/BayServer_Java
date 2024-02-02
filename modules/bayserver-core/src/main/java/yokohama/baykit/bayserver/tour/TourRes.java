@@ -69,6 +69,10 @@ public class TourRes implements Reusable {
     }
 
 
+    /**
+     * This method sends the response headers to the client.
+     * Whether this process is carried out synchronously or asynchronously is uncertain"
+     */
     public void sendHeaders(int checkId) throws IOException {
         tour.checkTourId(checkId);
 
@@ -131,8 +135,8 @@ public class TourRes implements Reusable {
                             case TEXT: {
                                 tour.ship.sendHeaders(tour.ship.shipId, errTour);
                                 byte[] data = cmd.target.getBytes();
-                                errTour.res.sendContent(Tour.TOUR_ID_NOCHECK, data, 0, data.length);
-                                errTour.res.endContent(Tour.TOUR_ID_NOCHECK);
+                                errTour.res.sendResContent(Tour.TOUR_ID_NOCHECK, data, 0, data.length);
+                                errTour.res.endResContent(Tour.TOUR_ID_NOCHECK);
                                 break;
                             }
 
@@ -166,7 +170,11 @@ public class TourRes implements Reusable {
         this.available = true;
     }
 
-    public synchronized boolean sendContent(int checkId, byte[] buf, int ofs, int len) throws IOException {
+    /**
+     * This method sends a part of the response content to the client.
+     * Whether this process is synchronous or asynchronous is uncertain
+     */
+    public synchronized boolean sendResContent(int checkId, byte[] buf, int ofs, int len) throws IOException {
         if (buf == null)
             throw new NullPointerException();
         tour.checkTourId(checkId);
@@ -233,7 +241,13 @@ public class TourRes implements Reusable {
         return headerSent;
     }
 
-    public synchronized void endContent(int checkId) throws IOException {
+
+    /**
+     * This method notifies the client that the response has ended.
+     * Whether this process is synchronous or asynchronous is uncertain.
+     * If it occurs synchronously, the tour instance will be disposed, and no further processing on the tour will be allowed
+     */
+    public synchronized void endResContent(int checkId) throws IOException {
         tour.checkTourId(checkId);
 
         BayLog.debug("%s end ResContent", this);
@@ -276,7 +290,7 @@ public class TourRes implements Reusable {
         }
         finally {
             // If tour is returned, we cannot change its state because
-            // it will become uninitialized.
+            // it will be disposed.
             BayLog.debug("%s is returned: %s", this, tourReturned[0]);
             if(!tourReturned[0])
                 tour.changeState(checkId, Tour.TourState.ENDED);
@@ -289,7 +303,7 @@ public class TourRes implements Reusable {
     ////////////////////////////////////////////////////////////////////////////////
     public void sendHttpException(int checkId, HttpException e) throws IOException {
         if (e.status == HttpStatus.MOVED_TEMPORARILY || e.status == HttpStatus.MOVED_PERMANENTLY)
-            sendRedirect(checkId, e.status, e.location);
+            postRedirect(checkId, e.status, e.location);
         else
             sendError(checkId, e.status, e.getMessage(), e);
     }
@@ -298,6 +312,10 @@ public class TourRes implements Reusable {
         sendError(checkId, status, message, null);
     }
 
+    /**
+     * This method sends an HTTP error response to the client.
+     * Whether this process is carried out synchronously or asynchronously is uncertain
+     */
     public void sendError(int checkId, int status, String message, Throwable e) throws IOException {
         tour.checkTourId(checkId);
 
@@ -333,7 +351,7 @@ public class TourRes implements Reusable {
                 headers.setStatus(status);
 
                 try {
-                    sendErrorContent(body.toString());
+                    postErrorContent(body.toString());
                 }
                 catch(IOException ex) {
                     BayLog.debug(e, "%s Error in sending error", this);
@@ -342,11 +360,11 @@ public class TourRes implements Reusable {
                 headerSent = true;
             }
         }
-        endContent(checkId);
+        endResContent(checkId);
     }
 
 
-    private void sendRedirect(int checkId, int status, String location) throws IOException {
+    private void postRedirect(int checkId, int status, String location) throws IOException {
         tour.checkTourId(checkId);
 
         try {
@@ -362,7 +380,7 @@ public class TourRes implements Reusable {
                     String body = "<H2>Document Moved.</H2><BR>" + "<A HREF=\""
                             + location + "\">" + location + "</A>";
 
-                    sendErrorContent(body);
+                    postErrorContent(body);
                 }
                 catch(IOException e) {
                     tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
@@ -374,12 +392,12 @@ public class TourRes implements Reusable {
             }
         }
         finally {
-            endContent(checkId);
+            endResContent(checkId);
         }
 
     }
 
-    private void sendErrorContent(String content) throws IOException {
+    private void postErrorContent(String content) throws IOException {
 
 
         // Set content type
@@ -422,6 +440,10 @@ public class TourRes implements Reusable {
         return compressor;
     }
 
+    /**
+     * This method is called back when a part of the response data is actually sent to the client.
+     * In this method, the internal buffer space is increased
+     */
     private synchronized void consumed(int checkId, int length) {
         tour.checkTourId(checkId);
         if (resConsumeListener == null)

@@ -6,25 +6,25 @@ import java.io.IOException;
 
 public interface ReqContentHandler {
 
-    void onReadContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException;
+    void onReadReqContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException;
 
-    void onEndContent(Tour tur) throws IOException, HttpException;
+    void onEndReqContent(Tour tur) throws IOException, HttpException;
 
-    boolean onAbort(Tour tur);
+    boolean onAbortReq(Tour tur);
 
     ReqContentHandler devNull = new ReqContentHandler() {
         @Override
-        public void onReadContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
+        public void onReadReqContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
 
         }
 
         @Override
-        public void onEndContent(Tour tur) throws IOException, HttpException {
+        public void onEndReqContent(Tour tur) throws IOException, HttpException {
 
         }
 
         @Override
-        public boolean onAbort(Tour tur) {
+        public boolean onAbortReq(Tour tur) {
             return false;
         }
     };

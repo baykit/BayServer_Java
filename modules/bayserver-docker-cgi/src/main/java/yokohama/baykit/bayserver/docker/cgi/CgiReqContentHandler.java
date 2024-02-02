@@ -33,7 +33,7 @@ public class CgiReqContentHandler implements ReqContentHandler {
     ///////////////////////////////////////////////////////////////////
 
     @Override
-    public void onReadContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
+    public void onReadReqContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
         BayLog.debug("%s CGI:onReadReqContent: len=%d", tur, len);
         process.getOutputStream().write(buf, start, len);
         process.getOutputStream().flush();
@@ -42,13 +42,13 @@ public class CgiReqContentHandler implements ReqContentHandler {
     }
 
     @Override
-    public void onEndContent(Tour tur) throws IOException, HttpException {
+    public void onEndReqContent(Tour tur) throws IOException, HttpException {
         BayLog.debug("%s CGI:endReqContent", tur);
         access();
     }
 
     @Override
-    public boolean onAbort(Tour tur) {
+    public boolean onAbortReq(Tour tur) {
         BayLog.debug("%s CGI:abortReq", tur);
         try {
             process.getOutputStream().close();
@@ -137,7 +137,7 @@ public class CgiReqContentHandler implements ReqContentHandler {
                 BayLog.error("CGI Exec error code=%d", code & 0xff);
                 tour.res.sendError(tourId, HttpStatus.INTERNAL_SERVER_ERROR, "Exec failed");
             } else {
-                tour.res.endContent(tourId);
+                tour.res.endResContent(tourId);
             }
         }
         catch(IOException e) {

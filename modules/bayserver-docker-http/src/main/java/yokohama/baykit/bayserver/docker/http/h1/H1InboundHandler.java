@@ -291,7 +291,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
                 BayLog.trace(this + " error sending is delayed");
                 changeState(ReadContent);
                 tur.error = e;
-                tur.req.setContentHandler(ReqContentHandler.devNull);
+                tur.req.setReqContentHandler(ReqContentHandler.devNull);
                 return NextSocketAction.Continue;
             }
         }
@@ -311,7 +311,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         int tourId = curTourId;
         int sid = ship().shipId;
         boolean success =
-                tur.req.postContent(
+                tur.req.postReqContent(
                         tourId,
                         cmd.buffer,
                         cmd.start,
@@ -361,7 +361,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
     }
 
     void endReqContent(int chkTurId, Tour tur) throws IOException, HttpException {
-        tur.req.endContent(chkTurId);
+        tur.req.endReqContent(chkTurId);
         resetState();
     }
 

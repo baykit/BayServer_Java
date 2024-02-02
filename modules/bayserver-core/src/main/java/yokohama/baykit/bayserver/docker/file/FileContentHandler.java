@@ -41,20 +41,20 @@ public class FileContentHandler implements ReqContentHandler {
     ///////////////////////////////////////////////////////////////////////
 
     @Override
-    public void onReadContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
+    public void onReadReqContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
         BayLog.debug("%s file:onReadContent(Ignore) len=%d", tur, len);
         tur.req.consumed(tur.tourId, len, lis);
     }
 
     @Override
-    public void onEndContent(Tour tur) throws IOException, HttpException {
+    public void onEndReqContent(Tour tur) throws IOException, HttpException {
         BayLog.debug("%s file:endContent", tur);
         sendFileAsync(tur, path, tur.res.charset());
         abortable = false;
     }
 
     @Override
-    public boolean onAbort(Tour tur) {
+    public boolean onAbortReq(Tour tur) {
         BayLog.debug("%s file:onAbort aborted=%s", tur, abortable);
         return abortable;
     }

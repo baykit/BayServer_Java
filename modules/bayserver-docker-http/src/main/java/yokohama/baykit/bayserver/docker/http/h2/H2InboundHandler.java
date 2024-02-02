@@ -243,7 +243,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
                 else {
                     // Delay send
                     tur.error = e;
-                    tur.req.setContentHandler(ReqContentHandler.devNull);
+                    tur.req.setReqContentHandler(ReqContentHandler.devNull);
                     return NextSocketAction.Continue;
                 }
             }
@@ -266,7 +266,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
         if(cmd.length > 0) {
             int tid = tur.tourId;
             success =
-                    tur.req.postContent(
+                    tur.req.postReqContent(
                             Tour.TOUR_ID_NOCHECK,
                             cmd.data,
                             cmd.start,
@@ -419,7 +419,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
     }
 
     private void endReqContent(int checkId, Tour tur) throws IOException, HttpException {
-        tur.req.endContent(checkId);
+        tur.req.endReqContent(checkId);
     }
 
     void startTour(Tour tur) throws HttpException {
