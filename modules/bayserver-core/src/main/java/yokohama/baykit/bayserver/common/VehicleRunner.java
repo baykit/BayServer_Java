@@ -67,7 +67,7 @@ public class VehicleRunner {
             try {
                 exe.submit(() -> {
                     if(agent.aborted) {
-                        BayLog.error("Agent is aborted");
+                        BayLog.fatal("Agent is aborted");
                         return;
                     }
                     synchronized (runnings) {
