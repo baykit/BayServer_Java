@@ -275,13 +275,13 @@ public class TourReq implements Reusable {
         tour.checkTourId(checkId);
         if (ended)
             throw new Sink(tour + " Request content is already ended");
+        ended = true;
 
         if (bytesLimit >= 0 && bytesPosted != bytesLimit) {
             throw new ProtocolException("nvalid request data length: " + bytesPosted + "/" + bytesLimit);
         }
         if (contentHandler != null)
             contentHandler.onEndReqContent(tour);
-        ended = true;
     }
 
     /**
