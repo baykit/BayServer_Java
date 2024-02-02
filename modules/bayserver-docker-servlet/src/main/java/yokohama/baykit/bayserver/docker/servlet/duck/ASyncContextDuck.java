@@ -96,7 +96,7 @@ public abstract class ASyncContextDuck {
         Tour tur = (Tour) docker.reqHelper.getAttribute(req, ServletDocker.ATTR_TOUR);
         int tourId = (Integer)docker.reqHelper.getAttribute(req, ServletDocker.ATTR_TOUR_ID);
         try {
-            tur.res.endContent(tourId);
+            tur.res.endResContent(tourId);
         } catch (IOException e) {
             BayLog.error(e);
         }

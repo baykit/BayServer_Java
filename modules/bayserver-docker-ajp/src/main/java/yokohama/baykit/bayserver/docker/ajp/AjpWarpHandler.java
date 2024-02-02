@@ -160,7 +160,7 @@ public class AjpWarpHandler implements WarpHandler, AjpHandler {
             endResHeader(tur);
         }
 
-        boolean available = tur.res.sendContent(tur.tourId, cmd.chunk, 0, cmd.length);
+        boolean available = tur.res.sendResContent(tur.tourId, cmd.chunk, 0, cmd.length);
         contReadLen += cmd.length;
         if(available)
             return NextSocketAction.Continue;
@@ -231,7 +231,7 @@ public class AjpWarpHandler implements WarpHandler, AjpHandler {
 
     void endResContent(Tour tur) throws IOException {
         ship().endWarpTour(tur);
-        tur.res.endContent(Tour.TOUR_ID_NOCHECK);
+        tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
         resetState();
     }
 

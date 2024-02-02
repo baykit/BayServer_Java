@@ -129,7 +129,7 @@ public class H1WarpHandler implements WarpHandler, H1Handler {
             throw new ProtocolException("Content command not expected");
 
 
-        boolean available = tur.res.sendContent(Tour.TOUR_ID_NOCHECK, cmd.buffer, cmd.start, cmd.len);
+        boolean available = tur.res.sendResContent(Tour.TOUR_ID_NOCHECK, cmd.buffer, cmd.start, cmd.len);
         if (tur.res.bytesPosted == tur.res.bytesLimit) {
             endResContent(tur);
             return NextSocketAction.Continue;
@@ -262,7 +262,7 @@ public class H1WarpHandler implements WarpHandler, H1Handler {
 
     private void endResContent(Tour tur) throws IOException {
         ship().endWarpTour(tur);
-        tur.res.endContent(Tour.TOUR_ID_NOCHECK);
+        tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
         resetState();
         ship().keeping = true;
     }

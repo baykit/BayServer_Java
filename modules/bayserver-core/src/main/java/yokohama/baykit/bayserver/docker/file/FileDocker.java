@@ -73,7 +73,7 @@ public class FileDocker extends ClubBase {
         }
         else {
             FileContentHandler handler = new FileContentHandler(real);
-            tur.req.setContentHandler(handler);
+            tur.req.setReqContentHandler(handler);
         }
     }
 }

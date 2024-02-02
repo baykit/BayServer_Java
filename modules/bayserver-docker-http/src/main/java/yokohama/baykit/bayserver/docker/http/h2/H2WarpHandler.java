@@ -71,7 +71,7 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
     @Override
     public NextSocketAction handleData(CmdData cmd) throws IOException {
         Tour tur = ship().getTour(cmd.streamId);
-        boolean available = tur.res.sendContent(Tour.TOUR_ID_NOCHECK, cmd.data, cmd.start, cmd.length);
+        boolean available = tur.res.sendResContent(Tour.TOUR_ID_NOCHECK, cmd.data, cmd.start, cmd.length);
         if(!available)
             return NextSocketAction.Suspend;
 
@@ -273,7 +273,7 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
 
 
     private void endResContent(Tour tur) throws IOException {
-        tur.res.endContent(Tour.TOUR_ID_NOCHECK);
+        tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
         ship.endWarpTour(tur);
     }
 

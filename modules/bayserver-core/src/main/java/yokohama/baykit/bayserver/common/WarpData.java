@@ -36,7 +36,7 @@ public class WarpData implements ReqContentHandler {
     //////////////////////////////////////////////////////
 
     @Override
-    public synchronized final void onReadContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
+    public synchronized final void onReadReqContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
         BayLog.debug("%s onReadReqContent tur=%s len=%d", warpShip, tur, len);
         warpShip.checkShipId(warpShipId);
         int maxLen = warpShip.protocolHandler.maxReqPacketDataSize();
@@ -61,7 +61,7 @@ public class WarpData implements ReqContentHandler {
     }
 
     @Override
-    public synchronized final void onEndContent(Tour tur) throws IOException {
+    public synchronized final void onEndReqContent(Tour tur) throws IOException {
         BayLog.debug("%s endReqContent tur=%s", warpShip, tur);
         warpShip.checkShipId(warpShipId);
         warpShip.warpHandler().sendEnd(tur, false, () -> {
@@ -71,7 +71,7 @@ public class WarpData implements ReqContentHandler {
     }
 
     @Override
-    public synchronized final boolean onAbort(Tour tur) {
+    public synchronized final boolean onAbortReq(Tour tur) {
         BayLog.debug("%s onAbortReq tur=%s", warpShip, tur);
         warpShip.checkShipId(warpShipId);
         warpShip.abort(warpShipId);

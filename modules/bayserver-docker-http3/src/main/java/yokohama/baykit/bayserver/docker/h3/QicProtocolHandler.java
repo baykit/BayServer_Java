@@ -418,7 +418,7 @@ public class QicProtocolHandler
                 } else {
                     // Delay send
                     tur.error = e;
-                    tur.req.setContentHandler(ReqContentHandler.devNull);
+                    tur.req.setReqContentHandler(ReqContentHandler.devNull);
                     return;
                 }
             }
@@ -463,7 +463,7 @@ public class QicProtocolHandler
                 else {
                     int sid = ship.shipId;
                     boolean success =
-                            tur.req.postContent(
+                            tur.req.postReqContent(
                                     Tour.TOUR_ID_NOCHECK,
                                     buf,
                                     0,
@@ -559,7 +559,7 @@ public class QicProtocolHandler
         // read shutdown
         BayLog.debug("%s endReqContent", tur);
         con.streamShutdown(tur.req.key, Quiche.Shutdown.READ, 0L);
-        tur.req.endContent(checkId);
+        tur.req.endReqContent(checkId);
     }
 
     void startTour(Tour tur) throws HttpException {

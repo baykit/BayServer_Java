@@ -162,7 +162,7 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
             BayLog.error(BayMessage.get(Symbol.INT_NO_MORE_TOURS));
             tur = sip.getTour(DUMMY_KEY, true);
             tur.res.sendError(Tour.TOUR_ID_NOCHECK, HttpStatus.SERVICE_UNAVAILABLE, "No available tours");
-            tur.res.endContent(Tour.TOUR_ID_NOCHECK);
+            tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
             //sip.agent.reqShutdown();
             return NextSocketAction.Continue;
         }
@@ -215,7 +215,7 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
                 // Delay send
                 changeState(CommandState.ReadData);
                 tur.error = e;
-                tur.req.setContentHandler(ReqContentHandler.devNull);
+                tur.req.setReqContentHandler(ReqContentHandler.devNull);
                 return NextSocketAction.Continue;
             }
         }
@@ -233,7 +233,7 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
         Tour tur = sip.getTour(DUMMY_KEY);
         int sid = sip.shipId;
         boolean success =
-                tur.req.postContent(
+                tur.req.postReqContent(
                         Tour.TOUR_ID_NOCHECK,
                         cmd.data,
                         cmd.start,
@@ -323,7 +323,7 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
     }
 
     void endReqContent(Tour tur) throws IOException, HttpException {
-        tur.req.endContent(Tour.TOUR_ID_NOCHECK);
+        tur.req.endReqContent(Tour.TOUR_ID_NOCHECK);
         resetState();
     }
 

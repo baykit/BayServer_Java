@@ -28,7 +28,7 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
     }
 
     public void startTour() throws HttpException {
-        tour.req.setContentHandler(this);
+        tour.req.setReqContentHandler(this);
     }
 
     ///////////////////////////////////////////////////////////////////
@@ -70,7 +70,7 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
             String s = w.toString();
 
             BayLog.trace("%s Directory: send contents: len=%d", tour, s.length());
-            available = tour.res.sendContent(tour.tourId, s.getBytes(), 0, s.length());
+            available = tour.res.sendResContent(tour.tourId, s.getBytes(), 0, s.length());
 
             try {
                 while(!available) {
@@ -81,7 +81,7 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
                 throw new Sink(e.getMessage());
             }
 
-            tour.res.endContent(tour.tourId);
+            tour.res.endResContent(tour.tourId);
 
         } catch (IOException e) {
             BayLog.error(e);
@@ -98,13 +98,13 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
     ///////////////////////////////////////////////////////////////////
 
     @Override
-    public void onReadContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
+    public void onReadReqContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
         BayLog.debug("%s onReadContent(Ignore) len=%d", tur, len);
         tur.req.consumed(tur.tourId, len, lis);
     }
 
     @Override
-    public void onEndContent(Tour tur) throws IOException, HttpException {
+    public void onEndReqContent(Tour tur) throws IOException, HttpException {
         BayLog.debug("%s endContent", tur);
         abortable = false;
 
@@ -114,7 +114,7 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
     }
 
     @Override
-    public boolean onAbort(Tour tur) {
+    public boolean onAbortReq(Tour tur) {
         BayLog.debug("%s onAbort aborted=%s", tur, abortable);
         return abortable;
     }

@@ -130,7 +130,7 @@ public class CgiStdOutShip extends ReadOnlyShip {
         }
         else {
             if(buf.hasRemaining()) {
-                available = tour.res.sendContent(tourId, buf.array(), buf.position(), buf.limit() - buf.position());
+                available = tour.res.sendResContent(tourId, buf.array(), buf.position(), buf.limit() - buf.position());
             }
         }
 
