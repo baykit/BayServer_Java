@@ -271,11 +271,10 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
 
             if (reqContLen <= 0) {
                 endReqContent(curTourId, tur);
-                return NextSocketAction.Suspend; // end reading
             } else {
                 changeState(ReadContent);
-                return NextSocketAction.Continue;
             }
+            return NextSocketAction.Continue;
 
         } catch (HttpException e) {
             BayLog.debug(this + " Http error occurred: " + e);
@@ -331,7 +330,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
             else {
                 try {
                     endReqContent(tourId, tur);
-                    return NextSocketAction.Suspend;  // end reading
+                    return NextSocketAction.Continue;
                 } catch (HttpException e) {
                     tur.res.sendHttpException(tourId, e);
                     resetState();
