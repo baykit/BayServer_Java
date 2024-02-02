@@ -118,7 +118,7 @@ public final class WarpShip extends Ship {
                 else {
                     // NOT treat EOF as Error
                     BayLog.debug("%s EOF is not an error: tur=%s", this, tur);
-                    tur.res.endContent(Tour.TOUR_ID_NOCHECK);
+                    tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
                 }
             }
             catch(IOException e) {
@@ -173,7 +173,7 @@ public final class WarpShip extends Ship {
         int warpId = wHnd.nextWarpId();
         WarpData wdat = wHnd.newWarpData(warpId);
         BayLog.debug("%s new warp tour related to %s", wdat, tur);
-        tur.req.setContentHandler(wdat);
+        tur.req.setReqContentHandler(wdat);
 
         BayLog.debug("%s start: warpId=%d", wdat, warpId);
         if(tourMap.containsKey(warpId))
@@ -230,7 +230,7 @@ public final class WarpShip extends Ship {
                         tur.res.sendError(Tour.TOUR_ID_NOCHECK, status, msg);
                     }
                     else {
-                        tur.res.endContent(Tour.TOUR_ID_NOCHECK);
+                        tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
                     }
                 } catch (IOException e) {
                     BayLog.error(e);

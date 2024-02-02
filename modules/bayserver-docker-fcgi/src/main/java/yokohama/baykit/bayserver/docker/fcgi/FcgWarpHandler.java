@@ -174,7 +174,7 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
 
         if (pos < last) {
             if (state == ReadContent) {
-                boolean available = tur.res.sendContent(Tour.TOUR_ID_NOCHECK, data, pos, last - pos);
+                boolean available = tur.res.sendResContent(Tour.TOUR_ID_NOCHECK, data, pos, last - pos);
                 if(!available)
                     return NextSocketAction.Suspend;
             }
@@ -284,7 +284,7 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
 
     private void endReqContent(Tour tur) throws IOException {
         ship().endWarpTour(tur);
-        tur.res.endContent(Tour.TOUR_ID_NOCHECK);
+        tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
         resetState();
     }
 

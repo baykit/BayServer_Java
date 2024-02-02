@@ -82,7 +82,7 @@ class ServletTrain extends Train implements ReqContentHandler {
                 if (!asyncSupported || !asyncStarted) {
                     if(!tour.res.headerSent())
                         tour.res.sendHeaders(tour.tourId);
-                    tour.res.endContent(tour.tourId);
+                    tour.res.endResContent(tour.tourId);
                 }
             } catch (Throwable ex) {
                 BayLog.error(ex);
@@ -137,7 +137,7 @@ class ServletTrain extends Train implements ReqContentHandler {
     ///////////////////////////////////////////////////////////////////
 
     @Override
-    public void onReadContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) {
+    public void onReadReqContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) {
         BayLog.debug(tur + " Servlet:onReadReqContent: len=" + len);
 
         try {
@@ -150,7 +150,7 @@ class ServletTrain extends Train implements ReqContentHandler {
     }
 
     @Override
-    public void onEndContent(Tour tur) {
+    public void onEndReqContent(Tour tur) {
         BayLog.debug(tur + " Servlet:endReqContent");
         try {
             pipeOut.close();
@@ -161,7 +161,7 @@ class ServletTrain extends Train implements ReqContentHandler {
     }
 
     @Override
-    public boolean onAbort(Tour tur) {
+    public boolean onAbortReq(Tour tur) {
         BayLog.debug(tur + " Servlet:abort");
         try {
             pipeOut.close();

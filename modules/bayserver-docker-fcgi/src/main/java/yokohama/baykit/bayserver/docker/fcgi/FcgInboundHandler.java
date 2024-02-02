@@ -256,7 +256,7 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
                     // Delay send
                     changeState(ReadStdIn);
                     tur.error = e;
-                    tur.req.setContentHandler(ReqContentHandler.devNull);
+                    tur.req.setReqContentHandler(ReqContentHandler.devNull);
                     return NextSocketAction.Continue;
                 }
             }
@@ -336,7 +336,7 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
         else {
             int sid = ship().shipId;
             boolean success =
-                    tur.req.postContent(
+                    tur.req.postReqContent(
                             Tour.TOUR_ID_NOCHECK,
                             cmd.data,
                             cmd.start,
@@ -382,7 +382,7 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
     }
 
     void endReqContent(int checkId, Tour tur) throws IOException, HttpException {
-        tur.req.endContent(checkId);
+        tur.req.endReqContent(checkId);
         resetState();
     }
 

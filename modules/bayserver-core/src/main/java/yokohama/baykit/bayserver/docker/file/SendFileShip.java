@@ -50,7 +50,7 @@ public class SendFileShip extends ReadOnlyShip {
 
         fileWroteLen += buf.limit();
         BayLog.debug("%s read file %d bytes: total=%d", this, buf.limit(), fileWroteLen);
-        boolean available = tour.res.sendContent(tourId, buf.array(), 0, buf.limit());
+        boolean available = tour.res.sendResContent(tourId, buf.array(), 0, buf.limit());
 
         if(available) {
             return NextSocketAction.Continue;
@@ -75,7 +75,7 @@ public class SendFileShip extends ReadOnlyShip {
     public NextSocketAction notifyEof() {
         BayLog.debug("%s EOF", this);
         try {
-            tour.res.endContent(tourId);
+            tour.res.endResContent(tourId);
         }
         catch(IOException e) {
             BayLog.debug(e);
