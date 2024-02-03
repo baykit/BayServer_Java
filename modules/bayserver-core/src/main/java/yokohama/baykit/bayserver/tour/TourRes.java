@@ -303,7 +303,7 @@ public class TourRes implements Reusable {
     ////////////////////////////////////////////////////////////////////////////////
     public void sendHttpException(int checkId, HttpException e) throws IOException {
         if (e.status == HttpStatus.MOVED_TEMPORARILY || e.status == HttpStatus.MOVED_PERMANENTLY)
-            postRedirect(checkId, e.status, e.location);
+            sendRedirect(checkId, e.status, e.location);
         else
             sendError(checkId, e.status, e.getMessage(), e);
     }
@@ -351,7 +351,7 @@ public class TourRes implements Reusable {
                 headers.setStatus(status);
 
                 try {
-                    postErrorContent(body.toString());
+                    sendErrorContent(body.toString());
                 }
                 catch(IOException ex) {
                     BayLog.debug(e, "%s Error in sending error", this);
@@ -364,7 +364,7 @@ public class TourRes implements Reusable {
     }
 
 
-    private void postRedirect(int checkId, int status, String location) throws IOException {
+    private void sendRedirect(int checkId, int status, String location) throws IOException {
         tour.checkTourId(checkId);
 
         try {
@@ -380,7 +380,7 @@ public class TourRes implements Reusable {
                     String body = "<H2>Document Moved.</H2><BR>" + "<A HREF=\""
                             + location + "\">" + location + "</A>";
 
-                    postErrorContent(body);
+                    sendErrorContent(body);
                 }
                 catch(IOException e) {
                     tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
@@ -397,7 +397,7 @@ public class TourRes implements Reusable {
 
     }
 
-    private void postErrorContent(String content) throws IOException {
+    private void sendErrorContent(String content) throws IOException {
 
 
         // Set content type
