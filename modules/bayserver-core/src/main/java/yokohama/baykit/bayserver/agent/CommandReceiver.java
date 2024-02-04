@@ -1,17 +1,16 @@
-package yokohama.baykit.bayserver.agent.multiplexer;
+package yokohama.baykit.bayserver.agent;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.util.IOUtil;
 
 import java.io.IOException;
 import java.nio.channels.Pipe;
 
-class CommandReceiver {
+public class CommandReceiver {
     GrandAgent agent;
-    Pipe.SourceChannel comRecvChannel;
+    public Pipe.SourceChannel comRecvChannel;
     Pipe.SinkChannel comSendChannel;
-    boolean closed = false;
+    public boolean closed = false;
 
     public CommandReceiver(GrandAgent agent, Pipe.SourceChannel comRecvChannel, Pipe.SinkChannel comSendChannel) {
         this.agent = agent;
