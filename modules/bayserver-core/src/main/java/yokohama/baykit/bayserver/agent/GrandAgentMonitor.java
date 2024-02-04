@@ -93,12 +93,16 @@ public class GrandAgentMonitor {
         }
     }
 
-    public void send(int cmd) throws IOException {
+    /////////////////////////////////////////////////
+    // Private methods                             //
+    /////////////////////////////////////////////////
+
+    private void send(int cmd) throws IOException {
         BayLog.debug("%s send command %s pipe=%s", this, cmd, comSendChannel);
         IOUtil.writeInt32(comSendChannel, cmd);
     }
 
-    public void close()
+    private void close()
     {
         try {
             comSendChannel.close();

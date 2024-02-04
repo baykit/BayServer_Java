@@ -184,6 +184,11 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
 
     public void runCommandReceiver(Pipe.SourceChannel readCh, Pipe.SinkChannel writeCh) {
         commandReceiver = new CommandReceiver(agent, readCh, writeCh);
+        new Thread(() -> {
+            while (!commandReceiver.closed) {
+                commandReceiver.onPipeReadable();
+            }
+        }).start();
     }
 
     public void shutdown() {
