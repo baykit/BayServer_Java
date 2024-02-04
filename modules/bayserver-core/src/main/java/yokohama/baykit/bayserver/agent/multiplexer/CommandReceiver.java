@@ -11,7 +11,7 @@ class CommandReceiver {
     GrandAgent agent;
     Pipe.SourceChannel comRecvChannel;
     Pipe.SinkChannel comSendChannel;
-    boolean aborted = false;
+    boolean closed = false;
 
     public CommandReceiver(GrandAgent agent, Pipe.SourceChannel comRecvChannel, Pipe.SinkChannel comSendChannel) {
         this.agent = agent;
@@ -38,7 +38,6 @@ class CommandReceiver {
                     break;
                 case GrandAgent.CMD_SHUTDOWN:
                     agent.reqShutdown();
-                    aborted = true;
                     break;
                 case GrandAgent.CMD_ABORT:
                     IOUtil.writeInt32(comSendChannel, GrandAgent.CMD_OK);
@@ -51,6 +50,7 @@ class CommandReceiver {
             IOUtil.writeInt32(comSendChannel, GrandAgent.CMD_OK);
         } catch (IOException e) {
             BayLog.error(e, "%s Command thread aborted(end)", agent);
+            close();
         } finally {
             BayLog.debug("%s Command ended", this);
         }
@@ -63,6 +63,7 @@ class CommandReceiver {
         } catch (IOException e) {
             BayLog.error(e);
         }
+        close();
     }
 
     public void close() {
@@ -78,5 +79,6 @@ class CommandReceiver {
         catch (IOException e) {
             BayLog.fatal(e);
         }
+        closed = true;
     }
 }
