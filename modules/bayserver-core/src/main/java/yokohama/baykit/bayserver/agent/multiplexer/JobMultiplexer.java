@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.*;
+import yokohama.baykit.bayserver.agent.CommandReceiver;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.TimerHandler;
