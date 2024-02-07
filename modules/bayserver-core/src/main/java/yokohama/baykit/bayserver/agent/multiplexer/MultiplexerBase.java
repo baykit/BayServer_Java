@@ -71,12 +71,6 @@ public abstract class MultiplexerBase implements Multiplexer {
         throw new Sink();
     }
 
-    @Override
-    public void shutdown() {
-        throw new Sink();
-    }
-
-
 
     ////////////////////////////////////////////
     // Custom methods

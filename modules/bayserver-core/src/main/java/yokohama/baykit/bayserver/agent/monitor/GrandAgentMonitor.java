@@ -1,10 +1,10 @@
-package yokohama.baykit.bayserver.agent;
+package yokohama.baykit.bayserver.agent.monitor;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayMessage;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Symbol;
-import yokohama.baykit.bayserver.util.BlockingIOException;
+import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.util.IOUtil;
 
 import java.io.IOException;
@@ -14,7 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class GrandAgentMonitor {
+public class GrandAgentMonitor extends Thread {
 
     static int numAgents;
     static int curId;
@@ -40,8 +40,12 @@ public class GrandAgentMonitor {
         return "Monitor#" + agentId;
     }
 
-    public void onReadable()
-    {
+    /////////////////////////////////////////////////
+    // Implements Runnable                         //
+    /////////////////////////////////////////////////
+
+    @Override
+    public void run() {
         try {
             while(true) {
                 int res = IOUtil.readInt32(comRecvChannel);
@@ -54,13 +58,15 @@ public class GrandAgentMonitor {
                 }
             }
         }
-        catch(BlockingIOException e) {
-            BayLog.debug("%s No data", this);
-        }
-        catch(IOException e) {
-            BayLog.error(e);
+        catch (IOException e) {
+            BayLog.fatal(e);
         }
     }
+
+
+    /////////////////////////////////////////////////
+    // Custom methods                              //
+    /////////////////////////////////////////////////
 
     public void shutdown() throws IOException {
         BayLog.debug("%s send shutdown command", this);
@@ -146,13 +152,14 @@ public class GrandAgentMonitor {
         GrandAgent agt = GrandAgent.add(agtId, anchorable);
         agt.netMultiplexer.runCommandReceiver(sendPipe.source(), recvPipe.sink());
 
-        monitors.put(
+        GrandAgentMonitor mon = new GrandAgentMonitor(
                 agtId,
-                new GrandAgentMonitor(
-                        agtId,
-                        anchorable,
-                        sendPipe.sink(),
-                        recvPipe.source()));
+                anchorable,
+                sendPipe.sink(),
+                recvPipe.source());
+
+        monitors.put(agtId, mon);
+        mon.start();
 
         agt.netMultiplexer.start();
     }

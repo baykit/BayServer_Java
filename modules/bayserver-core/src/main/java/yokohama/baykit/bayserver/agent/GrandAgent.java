@@ -101,7 +101,10 @@ public class GrandAgent {
     ////////////////////////////////////////////
 
     public void shutdown() {
-        BayLog.debug("%s shutdown", this);
+        BayLog.debug("%s shutdown aborted=%b", this, aborted);
+        if(aborted)
+            return;
+
         aborted = true;
         netMultiplexer.shutdown();
 
@@ -113,14 +116,6 @@ public class GrandAgent {
     public void abort() {
         BayLog.fatal("%s abort", this);
     }
-
-    /**
-     * Another thread requests to shut down this GrandAgent
-     */
-    public void reqShutdown() {
-        aborted = true;
-    }
-
 
     public void reloadCert() {
         for(Port port : BayServer.anchorablePortMap.values()) {

@@ -171,6 +171,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
         }
         finally {
             BayLog.info("%s end", this);
+            doShutdown();
             agent.shutdown();
         }
     }
@@ -267,13 +268,14 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
         st.access();
     }
 
+    @Override
     public void runCommandReceiver(Pipe.SourceChannel readCh, Pipe.SinkChannel writeCh) {
         commandReceiver = new CommandReceiver(agent, readCh, writeCh);
     }
 
+    @Override
     public void shutdown() {
-        commandReceiver.end();
-        closeAll();
+        selector.wakeup();
     }
 
     ////////////////////////////////////////////
@@ -471,7 +473,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
     }
 
 
-    public void closeTimeoutSockets() {
+    private void closeTimeoutSockets() {
         if(rudders.isEmpty())
             return;
 
@@ -494,7 +496,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
 
     }
 
-    public synchronized void onBusy() {
+    private synchronized void onBusy() {
         BayLog.debug("%s AcceptHandler:onBusy", agent);
         for(Rudder rd: BayServer.anchorablePortMap.keySet()) {
             SelectionKey key = ((ServerSocketChannel)ChannelRudder.getChannel(rd)).keyFor(selector);
@@ -503,7 +505,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
         }
     }
 
-    public synchronized void onFree() {
+    private synchronized void onFree() {
         BayLog.debug("%s AcceptHandler:onFree isShutdown=%s", agent, agent.aborted);
         if(agent.aborted)
             return;
@@ -518,7 +520,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
         }
     }
 
-    public static String opMode(int mode) {
+    private static String opMode(int mode) {
         String modeStr = null;
         if ((mode & OP_ACCEPT) != 0)
             modeStr = "OP_ACCEPT";
@@ -529,6 +531,11 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
         if ((mode & OP_WRITE) != 0)
             modeStr = (modeStr == null) ? "OP_WRTIE" : modeStr + "|OP_WRITE";
         return modeStr;
+    }
+
+    private void doShutdown() {
+        commandReceiver.end();
+        closeAll();
     }
 
 

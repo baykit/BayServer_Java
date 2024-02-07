@@ -1,7 +1,7 @@
 package yokohama.baykit.bayserver.docker.ajp;
 
 import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.agent.GrandAgentMonitor;
+import yokohama.baykit.bayserver.agent.monitor.GrandAgentMonitor;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.common.InboundHandler;

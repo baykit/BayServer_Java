@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.agent.signal;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayMessage;
 import yokohama.baykit.bayserver.Symbol;
-import yokohama.baykit.bayserver.agent.GrandAgentMonitor;
+import yokohama.baykit.bayserver.agent.monitor.GrandAgentMonitor;
 import yokohama.baykit.bayserver.util.SysUtil;
 
 import java.io.*;
@@ -28,50 +28,12 @@ public class SignalAgent{
             COMMAND_ABORT
     };
     
-    
-    public static SignalAgent signalAgent;
+
     static Map<String, String> signalMap = new HashMap<>();
-
-    int port;
-    public ServerSocketChannel serverSocket;
-
-    public SignalAgent(int port) throws IOException {
-        this.port = port;
-        BayLog.info( BayMessage.get(Symbol.MSG_OPEN_CTL_PORT, port));
-        this.serverSocket = ServerSocketChannel.open();
-        this.serverSocket.bind(new InetSocketAddress("127.0.0.1", port));
-        this.serverSocket.configureBlocking(false);
-    }
-
-    public void onSocketReadable() {
-
-        try (SocketChannel s = serverSocket.accept()) {
-            s.socket().setSoTimeout(5);
-            BufferedReader br = new BufferedReader(new InputStreamReader(s.socket().getInputStream()));
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(s.socket().getOutputStream()));
-
-            String line = br.readLine();
-            BayLog.info(BayMessage.get(Symbol.MSG_COMMAND_RECEIVED, line));
-            handleCommand(line);
-            bw.write("OK");
-            bw.newLine();
-            bw.flush();
-        } catch (Exception e) {
-            BayLog.error(e);
-        }
-    }
-
-    public void close() {
-        try {
-            serverSocket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     public static void init(int port) throws IOException {
         if(port > 0) {
-            signalAgent = new SignalAgent(port);
+            runSignalAgent(port);
         }
         else {
             SignalProxy sp = SignalProxy.getProxy();
@@ -132,10 +94,6 @@ public class SignalAgent{
         return null;
     }
 
-    public static void term() {
-        if(signalAgent != null)
-            signalAgent.close();
-    }
     
     private static void initSignalMap() {
         if(!signalMap.isEmpty())
@@ -163,5 +121,38 @@ public class SignalAgent{
             signalMap.put("TERM", COMMAND_SHUTDOWN);
             signalMap.put("ABRT", COMMAND_ABORT);
         }
+    }
+
+    public static void runSignalAgent(int port) {
+        new Thread(() -> {
+            try (ServerSocketChannel serverSocket = ServerSocketChannel.open()){
+                BayLog.info( BayMessage.get(Symbol.MSG_OPEN_CTL_PORT, port));
+                serverSocket.bind(new InetSocketAddress("127.0.0.1", port));
+
+                while (true) {
+                    SocketChannel s =  serverSocket.accept();
+                    try {
+                        s.socket().setSoTimeout(5);
+                        BufferedReader br = new BufferedReader(new InputStreamReader(s.socket().getInputStream()));
+                        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(s.socket().getOutputStream()));
+
+                        String line = br.readLine();
+                        BayLog.info(BayMessage.get(Symbol.MSG_COMMAND_RECEIVED, line));
+                        handleCommand(line);
+                        bw.write("OK");
+                        bw.newLine();
+                        bw.flush();
+                    }
+                    catch (Exception e) {
+                        BayLog.error(e);
+                    }
+                }
+            }
+            catch (Throwable e) {
+                BayLog.fatal(e);
+            }
+
+            System.exit(0);
+        }).start();
     }
 }

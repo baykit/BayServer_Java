@@ -35,8 +35,9 @@ public class WriteChannelTaxi extends Taxi {
             output.write(buf);
         }
         catch(Throwable e) {
+            BayLog.fatal(e);
             close();
-            GrandAgent.get(agentId).reqShutdown();
+            GrandAgent.get(agentId).shutdown();
         }
     }
 
