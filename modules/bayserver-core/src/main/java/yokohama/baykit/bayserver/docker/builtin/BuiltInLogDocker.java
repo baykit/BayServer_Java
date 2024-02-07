@@ -116,14 +116,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
 
         @Override
         public void remove(int agentId) {
-            WritableByteChannel output = channels.get(agentId);
-            try {
-                output.close();
-            }
-            catch(IOException e) {
-                BayLog.error(e);
-            }
-            channels.remove(agentId);
+            multiplexer.reqClose(rudder);
         }
     }
 

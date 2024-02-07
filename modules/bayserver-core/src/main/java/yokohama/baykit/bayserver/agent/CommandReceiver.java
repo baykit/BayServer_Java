@@ -36,7 +36,7 @@ public class CommandReceiver {
                     agent.printUsage();
                     break;
                 case GrandAgent.CMD_SHUTDOWN:
-                    agent.reqShutdown();
+                    agent.shutdown();
                     break;
                 case GrandAgent.CMD_ABORT:
                     IOUtil.writeInt32(comSendChannel, GrandAgent.CMD_OK);

@@ -1,7 +1,7 @@
 package yokohama.baykit.bayserver;
 
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.GrandAgentMonitor;
+import yokohama.baykit.bayserver.agent.monitor.GrandAgentMonitor;
 import yokohama.baykit.bayserver.agent.signal.SignalAgent;
 import yokohama.baykit.bayserver.agent.signal.SignalSender;
 import yokohama.baykit.bayserver.common.*;
@@ -220,39 +220,6 @@ public class BayServer {
             SignalAgent.init(harbor.controlPort());
             createPidFile(SysUtil.pid());
 
-            while(!GrandAgentMonitor.monitors.isEmpty()) {
-                Selector sel = Selector.open();
-                HashMap<SelectableChannel, GrandAgentMonitor> pipToMonMap = new HashMap<>();
-                for(GrandAgentMonitor mon : GrandAgentMonitor.monitors.values()) {
-                    BayLog.debug("Monitoring pipe of %s", mon);
-                    mon.comRecvChannel.configureBlocking(false);
-                    mon.comRecvChannel.register(sel, SelectionKey.OP_READ);
-                    pipToMonMap.put(mon.comRecvChannel, mon);
-                }
-
-                ServerSocketChannel serverSkt = null;
-                if (SignalAgent.signalAgent != null) {
-                    serverSkt = SignalAgent.signalAgent.serverSocket;
-                    serverSkt.register(sel, SelectionKey.OP_ACCEPT);
-                }
-
-                int neys = sel.select();
-
-                for(SelectionKey key: sel.selectedKeys()) {
-                    if (key.channel() == serverSkt) {
-                        SignalAgent.signalAgent.onSocketReadable();
-                    }
-                    else {
-                        GrandAgentMonitor mon = pipToMonMap.get(key.channel());
-                        mon.onReadable();
-                    }
-                }
-
-                sel.close();
-            }
-
-            SignalAgent.term();
-            System.exit(0);
         } catch (Throwable e) {
             BayLog.fatal(e);
             System.exit(1);

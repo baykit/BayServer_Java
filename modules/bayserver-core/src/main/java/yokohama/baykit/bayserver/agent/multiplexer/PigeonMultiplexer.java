@@ -296,10 +296,14 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
                 return;
             }
 
-            st.listener.notifyError(e);
-            if(!(e instanceof IOException))
-                agent.reqShutdown();
-            nextAction(st, NextSocketAction.Close, true);
+            if(!(e instanceof IOException)) {
+                BayLog.fatal(e);
+                agent.shutdown();
+            }
+            else {
+                st.listener.notifyError(e);
+                nextAction(st, NextSocketAction.Close, true);
+            }
         }
 
     }
@@ -360,10 +364,14 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
                 return;
             }
 
-            st.listener.notifyError(e);
-            if(!(e instanceof IOException))
-                agent.reqShutdown();
-            nextAction(st, NextSocketAction.Close, true);
+            if(!(e instanceof IOException)) {
+                BayLog.fatal(e);
+                agent.shutdown();
+            }
+            else {
+                st.listener.notifyError(e);
+                nextAction(st, NextSocketAction.Close, true);
+            }
         }
 
     }

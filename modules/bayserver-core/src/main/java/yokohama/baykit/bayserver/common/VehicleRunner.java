@@ -78,7 +78,7 @@ public class VehicleRunner {
                     }
                     catch(Throwable e) {
                         BayLog.fatal(e);
-                        agent.reqShutdown();
+                        agent.shutdown();
                     }
                     finally {
                         synchronized (runnings) {
