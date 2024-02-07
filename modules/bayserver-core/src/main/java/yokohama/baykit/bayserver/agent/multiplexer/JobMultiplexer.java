@@ -319,8 +319,8 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                 st.listener.notifyError(e);
                 nextAct = NextSocketAction.Close;
             } catch (Throwable e) {
-                st.listener.notifyError(e);
-                agent.reqShutdown();
+                BayLog.fatal(e);
+                agent.shutdown();
                 nextAct = NextSocketAction.Close;
             }
 
