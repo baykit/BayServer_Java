@@ -31,7 +31,7 @@ public class SignalAgent{
 
     static Map<String, String> signalMap = new HashMap<>();
 
-    public static void init(int port) throws IOException {
+    public static void init(int port) {
         if(port > 0) {
             runSignalAgent(port);
         }
