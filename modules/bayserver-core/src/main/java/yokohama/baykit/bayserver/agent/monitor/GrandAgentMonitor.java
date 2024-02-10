@@ -51,7 +51,7 @@ public class GrandAgentMonitor extends Thread {
                 int res = IOUtil.readInt32(comRecvChannel);
                 if (res == GrandAgent.CMD_CLOSE) {
                     BayLog.debug("%s read Close", this);
-                    GrandAgentMonitor.agentAborted(agentId, anchorable);
+                    break;
                 }
                 else {
                     BayLog.debug("%s read OK: %d", this, res);
@@ -61,6 +61,7 @@ public class GrandAgentMonitor extends Thread {
         catch (IOException e) {
             BayLog.fatal(e);
         }
+        GrandAgentMonitor.agentAborted(agentId, anchorable);
     }
 
 

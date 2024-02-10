@@ -22,7 +22,7 @@ public class IOUtil {
         ByteBuffer b = ByteBuffer.allocate(4);
         int c = ch.read(b);
         if(b.hasRemaining()) {
-            throw new BlockingIOException();
+            throw new BlockingIOException("Read bytes: " + c + "/" + 4);
         }
         b.flip();
         return (((int)b.get() & 0xff) << 24) | (((int)b.get() & 0xff) << 16) | (((int)b.get() & 0xff) << 8) | ((int)b.get() & 0xff);
