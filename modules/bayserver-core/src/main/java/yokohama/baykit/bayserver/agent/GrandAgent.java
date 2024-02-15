@@ -33,6 +33,7 @@ public class GrandAgent {
     public int timeoutSec = SELECT_TIMEOUT_SEC;
     public final int agentId;
     public Multiplexer netMultiplexer;
+    public Multiplexer jobMultiplexer;
     public Multiplexer taxiMultiplexer;
     public SpinMultiplexer spinMultiplexer;
     public Multiplexer pegionMultiplexer;
@@ -48,6 +49,7 @@ public class GrandAgent {
         this.agentId = agentId;
 
         this.maxInboundShips = maxShips > 0 ? maxShips : 1;
+        this.jobMultiplexer = new JobMultiplexer(this, anchorable);
         this.taxiMultiplexer = new TaxiMultiplexer(this);
         this.spinMultiplexer = new SpinMultiplexer(this);
         this.pegionMultiplexer = new PigeonMultiplexer(this, anchorable);
@@ -58,7 +60,7 @@ public class GrandAgent {
                 break;
 
             case Job:
-                this.netMultiplexer = new JobMultiplexer(this, anchorable);
+                this.netMultiplexer = this.jobMultiplexer;
                 break;
 
             case Pigeon:

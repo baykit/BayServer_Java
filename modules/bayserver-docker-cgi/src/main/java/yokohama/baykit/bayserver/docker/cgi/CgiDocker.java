@@ -8,6 +8,7 @@ import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.bcf.ParseException;
 import yokohama.baykit.bayserver.common.EOFChecker;
+import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.common.SimpleDataListener;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.base.ClubBase;
@@ -128,6 +129,8 @@ public class CgiDocker extends ClubBase {
 
         GrandAgent agt = GrandAgent.get(tur.ship.agentId);
 
+        Multiplexer mpx = null;
+
         switch(BayServer.harbor.cgiMultiplexer()) {
             case Spin: {
                 EOFChecker eofChecker = () -> {
@@ -138,67 +141,17 @@ public class CgiDocker extends ClubBase {
                         return true;
                     }
                 };
-
-                outShip.init(outRd, tur.ship.agentId, tur, agt.spinMultiplexer, handler);
-                PlainTransporter tp = new PlainTransporter(false, bufsize);
-                agt.spinMultiplexer.addState(
-                        outRd,
-                        new RudderState(
-                                outRd,
-                                new SimpleDataListener(outShip),
-                                tp));
-
-                errShip.init(errRd, tur.ship.agentId, handler);
-                tp = new PlainTransporter(false, bufsize);
-                agt.spinMultiplexer.addState(
-                        errRd,
-                        new RudderState(
-                                errRd,
-                                new SimpleDataListener(errShip),
-                                tp));
-
-                int sipId = tur.ship.shipId;
-                tur.res.setConsumeListener((len, resume) -> {
-                    if(resume) {
-                        outShip.resumeRead(sipId);
-                    }
-                });
-
-                agt.spinMultiplexer.reqRead(outRd);
-                agt.spinMultiplexer.reqRead(errRd);
+                mpx = agt.spinMultiplexer;
                 break;
             }
 
-            case Taxi:{
-                PlainTransporter outTp = new PlainTransporter(true, bufsize);
-                outShip.init(outRd, tur.ship.agentId, tur, agt.taxiMultiplexer, handler);
-                agt.taxiMultiplexer.addState(
-                        outRd,
-                        new RudderState(
-                                outRd,
-                                new SimpleDataListener(outShip),
-                                outTp));
+            case Job: {
+                mpx = agt.jobMultiplexer;
+                break;
+            }
 
-                int sipId = tur.ship.shipId;
-                tur.res.setConsumeListener((len, resume) -> {
-                    if(resume) {
-                        outShip.resumeRead(sipId);
-                    }
-                });
-
-                agt.taxiMultiplexer.reqRead(outRd);
-
-
-                PlainTransporter errTp = new PlainTransporter(true, bufsize);
-                errShip.init(errRd, tur.ship.agentId, handler);
-                agt.taxiMultiplexer.addState(
-                        errRd,
-                        new RudderState(
-                                errRd,
-                                new SimpleDataListener(errShip),
-                                errTp));
-                agt.taxiMultiplexer.reqRead(errRd);
-
+            case Taxi: {
+                mpx = agt.taxiMultiplexer;
                 break;
             }
 
@@ -211,6 +164,37 @@ public class CgiDocker extends ClubBase {
 
             default:
                 throw new Sink();
+        }
+
+        if (mpx != null) {
+            PlainTransporter outTp = new PlainTransporter(false, bufsize);
+            outShip.init(outRd, tur.ship.agentId, tur, mpx, handler);
+
+            mpx.addState(
+                    outRd,
+                    new RudderState(
+                            outRd,
+                            new SimpleDataListener(outShip),
+                            outTp));
+
+            int sipId = tur.ship.shipId;
+            tur.res.setConsumeListener((len, resume) -> {
+                if(resume) {
+                    outShip.resumeRead(sipId);
+                }
+            });
+
+            PlainTransporter errTp = new PlainTransporter(false, bufsize);
+            errShip.init(errRd, tur.ship.agentId, handler);
+            mpx.addState(
+                    errRd,
+                    new RudderState(
+                            errRd,
+                            new SimpleDataListener(errShip),
+                            errTp));
+
+            mpx.reqRead(outRd);
+            mpx.reqRead(errRd);
         }
     }
 
