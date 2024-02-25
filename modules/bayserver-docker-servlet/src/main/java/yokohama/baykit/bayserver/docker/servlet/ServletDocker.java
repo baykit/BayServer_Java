@@ -1,9 +1,6 @@
 package yokohama.baykit.bayserver.docker.servlet;
 
-import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.BayServer;
-import yokohama.baykit.bayserver.ConfigException;
-import yokohama.baykit.bayserver.HttpException;
+import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
@@ -368,7 +365,7 @@ public class ServletDocker extends ClubBase {
                 TrainRunner.post(tour.ship.agentId, train);
             }
         }
-        catch (HttpException e) {
+        catch (HttpException | Sink e) {
             throw e;
         }
         catch (ServletExceptionDuck e) {
