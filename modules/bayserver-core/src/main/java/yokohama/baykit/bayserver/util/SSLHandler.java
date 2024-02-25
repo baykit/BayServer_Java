@@ -2,146 +2,170 @@ package yokohama.baykit.bayserver.util;
 
 import yokohama.baykit.bayserver.BayLog;
 
-import javax.net.ssl.*;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngineResult;
+import java.io.EOFException;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import static javax.net.ssl.SSLEngineResult.HandshakeStatus.*;
+import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
+import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING;
 
-public class SSLHandler {
+public class SSLHandler implements Reusable {
 
-    public final SSLEngine engine;
-    int appBufSize;
-    int netBufSize;
+    public interface Reader {
+        void read(ByteBuffer buf) throws IOException;
+    }
 
-    public SSLHandler(SSLContext ctx, String[] appProtocols, boolean serverMode) {
-        this.engine = ctx.createSSLEngine();
-        engine.setUseClientMode(!serverMode);
-        appBufSize = engine.getSession().getApplicationBufferSize();
-        netBufSize = engine.getSession().getPacketBufferSize();
-        if(appProtocols != null) {
-            SSLParameters params = new SSLParameters();
-            SSLUtil.setApplicationProtocols(params, new String[]{"h2"});
-            engine.setSSLParameters(params);
+    public interface Writer {
+        void write(ByteBuffer buf) throws IOException;
+    }
+
+    public enum HandshakeState {
+        NeedRead,
+        Done,
+        DoneRemains,
+    }
+
+    public final SSLContext ctx;
+    SSLWrapper sslWrapper;
+    ByteBuffer netIn, netOut, appIn;
+    final boolean traceSSL;
+
+    public SSLHandler(SSLContext ctx,  String[] appProtocols, boolean serverMode, boolean traceSSL) {
+        this.ctx = ctx;
+        this.sslWrapper = new SSLWrapper(ctx, appProtocols, serverMode);
+        this.traceSSL = traceSSL;
+
+        if (netIn == null)
+            netIn = ByteBuffer.allocate(sslWrapper.engine.getSession().getPacketBufferSize());
+        netIn.limit(0);
+        if (netOut == null)
+            netOut = ByteBuffer.allocate(sslWrapper.engine.getSession().getPacketBufferSize());
+        netOut.limit(0);
+        if (appIn == null)
+            appIn = ByteBuffer.allocate(sslWrapper.engine.getSession().getApplicationBufferSize());
+    }
+
+    @Override
+    public void reset() {
+        netIn.limit(0);
+        netOut.limit(0);
+        appIn.clear();
+        sslWrapper = null;
+    }
+
+    public HandshakeState handshake(Reader r, Writer w, boolean readable) throws IOException {
+        if(readable)
+            r.read(netIn);
+
+        SSLEngineResult.HandshakeStatus status = sslWrapper.engine.getHandshakeStatus();
+        if(status == NOT_HANDSHAKING) {
+            sslWrapper.engine.beginHandshake();
+            status = sslWrapper.engine.getHandshakeStatus();
         }
-    }
+        while (true) {
+            if(traceSSL) {
+                BayLog.info(this + " SSL: handshake status: " + status);
+            }
 
-    public ByteBuffer allocAppBuf() {
-        return ByteBuffer.allocate(appBufSize);
-    }
+            if (status == null) {
+                throw new EOFException(this + " SSL Connection is finished by peer.");
+            }
 
-    public ByteBuffer allocNetBuf() {
-        return ByteBuffer.allocate(netBufSize);
-    }
+            switch (status) {
+                case NEED_UNWRAP: // need to read
+                    if (!netIn.hasRemaining()) {
+                        return HandshakeState.NeedRead;
+                    }
 
-    /**
-     * unwrap data
-     * @param netIn
-     * @param appIn
-     * @return NOT_HANDSHAKING, NEED_UNWRAP or NEED_WRAP
-     * @throws SSLException
-     */
-    public SSLEngineResult.HandshakeStatus unwrap(ByteBuffer netIn, ByteBuffer appIn) throws SSLException {
-        if(BayLog.isTraceMode())
-            BayLog.trace("SSL: unwrap");
+                    status = sslWrapper.unwrap(netIn, appIn);
+                    continue;
 
-        while(true) {
-            int oldPos = appIn.position();
-            int oldLimit = appIn.limit();
-            // Unwrap net buffer data and put it into application buffer
-            SSLEngineResult res = engine.unwrap(netIn, appIn);
-            switch (res.getStatus()) {
-                case BUFFER_OVERFLOW: {
-                    ByteBuffer newAppIn = ByteBuffer.allocate(appIn.capacity() * 2);
-                    newAppIn.put(appIn.array(), 0, appIn.position());
-                    appIn = newAppIn;
+                case NEED_WRAP: {
+                    ByteBuffer appOut = ByteBuffer.allocate(0);
+                    netOut.clear();
+                    status = sslWrapper.wrap(appOut, netOut);
+                    netOut.flip();
+
+                    // In handshaking, maybe we can write data without blocking because packet size is small
+                    w.write(netOut);
                     continue;
                 }
 
-                case BUFFER_UNDERFLOW:
-                    netIn.compact();
-                    return res.getHandshakeStatus();
+                case FINISHED:
+                case NOT_HANDSHAKING:  // TLSv1.3
+                    appIn.flip();
+                    String pcl = SSLUtil.getApplicationProtocol(sslWrapper.engine);
+                    if(netIn.hasRemaining())
+                        netIn.compact();
 
-                case CLOSED:
-                    return null;
-
-                case OK: {
-                    if (res.getHandshakeStatus() == NOT_HANDSHAKING) {
-                        if(netIn.hasRemaining())
-                            continue;
-                        else
-                            return NOT_HANDSHAKING;
-                    }
-                    else {
-                        SSLEngineResult.HandshakeStatus hstat = handshake(res);
-                        if (hstat == FINISHED && netIn.hasRemaining())
-                            continue;
-                        else
-                            return hstat;
-                    }
-                }
+                    if(netIn.hasRemaining() || appIn.hasRemaining())
+                        return HandshakeState.DoneRemains;
+                    else
+                        return HandshakeState.Done;
 
                 default:
+                    throw new IOException("Invalid status in handshaking: " + status.toString());
+            }
+        }
+    }
+
+
+    public ByteBuffer onReadable(Reader r) throws IOException{
+
+        r.read(netIn);
+
+        if(appIn.hasRemaining()) {
+            BayLog.debug("Remains appIn data (may be generated on handshaking)");
+            return appIn;
+        }
+
+        appIn.clear();
+        SSLEngineResult.HandshakeStatus status = sslWrapper.unwrap(netIn, appIn);
+        if (status == null)
+            throw new EOFException("SSL connection closed by peer");
+        if (status != NOT_HANDSHAKING && status != FINISHED)
+            throw new IllegalStateException("Illegal handshake status: " + status);
+        appIn.flip();
+        if(traceSSL)
+            BayLog.info(this + " SSL: Decrypt " + netIn.position() + "->" + appIn.limit() + " bytes");
+
+        return appIn;
+    }
+
+    public boolean onWritable(Writer w, ByteBuffer appOut) throws IOException {
+        do {
+            if (!netOut.hasRemaining()) {
+                netOut.clear();
+                SSLEngineResult.HandshakeStatus hstatus = sslWrapper.wrap(appOut, netOut);
+                if (hstatus != NOT_HANDSHAKING)
                     throw new IllegalStateException();
+
+                if (traceSSL)
+                    BayLog.info(this + " SSL: Encrypt " + appOut.position() + " bytes -> " + netOut.position() + " bytes");
+
+                netOut.flip();
             }
+
+            w.write(netOut);
+
+        } while (appOut.hasRemaining() && !netOut.hasRemaining());
+
+        if (appOut.hasRemaining()) {
+            // if application data remains, challenge on next writable chance.
+            return false;
         }
+
+        if (netOut.hasRemaining()) {
+            // if Network data remains, challenge on next writable chance.
+            return false;
+        }
+
+        return true;
     }
 
-    /**
-     * wrap data
-     * @param appOut
-     * @param netOut
-     * @return NOT_HANDSHAKING, NEED_UNWRAP, NEED_WRAP or FINISHED
-     * @throws SSLException
-     */
-    public SSLEngineResult.HandshakeStatus wrap(ByteBuffer appOut, ByteBuffer netOut) throws SSLException {
-        //if(BayLog.isTraceMode())
-        //    BayLog.trace ("SSL: wrap");
-
-        // Wrap application output data and put it into network output buffer
-        SSLEngineResult res = engine.wrap(appOut, netOut);
-        if (res.getStatus() != SSLEngineResult.Status.OK)
-            throw new SSLException("wrap: Illegal SSL Engine status: " + res.getStatus());
-
-        if(res.getHandshakeStatus() == NOT_HANDSHAKING)
-            return NOT_HANDSHAKING;
-
-        SSLEngineResult.HandshakeStatus hstat = handshake(res);
-        return hstat;
-    }
-
-
-    private SSLEngineResult.HandshakeStatus handshake(SSLEngineResult res) throws SSLException {
-        SSLEngineResult.HandshakeStatus oldStat = res.getHandshakeStatus();
-        SSLEngineResult.HandshakeStatus hstat = oldStat;
-        switch(hstat) {
-            case NOT_HANDSHAKING:
-                break;
-
-            case NEED_TASK:
-                hstat = doTasks();
-                break;
-
-            case FINISHED:
-                break;
-
-            case NEED_WRAP: {
-                break;
-            }
-        }
-        if(BayLog.isTraceMode())
-            BayLog.trace("SSL: handshake: " + oldStat + "->" + hstat);
-        return hstat;
-    }
-
-    private SSLEngineResult.HandshakeStatus doTasks() {
-        while (true) {
-            Runnable rbl = engine.getDelegatedTask();
-            if(rbl == null)
-                break;
-            if(BayLog.isTraceMode())
-                BayLog.trace("Handshake: Run delegated task");
-            rbl.run();
-        }
-        return engine.getHandshakeStatus();
+    public String getApplicationProtocol() {
+        return SSLUtil.getApplicationProtocol(sslWrapper.engine);
     }
 }
