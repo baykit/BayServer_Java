@@ -6,6 +6,7 @@ import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
+import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.common.SimpleDataListener;
 import yokohama.baykit.bayserver.rudder.AsynchronousFileChannelRudder;
 import yokohama.baykit.bayserver.rudder.ReadableByteChannelRudder;
@@ -94,71 +95,63 @@ public class FileContentHandler implements ReqContentHandler {
             tur.res.sendHeaders(Tour.TOUR_ID_NOCHECK);
 
             int bufsize = tur.ship.protocolHandler.maxResPacketDataSize();
+            GrandAgent agt = GrandAgent.get(tur.ship.agentId);
+            Multiplexer mpx = null;
+            Rudder rd = null;
 
             switch(BayServer.harbor.fileMultiplexer()) {
                 case Spin: {
                     AsynchronousFileChannel ch =
                             AsynchronousFileChannel.open(Paths.get(file.getPath()), StandardOpenOption.READ);
-                    Rudder rd = new AsynchronousFileChannelRudder(ch);
+                    rd = new AsynchronousFileChannelRudder(ch);
+                    mpx = agt.spinMultiplexer;
 
-                    GrandAgent agt = GrandAgent.get(tur.ship.agentId);
-                    sendFileShip.init(rd, agt.netMultiplexer, tur);
-                    agt.spinMultiplexer.addState(rd, new RudderState(rd, new SimpleDataListener(sendFileShip)));
+                    break;
+                }
 
-                    int sid = sendFileShip.id();
-                    tur.res.setConsumeListener((len, resume) -> {
-                        if(resume) {
-                            sendFileShip.resumeRead(sid);
-                        }
-                    });
+                case Job:{
+                    InputStream in = new FileInputStream(file);
+                    ReadableByteChannel ch = Channels.newChannel(in);
+                    rd = new ReadableByteChannelRudder(ch);
+                    mpx = agt.jobMultiplexer;
 
-                    agt.spinMultiplexer.reqRead(rd);
                     break;
                 }
 
                 case Taxi:{
                     InputStream in = new FileInputStream(file);
                     ReadableByteChannel ch = Channels.newChannel(in);
-                    Rudder rd = new ReadableByteChannelRudder(ch);
+                    rd = new ReadableByteChannelRudder(ch);
+                    mpx = agt.taxiMultiplexer;
 
-                    GrandAgent agt = GrandAgent.get(tur.ship.agentId);
-                    sendFileShip.init(rd, agt.taxiMultiplexer, tur);
-                    agt.taxiMultiplexer.addState(rd, new RudderState(rd, new SimpleDataListener(sendFileShip)));
-
-                    int sid = sendFileShip.id();
-                    tur.res.setConsumeListener((len, resume) -> {
-                        if(resume) {
-                            sendFileShip.resumeRead(sid);
-                        }
-                    });
-
-                    agt.taxiMultiplexer.reqRead(rd);
                     break;
                 }
 
                 case Pigeon: {
                     AsynchronousFileChannel ch =
                             AsynchronousFileChannel.open(Paths.get(file.getPath()), StandardOpenOption.READ);
-                    Rudder rd = new AsynchronousFileChannelRudder(ch);
+                    rd = new AsynchronousFileChannelRudder(ch);
+                    mpx = agt.pegionMultiplexer;
 
-                    GrandAgent agt = GrandAgent.get(tur.ship.agentId);
-                    sendFileShip.init(rd, agt.pegionMultiplexer, tur);
-                    agt.pegionMultiplexer.addState(rd, new RudderState(rd, new SimpleDataListener(sendFileShip)));
-
-                    int sid = sendFileShip.id();
-                    tur.res.setConsumeListener((len, resume) -> {
-                        if(resume) {
-                            sendFileShip.resumeRead(sid);
-                        }
-                    });
-
-                    agt.pegionMultiplexer.reqRead(rd);
                     break;
                 }
 
                 default:
                     throw new Sink();
             }
+
+            sendFileShip.init(rd, mpx, tur);
+            mpx.addState(rd, new RudderState(rd, new SimpleDataListener(sendFileShip)));
+
+            int sid = sendFileShip.id();
+            tur.res.setConsumeListener((len, resume) -> {
+                if(resume) {
+                    sendFileShip.resumeRead(sid);
+                }
+            });
+
+            mpx.reqRead(rd);
+
 
         } catch (IOException e) {
             BayLog.error(e);
