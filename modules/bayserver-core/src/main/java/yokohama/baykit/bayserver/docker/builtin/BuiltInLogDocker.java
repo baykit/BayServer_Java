@@ -31,7 +31,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 
 public class BuiltInLogDocker extends DockerBase implements Log {
 
@@ -128,11 +127,6 @@ public class BuiltInLogDocker extends DockerBase implements Log {
     String filePrefix;
     String fileExt;
 
-    /**
-     *  Logger for each agent.
-     */
-    Map<Integer, WritableByteChannel> channels = new HashMap<>();
-
     /** Log format */
     String format;
 
@@ -143,8 +137,6 @@ public class BuiltInLogDocker extends DockerBase implements Log {
 
     /** Multiplexer to write to file */
     Multiplexer multiplexer;
-
-    static String lineSep = System.getProperty("line.separator");
 
     static {
         // Create mapping table
