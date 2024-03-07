@@ -267,7 +267,7 @@ public class BayServer {
                     }
                 } catch (SocketException e) {
                     BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
-                    return;
+                    throw e;
                 }
             }
             else {
