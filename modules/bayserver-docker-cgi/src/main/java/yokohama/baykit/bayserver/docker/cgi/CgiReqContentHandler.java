@@ -125,7 +125,6 @@ public class CgiReqContentHandler implements ReqContentHandler {
         }
 
         try {
-
             process.destroy();
             BayLog.trace(tour + " CGITask: process ended");
 
@@ -141,7 +140,7 @@ public class CgiReqContentHandler implements ReqContentHandler {
             }
         }
         catch(IOException e) {
-            BayLog.error(e);
+            BayLog.debug(e);
         }
     }
 }
