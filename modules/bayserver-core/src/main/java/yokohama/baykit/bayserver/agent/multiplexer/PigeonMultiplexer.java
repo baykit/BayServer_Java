@@ -292,7 +292,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
             RudderState st = findRudderState(rd);
             if (st == null || st.closing) {
                 // channel is already closed
-                BayLog.debug("%s Rudder is already closed: rd=%s", agent, rd);
+                BayLog.debug("%s Rudder is already closed: err=%s rd=%s", agent, e, rd);
                 return;
             }
 
@@ -334,8 +334,13 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
 
                 unit.done();
 
-            } catch (IOException e) {
+            }
+            catch (IOException e) {
                 st.listener.notifyError(e);
+            }
+            catch (Throwable e) {
+                BayLog.fatal(e);
+                agent.shutdown();
             }
 
             boolean writeMore = true;
@@ -360,7 +365,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
             RudderState st = findRudderState(rd);
             if (st == null || st.closing) {
                 // channel is already closed
-                BayLog.debug("%s Rudder is already closed: rd=%s", agent, rd);
+                BayLog.debug("%s Rudder is already closed: err=%s rd=%s", agent, e, rd);
                 return;
             }
 
