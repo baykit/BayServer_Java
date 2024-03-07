@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.Pipe;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -113,6 +114,9 @@ public abstract class MultiplexerBase implements Multiplexer {
 
         try {
             chState.rudder.close();
+        }
+        catch(AsynchronousCloseException e) {
+            BayLog.debug("Close error: %s", e);
         }
         catch(IOException e) {
             BayLog.error(e);
