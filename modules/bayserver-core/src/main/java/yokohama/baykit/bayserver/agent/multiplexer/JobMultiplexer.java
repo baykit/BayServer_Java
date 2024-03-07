@@ -263,6 +263,15 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                     try {
                         ch = ((ServerSocketChannel) ChannelRudder.getChannel(rd)).accept();
                         BayLog.debug("%s Accepted ch=%s", agent, ch);
+                        if(agent.aborted) {
+                            BayLog.error("%s Agent is not alive (close)", agent);
+                            try {
+                                ch.close();
+                            }
+                            catch(IOException e) {
+                            }
+                            return;
+                        }
 
                         SocketChannelRudder clientRd = new SocketChannelRudder(ch);
 
@@ -330,7 +339,7 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
 
                 } catch (AsynchronousCloseException e) {
                     BayLog.debug(e, "%s Closed by another thread: %s", this, st.rudder);
-                    nextAct = NextSocketAction.Close;
+                    return; // Do not do next action
                 } catch (IOException e) {
                     st.listener.notifyError(e);
                     nextAct = NextSocketAction.Close;
@@ -392,11 +401,11 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                     }
 
                 } catch (IOException e) {
-                    st.listener.notifyError(e);
                     if(st.closed) {
                         BayLog.debug(e, "Rudder is closed. Ignore error");
                     }
                     else {
+                        st.listener.notifyError(e);
                         nextAction(st, NextSocketAction.Close, false);
                     }
                 }
