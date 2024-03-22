@@ -3,16 +3,13 @@ package yokohama.baykit.bayserver.docker.builtin;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
-import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
-import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Log;
 import yokohama.baykit.bayserver.docker.base.DockerBase;
-import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.rudder.AsynchronousFileChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.rudder.WritableByteChannelRudder;
@@ -23,7 +20,6 @@ import yokohama.baykit.bayserver.util.StringUtil;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.WritableByteChannel;
@@ -63,49 +59,9 @@ public class BuiltInLogDocker extends DockerBase implements Log {
                         throw new Sink("Not supported");
                 }
 
-                RudderState st = new RudderState(rudder, new DataListener() {
-                    @Override
-                    public NextSocketAction notifyConnect() throws IOException {
-                        throw new Sink();
-                    }
-
-                    @Override
-                    public NextSocketAction notifyRead(ByteBuffer buf, InetSocketAddress adr) throws IOException {
-                        throw new Sink();
-                    }
-
-                    @Override
-                    public NextSocketAction notifyEof() {
-                        throw new Sink();
-                    }
-
-                    @Override
-                    public NextSocketAction notifyHandshakeDone(String protocol) throws IOException {
-                        throw new Sink();
-                    }
-
-                    @Override
-                    public boolean notifyProtocolError(ProtocolException e) throws IOException {
-                        throw new Sink();
-                    }
-
-                    @Override
-                    public void notifyError(Throwable e) {
-                        BayLog.error(e);
-                    }
-
-                    @Override
-                    public void notifyClose() {
-
-                    }
-
-                    @Override
-                    public boolean checkTimeout(int durationSec) {
-                        return false;
-                    }
-                });
+                RudderState st = new RudderState(rudder);
                 st.bytesWrote = size;
-                multiplexer.addState(rudder, st);
+                multiplexer.addRudderState(rudder, st);
             }
             catch(IOException e) {
                 BayLog.fatal(BayMessage.get(Symbol.INT_CANNOT_OPEN_LOG_FILE, fileName));

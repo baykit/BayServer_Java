@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.docker.cgi;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.common.ReadOnlyShip;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.tour.Tour;
@@ -33,8 +33,8 @@ public class CgiStdOutShip extends ReadOnlyShip {
     /////////////////////////////////////
     // Initialize methods
     /////////////////////////////////////
-    public void init(Rudder rd, int agentId, Tour tur, Multiplexer mpx, CgiReqContentHandler handler) {
-        super.init(agentId, rd, mpx);
+    public void init(Rudder rd, int agentId, Tour tur, Transporter tp, CgiReqContentHandler handler) {
+        super.init(agentId, rd, tp);
         this.handler = handler;
         this.tour = tur;
         this.tourId = tur.tourId;

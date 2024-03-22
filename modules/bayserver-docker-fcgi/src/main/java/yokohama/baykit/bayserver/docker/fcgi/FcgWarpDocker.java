@@ -2,15 +2,15 @@ package yokohama.baykit.bayserver.docker.fcgi;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.ConfigException;
-import yokohama.baykit.bayserver.agent.multiplexer.TransporterBase;
-import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
 import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.base.WarpBase;
+import yokohama.baykit.bayserver.protocol.PacketStore;
+import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
+import yokohama.baykit.bayserver.ship.Ship;
 import yokohama.baykit.bayserver.util.IOUtil;
 
 import java.io.IOException;
@@ -66,8 +66,15 @@ public class FcgWarpDocker extends WarpBase implements FcgDocker {
     }
 
     @Override
-    protected TransporterBase newTransporter(GrandAgent agent, SocketChannel ch) throws IOException {
-        return new PlainTransporter(false, IOUtil.getSockRecvBufSize(ch));
+    protected PlainTransporter newTransporter(GrandAgent agt, SocketChannel ch, Ship sip) throws IOException {
+        PlainTransporter tp =
+                new PlainTransporter(
+                        agt.netMultiplexer,
+                        sip,
+                        false,
+                        IOUtil.getSockRecvBufSize(ch),
+                        false);
+        return tp;
     }
 
     static {

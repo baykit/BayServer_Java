@@ -18,7 +18,7 @@ public class PacketPacker<P extends Packet<?>> implements Reusable {
         if(listener == null)
             throw new NullPointerException();
 
-        sip.multiplexer.reqWrite(
+        sip.transporter.reqWrite(
                 sip.rudder,
                 ByteBuffer.wrap(pkt.buf, 0, pkt.bufLen),
                 null,

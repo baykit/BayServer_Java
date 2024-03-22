@@ -34,7 +34,7 @@ public enum H2Type {
 
     public static H2Type getType(int no) {
         if(no < 0 || no > types.length)
-            throw new ArrayIndexOutOfBoundsException("Invalid H2 type: " + no);
+            return null;
         return types[no];
     }
 }

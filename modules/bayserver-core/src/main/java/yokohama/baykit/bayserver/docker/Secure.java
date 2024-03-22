@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.docker;
 
 import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
+import yokohama.baykit.bayserver.ship.Ship;
 
 public interface Secure {
 
@@ -8,5 +9,5 @@ public interface Secure {
 
     void reloadCert() throws Exception;
 
-    Transporter createTransporter();
+    Transporter newTransporter(int agtId, Ship ship);
 }

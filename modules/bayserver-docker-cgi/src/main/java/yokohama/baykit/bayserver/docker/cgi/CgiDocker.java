@@ -9,7 +9,6 @@ import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.bcf.ParseException;
 import yokohama.baykit.bayserver.common.EOFChecker;
 import yokohama.baykit.bayserver.common.Multiplexer;
-import yokohama.baykit.bayserver.common.SimpleDataListener;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.base.ClubBase;
 import yokohama.baykit.bayserver.rudder.ChannelRudder;
@@ -119,9 +118,6 @@ public class CgiDocker extends ClubBase {
         tur.req.setReqContentHandler(handler);
         handler.startTour(env);
 
-        CgiStdOutShip outShip = new CgiStdOutShip();
-        CgiStdErrShip errShip = new CgiStdErrShip();
-
         ReadableByteChannel outCh = Channels.newChannel(handler.process.getInputStream());
         ReadableByteChannel errCh = Channels.newChannel(handler.process.getErrorStream());
         ChannelRudder outRd = new ReadableByteChannelRudder(outCh);
@@ -167,14 +163,16 @@ public class CgiDocker extends ClubBase {
         }
 
         if (mpx != null) {
-            PlainTransporter outTp = new PlainTransporter(false, bufsize);
-            outShip.init(outRd, tur.ship.agentId, tur, mpx, handler);
+            CgiStdOutShip outShip = new CgiStdOutShip();
+            PlainTransporter outTp = new PlainTransporter(agt.netMultiplexer, outShip, false, bufsize, false);
+            outTp.init();
 
-            mpx.addState(
+            outShip.init(outRd, tur.ship.agentId, tur, outTp, handler);
+
+            mpx.addRudderState(
                     outRd,
                     new RudderState(
                             outRd,
-                            new SimpleDataListener(outShip),
                             outTp));
 
             int sipId = tur.ship.shipId;
@@ -184,13 +182,14 @@ public class CgiDocker extends ClubBase {
                 }
             });
 
-            PlainTransporter errTp = new PlainTransporter(false, bufsize);
+            CgiStdErrShip errShip = new CgiStdErrShip();
+            PlainTransporter errTp = new PlainTransporter(agt.netMultiplexer, errShip, false, bufsize, false);
+            errTp.init();
             errShip.init(errRd, tur.ship.agentId, handler);
-            mpx.addState(
+            mpx.addRudderState(
                     errRd,
                     new RudderState(
                             errRd,
-                            new SimpleDataListener(errShip),
                             errTp));
 
             mpx.reqRead(outRd);

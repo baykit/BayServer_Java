@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
+import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 
@@ -18,7 +19,11 @@ public interface Multiplexer {
 
     void start();
 
-    void addState(Rudder rd, RudderState st);
+    void addRudderState(Rudder rd, RudderState st);
+
+    RudderState getRudderState(Rudder rd);
+
+    Transporter getTransporter(Rudder rd);
 
     void reqConnect(Rudder rd, SocketAddress addr) throws IOException;
 

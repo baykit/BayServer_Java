@@ -1,6 +1,5 @@
 package yokohama.baykit.bayserver.agent.multiplexer;
 
-import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.common.EOFChecker;
 import yokohama.baykit.bayserver.rudder.Rudder;
 
@@ -9,13 +8,12 @@ import java.util.ArrayList;
 
 public class RudderState {
 
-    public final Rudder rudder;
-    public final DataListener listener;
-    public final Transporter transporter;
+    final Rudder rudder;
+    final Transporter transporter;
 
     long lastAccessTime;
     boolean closing;
-    ByteBuffer readBuf = ByteBuffer.allocate(8192);
+    final ByteBuffer readBuf;
     public ArrayList<WriteUnit> writeQueue = new ArrayList<>();
     public boolean reading[] = new boolean[]{false};
     public boolean writing[] = new boolean[]{false};
@@ -25,19 +23,22 @@ public class RudderState {
     public boolean finale;
     EOFChecker eofChecker;
 
-    public RudderState(Rudder rd, DataListener lis) {
-        this(rd, lis, null);
+    public RudderState(Rudder rd) {
+        this(rd, null);
     }
 
-    public RudderState(Rudder rd, DataListener lis, Transporter tp) {
+    public RudderState(Rudder rd, Transporter tp) {
         if (rd == null)
             throw new NullPointerException();
-        if (lis == null)
-            throw new NullPointerException();
         this.rudder = rd;
-        this.listener = lis;
         this.transporter = tp;
         this.closed = false;
+        if(tp != null) {
+            this.readBuf = ByteBuffer.allocate(tp.getReadBufferSize());
+        }
+        else {
+            this.readBuf = ByteBuffer.allocate(8192);
+        }
     }
 
     void access() {
@@ -50,11 +51,7 @@ public class RudderState {
 
     @Override
     public String toString() {
-        String str = "";
-        if (listener != null)
-            str += listener;
-        else
-            str += super.toString();
+        String str = super.toString();
         if (closing)
             str += " closing";
         return str;

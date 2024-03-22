@@ -2,7 +2,6 @@ package yokohama.baykit.bayserver.agent;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
-import yokohama.baykit.bayserver.MemUsage;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.multiplexer.*;
 import yokohama.baykit.bayserver.common.Multiplexer;
@@ -134,8 +133,6 @@ public class GrandAgent {
 
     public void printUsage() {
         // print memory usage
-        BayLog.info("Agent#%d MemUsage", agentId);
-        MemUsage.get(agentId).printUsage(1);
     }
 
     public void addTimerHandler(TimerHandler th) {

@@ -2,7 +2,7 @@ package yokohama.baykit.bayserver.docker.file;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.common.ReadOnlyShip;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.tour.Tour;
@@ -18,8 +18,8 @@ public class SendFileShip extends ReadOnlyShip {
     Tour tour;
     int tourId;
 
-    public void init(Rudder rd, Multiplexer mpx, Tour tur) throws IOException {
-        super.init(tur.ship.agentId, rd, mpx);
+    public void init(Rudder rd, Transporter tp, Tour tur) {
+        super.init(tur.ship.agentId, rd, tp);
         this.tour = tur;
         this.tourId = tur.tourId;
     }

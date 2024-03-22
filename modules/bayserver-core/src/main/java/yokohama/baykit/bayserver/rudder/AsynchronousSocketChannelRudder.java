@@ -5,7 +5,9 @@ import yokohama.baykit.bayserver.util.IOUtil;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.util.concurrent.ExecutionException;
 
 public class AsynchronousSocketChannelRudder extends NetworkChannelRudder {
 
@@ -20,6 +22,28 @@ public class AsynchronousSocketChannelRudder extends NetworkChannelRudder {
     @Override
     public void setNonBlocking() throws IOException {
 
+    }
+
+    ////////////////////////////////////////////
+    // Implements ChannelRudder
+    ////////////////////////////////////////////
+
+    @Override
+    public int read(ByteBuffer buf) throws IOException {
+        try {
+            return ((AsynchronousSocketChannel) channel).read(buf).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new IOException(e);
+        }
+    }
+
+    @Override
+    public int write(ByteBuffer buf) throws IOException {
+        try {
+            return ((AsynchronousSocketChannel) channel).write(buf).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new IOException(e);
+        }
     }
 
     ////////////////////////////////////////////

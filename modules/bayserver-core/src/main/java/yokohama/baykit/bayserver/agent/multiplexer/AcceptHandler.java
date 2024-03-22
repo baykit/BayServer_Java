@@ -4,7 +4,6 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
@@ -68,11 +67,9 @@ public class AcceptHandler {
                     return;
                 }
                 //BayServer.debug(ch + " accepted");
-
-                DataListener lis = p.newDataListener(agent.agentId, rd);
                 Transporter tp = p.newTransporter(agent.agentId, rd);
-                RudderState st = new RudderState(rd, lis, tp);
-                agent.netMultiplexer.addState(rd, st);
+                RudderState st = new RudderState(rd, tp);
+                agent.netMultiplexer.addRudderState(rd, st);
                 agent.netMultiplexer.reqRead(rd);
             } catch (IOException e) {
                 BayLog.error(e);

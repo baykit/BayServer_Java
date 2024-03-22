@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.agent;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.MemUsage;
 import yokohama.baykit.bayserver.util.IOUtil;
 
 import java.io.IOException;
@@ -33,7 +34,7 @@ public class CommandReceiver {
                     agent.reloadCert();
                     break;
                 case GrandAgent.CMD_MEM_USAGE:
-                    agent.printUsage();
+                    MemUsage.get(agent.agentId).printUsage(0);
                     break;
                 case GrandAgent.CMD_SHUTDOWN:
                     agent.shutdown();
