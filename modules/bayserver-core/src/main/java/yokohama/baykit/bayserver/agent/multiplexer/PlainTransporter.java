@@ -1,73 +1,175 @@
 package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.rudder.ChannelRudder;
-import yokohama.baykit.bayserver.common.DataListener;
+import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.agent.UpgradeException;
+import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.ship.Ship;
+import yokohama.baykit.bayserver.util.DataConsumeListener;
+import yokohama.baykit.bayserver.util.Reusable;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 
-public class PlainTransporter extends TransporterBase {
+public class PlainTransporter implements Transporter, Reusable {
 
-    final ByteBuffer readBuf;
+    protected static class WaitReadableException extends IOException {
 
-    public PlainTransporter(boolean serverMode, int bufsiz) {
-        super(serverMode, false);
-        readBuf = ByteBuffer.allocate(bufsiz);
-        needHandshake = false;
     }
 
+    protected final Multiplexer multiplexer;
+    protected final boolean serverMode;
+    protected final boolean traceSSL;
+    protected int readBufferSize;
+    protected boolean needHandshake = true;
+    protected Ship ship;
+    protected boolean closed = false;
 
-    @Override
-    public void reset() {
-        if(readBuf != null)
-            readBuf.clear();
+    public PlainTransporter(
+            Multiplexer multiplexer,
+            Ship sip,
+            boolean serverMode,
+            int readBufferSize,
+            boolean traceSSL) {
+        this.multiplexer = multiplexer;
+        this.ship = sip;
+        this.serverMode = serverMode;
+        this.traceSSL = traceSSL;
+        this.readBufferSize = readBufferSize;
     }
 
-
-    @Override
     public String toString() {
         return "tp[]";
     }
 
-    /////////////////////////////////////////////////////////////////////////////////
-    // implements Transporter
-    /////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////
+    // implements Reusable
+    ////////////////////////////////////////////
+
     @Override
-    protected boolean handshake(Rudder rd, DataListener lis, boolean readable) throws IOException {
-        throw new IllegalStateException("This transporter does not need handshake");
+    public void reset() {
+        closed = false;
+    }
+
+    ////////////////////////////////////////////
+    // implements SelectListener
+    ////////////////////////////////////////////
+
+    @Override
+    public void init() {
     }
 
     @Override
-    protected ByteBuffer readNonBlock(Rudder rd, InetSocketAddress[] adr) throws IOException {
+    public NextSocketAction onConnect(Rudder rd) throws IOException {
+        BayLog.trace("%s onConnect", this);
 
-        // read data
-        readBuf.clear();
-        int c = ((ReadableByteChannel)ChannelRudder.getChannel(rd)).read(readBuf);
-        if (c == -1)
-            throw new EOFException();
-        readBuf.flip();
-        BayLog.trace("%s read %d bytes", this, readBuf.limit());
-
-        return readBuf;
+        return ship.notifyConnect();
     }
 
     @Override
-    protected boolean writeNonBlock(Rudder rd, InetSocketAddress adr, ByteBuffer buf) throws IOException {
-        int pos = buf.position();
-        ((WritableByteChannel)ChannelRudder.getChannel(rd)).write(buf);
-        BayLog.trace(this + " wrote " + (buf.position() - pos) + " bytes");
+    public NextSocketAction onRead(Rudder rd, ByteBuffer buf, InetSocketAddress adr) throws IOException {
+        BayLog.debug("%s onRead: %s", this, buf);
 
-        return !buf.hasRemaining();
+
+        if(buf.limit() == 0) {
+            return ship.notifyEof();
+        }
+        else {
+            try {
+                return ship.notifyRead(buf);
+            }
+            catch(UpgradeException e) {
+                BayLog.debug("%s Protocol upgrade", ship);
+                buf.rewind();
+                return ship.notifyRead(buf);
+            }
+            catch (ProtocolException e) {
+                boolean close = ship.notifyProtocolError(e);
+                if(!close && serverMode)
+                    return NextSocketAction.Continue;
+                else
+                    return NextSocketAction.Close;
+            }
+            catch (IOException e) {
+                // IOException which occur in notifyRead must be distinguished from
+                // IOException which occur in handshake or readNonBlock.
+                onError(rd, e);
+                return NextSocketAction.Close;
+            }
+        }
     }
 
     @Override
+    public void onError(Rudder rd, Throwable e) {
+        ship.notifyError(e);
+    }
+
+    @Override
+    public void onClosed(Rudder rd) {
+        ship.notifyClose();
+    }
+
+    @Override
+    public void reqConnect(Rudder rd, SocketAddress addr) throws IOException {
+        multiplexer.reqConnect(rd, addr);
+    }
+
+    @Override
+    public void reqRead(Rudder rd) {
+        multiplexer.reqRead(rd);
+    }
+
+    @Override
+    public void reqWrite(
+            Rudder rd,
+            ByteBuffer buf,
+            InetSocketAddress adr,
+            Object tag,
+            DataConsumeListener listener)
+            throws IOException {
+
+        BayLog.trace("%s reqWrite: %s", buf);
+        multiplexer.reqWrite(rd, buf, adr, tag, listener);
+    }
+
+    @Override
+    public void reqEnd(Rudder rd) {
+        multiplexer.reqEnd(rd);
+    }
+
+    @Override
+    public void reqClose(Rudder rd) {
+        closed = true;
+        multiplexer.reqClose(rd);
+    }
+
+
+    @Override
+    public boolean checkTimeout(Rudder rd, int durationSec) {
+        return ship.checkTimeout(durationSec);
+    }
+
+    @Override
+    public int getReadBufferSize() {
+        return readBufferSize;
+    }
+
+    @Override
+    /**
+     * print memory usage
+     */
+    public synchronized void printUsage(int indent) {
+    }
+
+    ////////////////////////////////////////////
+    // Custom methods
+    ////////////////////////////////////////////
     protected boolean secure() {
         return false;
     }
+
 }

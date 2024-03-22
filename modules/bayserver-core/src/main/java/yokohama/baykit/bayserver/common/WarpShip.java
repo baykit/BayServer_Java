@@ -4,6 +4,7 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.docker.Warp;
 import yokohama.baykit.bayserver.protocol.Command;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
@@ -44,10 +45,10 @@ public final class WarpShip extends Ship {
     public void initWarp(
             Rudder rd,
             int agentId,
-            Multiplexer mpx,
+            Transporter tp,
             Warp dkr,
             ProtocolHandler protoHandler) {
-        init(agentId, rd, mpx);
+        init(agentId, rd, tp);
         this.docker = dkr;
         this.socketTimeoutSec = dkr.timeoutSec() >= 0 ? dkr.timeoutSec() : BayServer.harbor.socketTimeoutSec();
         this.protocolHandler = protoHandler;
@@ -128,6 +129,11 @@ public final class WarpShip extends Ship {
         tourMap.clear();
 
         return NextSocketAction.Close;
+    }
+
+    @Override
+    public void notifyError(Throwable e) {
+        BayLog.debug(e, "%s Error notified", this);
     }
 
     @Override
@@ -246,7 +252,7 @@ public final class WarpShip extends Ship {
 
     public void abort(int checkId) {
         checkShipId(checkId);
-        multiplexer.reqClose(rudder);
+        transporter.reqClose(rudder);
     }
 
     public final boolean isTimeout(long duration) {

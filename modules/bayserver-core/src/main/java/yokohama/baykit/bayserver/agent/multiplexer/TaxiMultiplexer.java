@@ -43,14 +43,14 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
     @Override
     public void reqRead(Rudder rd) {
         BayLog.debug("%s TaxiMpx reqRead rd=%s", this, rd);
-        RudderState st = findRudderState(rd);
+        RudderState st = getRudderState(rd);
         nextRun(st);
     }
 
     @Override
     public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) throws IOException {
         BayLog.debug("%s TaxiMpx reqWrite rd=%s", this, rd);
-        RudderState st = findRudderState(rd);
+        RudderState st = getRudderState(rd);
         nextRun(st);
     }
 
@@ -62,7 +62,7 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
     @Override
     public void reqClose(Rudder rd) {
         BayLog.debug("%s TaxiMpx reqClose rd=%s", this, rd);
-        RudderState st = findRudderState(rd);
+        RudderState st = getRudderState(rd);
         closeRudder(st);
     }
 
@@ -82,11 +82,11 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
 
 
     protected void onTimer(Rudder rd) {
-        RudderState st = findRudderState(rd);
+        RudderState st = getRudderState(rd);
         st.access();
 
         int durationSec = (int)(System.currentTimeMillis() - st.lastAccessTime) / 1000;
-        if (st.listener.checkTimeout(durationSec))
+        if (st.transporter.checkTimeout(st.rudder, durationSec))
             closeRudder(st);
     }
 
@@ -109,13 +109,13 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
 
             @Override
             protected void onTimer() {
-                st.listener.checkTimeout(-1);
+                st.transporter.checkTimeout(st.rudder, -1);
             }
         });
     }
 
     private void nextRead(Rudder rd) {
-        RudderState st = findRudderState(rd);
+        RudderState st = getRudderState(rd);
 
         try {
             ByteBuffer buf = ByteBuffer.allocate(8192);
@@ -123,11 +123,12 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
             BayLog.debug("%s Read %d bytes rd=%s", this, len, rd);
             NextSocketAction act;
             if (len <= 0) {
-                act = st.listener.notifyEof();
+                buf.limit(0);
+                act = st.transporter.onRead(st.rudder, buf, null);
             }
             else {
                 buf.flip();
-                act = st.listener.notifyRead(buf, null);
+                act = st.transporter.onRead(st.rudder, buf, null);
             }
             BayLog.debug("Next action: %s", act);
             switch(act) {
@@ -155,7 +156,7 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
     }
 
     private void nextWrite(Rudder rd) {
-        RudderState st = findRudderState(rd);
+        RudderState st = getRudderState(rd);
         st.access();
 
         try {

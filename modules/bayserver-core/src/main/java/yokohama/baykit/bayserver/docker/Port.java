@@ -2,7 +2,6 @@ package yokohama.baykit.bayserver.docker;
 
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
-import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
@@ -38,8 +37,6 @@ public interface Port {
     Collection<City> cities();
 
     City findCity(String name);
-
-    DataListener newDataListener(int agentId, Rudder rd) throws IOException;
 
     Transporter newTransporter(int agentId, Rudder rd) throws IOException;
 

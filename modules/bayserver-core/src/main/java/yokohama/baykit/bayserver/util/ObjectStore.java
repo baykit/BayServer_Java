@@ -53,7 +53,7 @@ public class ObjectStore<T extends Reusable> implements Reusable{
     }
 
     public synchronized void Return(T obj, boolean reuse) {
-        //BayLog.debug(owner + " return object " + obj);
+        //BayLog.debug(" return object " + obj.hashCode());
         if(freeList.contains(obj))
             throw new Sink("This object already returned: " + obj);
 

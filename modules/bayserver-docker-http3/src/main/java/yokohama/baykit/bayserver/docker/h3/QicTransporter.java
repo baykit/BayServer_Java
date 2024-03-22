@@ -8,22 +8,24 @@ import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.common.DataListener;
+import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.common.Multiplexer;
-import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
+import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.util.DataConsumeListener;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
 
 
-public final class QicDataListener implements DataListener {
+public final class QicTransporter implements Transporter {
 
     Multiplexer multiplexer;
     byte[] connIdSeed = Quiche.newConnectionIdSeed();
@@ -62,16 +64,22 @@ public final class QicDataListener implements DataListener {
     }
 
     ////////////////////////////////////////////
-    // Implements WaterCraft
+    // Implements Transporter
     ////////////////////////////////////////////
 
+
     @Override
-    public NextSocketAction notifyConnect() throws IOException {
+    public void init() {
+
+    }
+
+    @Override
+    public NextSocketAction onConnect(Rudder rd) throws IOException {
         throw new Sink();
     }
 
     @Override
-    public synchronized NextSocketAction notifyRead(ByteBuffer buf, InetSocketAddress adr) throws IOException {
+    public synchronized NextSocketAction onRead(Rudder rd, ByteBuffer buf, InetSocketAddress adr) throws IOException {
 
         byte[] packetBuf = new byte[buf.limit()];
         buf.get(packetBuf);
@@ -120,34 +128,53 @@ public final class QicDataListener implements DataListener {
     }
 
     @Override
-    public NextSocketAction notifyEof() {
-        return NextSocketAction.Continue;
+    public void onError(Rudder rd, Throwable e) {
+        BayLog.error(e);
     }
 
     @Override
-    public NextSocketAction notifyHandshakeDone(String protocol) throws IOException {
+    public void onClosed(Rudder rd) {
+
+    }
+
+    @Override
+    public void reqConnect(Rudder rd, SocketAddress addr) throws IOException {
+        multiplexer.reqConnect(rd, addr);
+    }
+
+    @Override
+    public void reqRead(Rudder rd) {
+        multiplexer.reqRead(rd);
+    }
+
+    @Override
+    public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) throws IOException {
+        multiplexer.reqWrite(rd, buf, adr, tag, listener);
+    }
+
+    @Override
+    public void reqEnd(Rudder rd) {
+        multiplexer.reqEnd(rd);
+    }
+
+    @Override
+    public void reqClose(Rudder rd) {
+        multiplexer.reqClose(rd);
+    }
+
+    @Override
+    public boolean checkTimeout(Rudder rd, int durationSec) {
+        return false;
+    }
+
+    @Override
+    public int getReadBufferSize() {
         throw new Sink();
     }
 
     @Override
-    public boolean notifyProtocolError(ProtocolException e) throws IOException {
-        BayLog.error(e);
-        return false;
-    }
+    public void printUsage(int indent) {
 
-    @Override
-    public void notifyError(Throwable e) {
-        BayLog.error(e);
-    }
-
-    @Override
-    public void notifyClose() {
-
-    }
-
-    @Override
-    public boolean checkTimeout(int durationSec) {
-        return false;
     }
 
 
@@ -159,7 +186,7 @@ public final class QicDataListener implements DataListener {
     /**
      * Get client object held in this instance
      */
-    InboundShip getShip(byte[] conId, PacketHeader hdr) throws IOException {
+    private InboundShip getShip(byte[] conId, PacketHeader hdr) throws IOException {
 
         InboundShip sip = findShip(hdr.destinationConnectionId());
         if (sip == null)
@@ -169,7 +196,7 @@ public final class QicDataListener implements DataListener {
     }
 
 
-    InboundShip createShip(byte[] conId, PacketHeader hdr, InetSocketAddress adr) throws IOException {
+    private InboundShip createShip(byte[] conId, PacketHeader hdr, InetSocketAddress adr) throws IOException {
 
         if (!Quiche.versionIsSupported(hdr.version())) {
             negotiateVersion(hdr, adr);
@@ -205,7 +232,7 @@ public final class QicDataListener implements DataListener {
         GrandAgent agt = GrandAgent.get(agentId);
         QicProtocolHandler hnd = new QicProtocolHandler(con, adr, h3Config, agt.netMultiplexer);
         InboundShip sip = new InboundShip();
-        sip.initInbound(rudder, agentId, agt.netMultiplexer, portDkr, hnd);
+        sip.initInbound(rudder, agentId, this, portDkr, hnd);
         hnd.setShip(sip);
 
         addShip(srcConId, sip);
@@ -350,4 +377,8 @@ public final class QicDataListener implements DataListener {
     }
 
 
+    @Override
+    public void reset() {
+
+    }
 }

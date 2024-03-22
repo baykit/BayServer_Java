@@ -1,23 +1,33 @@
 package yokohama.baykit.bayserver.docker.builtin;
 
 import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.agent.multiplexer.TransporterBase;
+import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
+import yokohama.baykit.bayserver.agent.multiplexer.SecureTransporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
-import yokohama.baykit.bayserver.agent.multiplexer.SecureTransporter;
 import yokohama.baykit.bayserver.docker.Secure;
 import yokohama.baykit.bayserver.docker.base.DockerBase;
+import yokohama.baykit.bayserver.ship.Ship;
 import yokohama.baykit.bayserver.util.StringUtil;
 
-import javax.net.ssl.*;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import java.io.*;
-import java.security.*;
+import java.security.GeneralSecurityException;
+import java.security.KeyFactory;
+import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Collection;
 
 public class BuiltInSecureDocker extends DockerBase implements Secure {
 
@@ -130,11 +140,18 @@ public class BuiltInSecureDocker extends DockerBase implements Secure {
         this.appProtocols = protocols;
     }
 
-
-
     @Override
-    public TransporterBase createTransporter() {
-        return new SecureTransporter(sslctx, appProtocols, true, traceSSL);
+    public PlainTransporter newTransporter(int agtId, Ship ship) {
+        SecureTransporter tp = new SecureTransporter(
+                GrandAgent.get(agtId).netMultiplexer,
+                ship,
+                true,
+                -1,
+                traceSSL,
+                sslctx,
+                appProtocols);
+        tp.init();
+        return tp;
     }
 
     @Override

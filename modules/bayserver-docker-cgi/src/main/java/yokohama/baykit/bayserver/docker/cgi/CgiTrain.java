@@ -4,8 +4,8 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
+import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.common.SimpleDataListener;
 import yokohama.baykit.bayserver.rudder.InputStreamRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
@@ -43,9 +43,18 @@ public class CgiTrain extends Train {
         int bufsize = tour.ship.protocolHandler.maxResPacketDataSize();
         InputStream outIn = handler.process.getInputStream();
         Rudder outRd = new InputStreamRudder(outIn);
-        PlainTransporter outTp = new PlainTransporter(true, bufsize);
+
         CgiStdOutShip outShip = new CgiStdOutShip();
+        PlainTransporter outTp =
+                new PlainTransporter(
+                        agt.netMultiplexer,
+                        outShip,
+                        true,
+                        bufsize,
+                        false);
+
         outShip.init(outRd, tour.ship.agentId, tour, null, handler);
+        outTp.init();
 
         tour.res.setConsumeListener((len, resume) -> {
             if(resume)
