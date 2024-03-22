@@ -4,6 +4,7 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
@@ -41,10 +42,10 @@ public class InboundShip extends Ship {
     public void initInbound(
             Rudder rd,
             int agentId,
-            Multiplexer mpx,
+            Transporter tp,
             Port portDkr,
             ProtocolHandler protoHandler) {
-        init(agentId, rd, mpx);
+        init(agentId, rd, tp);
         this.portDkr = portDkr;
         this.socketTimeoutSec = portDkr.timeoutSec() >= 0 ? portDkr.timeoutSec() : BayServer.harbor.socketTimeoutSec();
         this.tourStore = TourStore.getStore(agentId);
@@ -97,6 +98,11 @@ public class InboundShip extends Ship {
     public NextSocketAction notifyEof() {
         BayLog.debug("%s EOF detected", this);
         return NextSocketAction.Close;
+    }
+
+    @Override
+    public void notifyError(Throwable e) {
+        BayLog.debug(e, "%s Error notified", this);
     }
 
     @Override

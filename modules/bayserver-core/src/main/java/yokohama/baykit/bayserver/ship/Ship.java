@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.ship;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.Counter;
@@ -27,7 +27,7 @@ public abstract class Ship implements Reusable {
     public int shipId;
     public int agentId;
     public Rudder rudder;
-    public Multiplexer multiplexer;
+    public Transporter transporter;
     public boolean initialized;
     public boolean keeping;
 
@@ -40,13 +40,13 @@ public abstract class Ship implements Reusable {
     // Initialize mthods
     /////////////////////////////////////
 
-    protected void init(int agentId, Rudder rd, Multiplexer mpx){
+    protected void init(int agentId, Rudder rd, Transporter tp){
         if(initialized)
             throw new Sink("Ship already initialized");
         this.shipId = idCounter.next();
         this.agentId = agentId;
         this.rudder = rd;
-        this.multiplexer = mpx;
+        this.transporter = tp;
         this.initialized = true;
         BayLog.debug("%s Initialized", this);
     }
@@ -59,7 +59,7 @@ public abstract class Ship implements Reusable {
     public void reset() {
         BayLog.debug("%s reset", this);
         initialized = false;
-        multiplexer = null;
+        transporter = null;
         rudder = null;
         agentId = -1;
         shipId = INVALID_SHIP_ID;
@@ -86,11 +86,11 @@ public abstract class Ship implements Reusable {
     public void resumeRead(int chkId) {
         checkShipId(chkId);
         BayLog.debug("%s resume read", this);
-        multiplexer.reqRead(rudder);
+        transporter.reqRead(rudder);
     }
 
     public void postClose() {
-        multiplexer.reqClose(rudder);
+        transporter.reqClose(rudder);
     }
 
     /////////////////////////////////////
@@ -101,6 +101,7 @@ public abstract class Ship implements Reusable {
     public abstract NextSocketAction notifyConnect() throws IOException;
     public abstract NextSocketAction notifyRead(ByteBuffer buf) throws IOException;
     public abstract NextSocketAction notifyEof();
+    public abstract void notifyError(Throwable e);
     public abstract boolean notifyProtocolError(ProtocolException e) throws IOException;
     public abstract void notifyClose();
     public abstract boolean checkTimeout(int durationSec);

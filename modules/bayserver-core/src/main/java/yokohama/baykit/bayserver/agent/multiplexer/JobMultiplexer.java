@@ -5,7 +5,6 @@ import yokohama.baykit.bayserver.agent.CommandReceiver;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.TimerHandler;
-import yokohama.baykit.bayserver.common.DataListener;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.rudder.ChannelRudder;
@@ -58,7 +57,7 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
 
         new Thread(() -> {
             try {
-                RudderState st = findRudderState(rd);
+                RudderState st = getRudderState(rd);
                 if (st == null || st.closing) {
                     // channel is already closed
                     BayLog.debug("%s Rudder is already closed: rd=%s", agent, rd);
@@ -73,7 +72,7 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
 
                     if(!(addr instanceof InetSocketAddress)) {
                         // Unix domain socket does not support connect operation
-                        NextSocketAction nextSocketAction = st.transporter.onConnectable(st);
+                        NextSocketAction nextSocketAction = st.transporter.onConnect(st.rudder);
                         if(nextSocketAction == NextSocketAction.Continue)
                             reqRead(rd);
                     }
@@ -81,9 +80,9 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                         ch.finishConnect();
                         //addOperation(rd, OP_CONNECT);
                     }
-                    nextAct = st.listener.notifyConnect();
+                    nextAct = st.transporter.onConnect(st.rudder);
                 } catch (IOException e) {
-                    st.listener.notifyError(e);
+                    st.transporter.onError(st.rudder, e);
                     nextAct = NextSocketAction.Close;
                 }
 
@@ -94,7 +93,7 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
             }
         }).start();
 
-        RudderState st = findRudderState(rd);
+        RudderState st = getRudderState(rd);
         st.access();
     }
 
@@ -103,7 +102,7 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
         if(rd == null)
             throw new NullPointerException();
 
-        RudderState state = findRudderState(rd);
+        RudderState state = getRudderState(rd);
         if(state == null)
             return;
 
@@ -126,7 +125,7 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
         if(rd == null)
             throw new NullPointerException();
 
-        RudderState state = findRudderState(rd);
+        RudderState state = getRudderState(rd);
         BayLog.debug("%s reqWrite chState=%s len=%d", agent, state, buf.remaining());
         if(state == null || state.closed) {
             throw new IOException("Invalid rudder");
@@ -154,7 +153,7 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
 
     @Override
     public void reqEnd(Rudder rd) {
-        RudderState state = findRudderState(rd);
+        RudderState state = getRudderState(rd);
         if(state == null)
             return;
 
@@ -168,7 +167,7 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
             throw new NullPointerException();
 
         BayLog.debug("%s reqClose rd=%s", agent, rd);
-        RudderState state = findRudderState(rd);
+        RudderState state = getRudderState(rd);
         if (state == null) {
             BayLog.debug("%s Rudder state not found: rd=%s", agent, rd);
             return;
@@ -176,7 +175,7 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
 
         new Thread(() -> {
             try {
-                RudderState st = findRudderState(rd);
+                RudderState st = getRudderState(rd);
                 if (st == null) {
                     // channel is already closed
                     BayLog.debug("%s Rudder is already closed: rd=%s", agent, rd);
@@ -233,7 +232,7 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
         synchronized (rudders) {
             long now = System.currentTimeMillis();
             for (RudderState st : rudders.values()) {
-                if(st.transporter.checkTimeout(st, (int)(now - st.lastAccessTime) / 1000)) {
+                if(st.transporter.checkTimeout(st.rudder, (int)(now - st.lastAccessTime) / 1000)) {
                     BayLog.debug("%s timeout: rd=%s", agent, st.rudder);
                     closeList.add(st);
                 }
@@ -286,11 +285,9 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                             return;
                         }
 
-
-                        DataListener lis = p.newDataListener(agent.agentId, clientRd);
                         Transporter tp = p.newTransporter(agent.agentId, clientRd);
-                        RudderState st = new RudderState(clientRd, lis, tp);
-                        agent.netMultiplexer.addState(clientRd, st);
+                        RudderState st = new RudderState(clientRd, tp);
+                        agent.netMultiplexer.addRudderState(clientRd, st);
                         agent.netMultiplexer.reqRead(clientRd);
                     } catch (IOException e) {
                         BayLog.error(e);
@@ -313,7 +310,7 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
     private void nextRead(Rudder rd) {
         new Thread(() -> {
             try {
-                RudderState st = findRudderState(rd);
+                RudderState st = getRudderState(rd);
                 if (st == null || st.closing) {
                     // channel is already closed
                     BayLog.debug("%s Rudder is already closed: rd=%s", agent, rd);
@@ -327,13 +324,14 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                     int n = rd.read(st.readBuf);
                     BayLog.debug("%s read %d bytes", agent, n);
                     if (n < 0) {
-                        nextAct = st.listener.notifyEof();
+                        st.readBuf.limit(0);
+                        nextAct = st.transporter.onRead(st.rudder, st.readBuf, null);
                     } else if (n == 0) {
                         // Continue
                         nextAct = NextSocketAction.Continue;
                     } else {
                         st.readBuf.flip();
-                        nextAct = st.listener.notifyRead(st.readBuf, null);
+                        nextAct = st.transporter.onRead(st.rudder, st.readBuf, null);
                     }
                     BayLog.debug("%s Next action %s", agent, nextAct);
 
@@ -341,7 +339,7 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                     BayLog.debug(e, "%s Closed by another thread: %s", this, st.rudder);
                     return; // Do not do next action
                 } catch (IOException e) {
-                    st.listener.notifyError(e);
+                    st.transporter.onError(st.rudder, e);
                     nextAct = NextSocketAction.Close;
                 } catch (Throwable e) {
                     BayLog.fatal(e);
@@ -360,7 +358,7 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
     private void nextWrite(Rudder rd) {
         new Thread(() -> {
             try {
-                RudderState st = findRudderState(rd);
+                RudderState st = getRudderState(rd);
                 if (st == null || st.closing) {
                     // channel is already closed
                     BayLog.debug("%s Rudder is already closed: rd=%s", agent, rd);
@@ -405,7 +403,7 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                         BayLog.debug(e, "Rudder is closed. Ignore error");
                     }
                     else {
-                        st.listener.notifyError(e);
+                        st.transporter.onError(st.rudder, e);
                         nextAction(st, NextSocketAction.Close, false);
                     }
                 }

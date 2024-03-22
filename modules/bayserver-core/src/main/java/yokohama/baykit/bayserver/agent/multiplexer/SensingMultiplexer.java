@@ -1,12 +1,15 @@
 package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.agent.*;
-import yokohama.baykit.bayserver.rudder.ChannelRudder;
-import yokohama.baykit.bayserver.common.DataListener;
+import yokohama.baykit.bayserver.agent.CommandReceiver;
+import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.agent.TimerHandler;
 import yokohama.baykit.bayserver.common.Multiplexer;
-import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.docker.Port;
+import yokohama.baykit.bayserver.rudder.ChannelRudder;
+import yokohama.baykit.bayserver.rudder.DatagramChannelRudder;
+import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 
 import java.io.IOException;
@@ -90,10 +93,9 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
             if(!anchorable) {
                 for (Rudder rd : BayServer.unanchorablePortMap.keySet()) {
                     Port p = BayServer.unanchorablePortMap.get(rd);
-                    DataListener lis = p.newDataListener(agent.agentId, rd);
                     Transporter tp = p.newTransporter(agent.agentId, rd);
-                    RudderState st = new RudderState(rd, lis, tp);
-                    addState(rd, st);
+                    RudderState st = new RudderState(rd, tp);
+                    addRudderState(rd, st);
                     reqRead(rd);
                 }
             }
@@ -190,7 +192,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
         if(rd == null)
             throw new NullPointerException();
 
-        RudderState chState = findRudderState(rd);
+        RudderState chState = getRudderState(rd);
         BayLog.debug("%s reqConnect addr=%s rd=%s chState=%s", agent, addr, rd, chState);
 
         //rd.configureBlocking(false);
@@ -198,7 +200,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
 
         if(!(addr instanceof InetSocketAddress)) {
             // Unix domain socket does not support connect operation
-            NextSocketAction nextSocketAction = chState.transporter.onConnectable(chState);
+            NextSocketAction nextSocketAction = onConnectable(chState);
             if(nextSocketAction == NextSocketAction.Continue)
                 reqRead(rd);
         }
@@ -212,7 +214,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
             throw new NullPointerException();
 
         //BayLog.debug("askToRead");
-        RudderState st = findRudderState(rd);
+        RudderState st = getRudderState(rd);
         BayLog.debug("%s reqRead chState=%s", agent, st);
         addOperation(rd, OP_READ);
 
@@ -228,7 +230,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
             throw new NullPointerException();
 
         //BayLog.debug("askToWrite");
-        RudderState st = findRudderState(rd);
+        RudderState st = getRudderState(rd);
         BayLog.debug("%s reqWrite chState=%s len=%d", agent, st, buf.remaining());
         if(st == null || st.closed) {
             throw new IOException("Invalid channel");
@@ -245,7 +247,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
 
     @Override
     public void reqEnd(Rudder rd) {
-        RudderState st = findRudderState(rd);
+        RudderState st = getRudderState(rd);
         if(st == null)
             return;
 
@@ -258,7 +260,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
         if(rd == null)
             throw new NullPointerException();
 
-        RudderState st = findRudderState(rd);
+        RudderState st = getRudderState(rd);
         BayLog.debug("%s reqClose chState=%s", agent, st);
         addOperation(rd, OP_WRITE, true);
 
@@ -323,7 +325,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
         synchronized (operations) {
             int nch = operations.size();
             for (ChannelOperation cop : operations) {
-                RudderState st = findRudderState(cop.rudder);
+                RudderState st = getRudderState(cop.rudder);
                 if (st == null) {
                     BayLog.debug("%s rudder is closed");
                     continue;
@@ -391,7 +393,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
                 int op = key.interestOps() & ~OP_CONNECT;
                 key.interestOps(op);
 
-                nextSocketAction = chStt.transporter.onConnectable(chStt);
+                nextSocketAction = onConnectable(chStt);
                 if(nextSocketAction == NextSocketAction.Read) {
                     // Write OP Off
                     op = key.interestOps() & ~OP_WRITE;
@@ -405,7 +407,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
                 // read or write
                 if (key.isReadable()) {
                     BayLog.trace("%s chState=%s socket readable", agent, chStt);
-                    nextSocketAction = chStt.transporter.onReadable(chStt);
+                    nextSocketAction = onReadable(chStt);
                     //BayLog.debug("%s chState=%s readable result=%s", agent, chStt, nextSocketAction);
                     if(nextSocketAction == NextSocketAction.Write) {
                         key.interestOps(key.interestOps() | OP_WRITE);
@@ -414,7 +416,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
 
                 if (nextSocketAction != NextSocketAction.Close && key.isWritable()) {
                     BayLog.trace("%s chState=%s socket writable", agent, chStt);
-                    nextSocketAction = chStt.transporter.onWritable(chStt);
+                    nextSocketAction = onWritable(chStt);
                     if(nextSocketAction == NextSocketAction.Read) {
                         // Handle as "Write Off"
                         int op = (key.interestOps() & ~OP_WRITE) | OP_READ;
@@ -444,7 +446,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
             }
 
             // Cannot handle Exception any more
-            chStt.transporter.onError(chStt, e);
+            chStt.transporter.onError(chStt.rudder, e);
             nextSocketAction = NextSocketAction.Close;
         }
 
@@ -472,6 +474,91 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
         }
     }
 
+    private NextSocketAction onConnectable(RudderState st) throws IOException {
+        BayLog.trace("%s onConnectable", this);
+
+        try {
+            ((SocketChannel)ChannelRudder.getChannel(st.rudder)).finishConnect();
+        }
+        catch(IOException e) {
+            BayLog.error("Connect failed: %s", e);
+            return NextSocketAction.Close;
+        }
+
+        return st.transporter.onConnect(st.rudder);
+    }
+
+    private NextSocketAction onReadable(RudderState st) throws IOException {
+        // read data
+        st.readBuf.clear();
+        InetSocketAddress sender = null;
+        if(st.rudder instanceof DatagramChannelRudder) {
+            // UDP
+            sender = (InetSocketAddress) DatagramChannelRudder.getDataGramChannel(st.rudder).receive(st.readBuf);
+            if (sender == null) {
+                BayLog.trace("%s Empty packet data (Maybe another agent received data)", this);
+                return null;
+            }
+        }
+        else {
+            // TCP
+            int c = st.rudder.read(st.readBuf);
+            if (c == -1)
+                st.readBuf.limit(0);
+            else
+                st.readBuf.flip();
+            BayLog.debug("%s read %d bytes", this, st.readBuf.limit());
+        }
+        return st.transporter.onRead(st.rudder, st.readBuf, sender);
+    }
+
+    private NextSocketAction onWritable(RudderState st) throws IOException {
+        while(!st.writeQueue.isEmpty()) {
+            WriteUnit wUnit = st.writeQueue.get(0);
+
+            BayLog.debug("%s Try to write: pkt=%s pos=%d len=%d closed=%b adr=%s", this, wUnit.tag, wUnit.buf.position(), wUnit.buf.limit(), st.closed, wUnit.adr);
+            //BayLog.debug(this + " " + new String(wUnit.buf.array(), 0, wUnit.buf.limit()));
+
+            if (!st.closed && wUnit.buf.hasRemaining()) {
+                int pos = wUnit.buf.position();
+                if (st.rudder instanceof DatagramChannelRudder) {
+                    DatagramChannelRudder.getDataGramChannel(st.rudder).send(wUnit.buf, wUnit.adr);
+                }
+                else {
+                    st.rudder.write(wUnit.buf);
+                }
+                BayLog.trace(this + " wrote " + (wUnit.buf.position() - pos) + " bytes");
+
+                if (wUnit.buf.hasRemaining()) {
+                    // Data remains
+                    BayLog.debug("%s data remains", this);
+                    break;
+                }
+            }
+
+            synchronized (this) {
+                st.writeQueue.remove(0);
+            }
+
+            // packet send complete
+            wUnit.done();
+        }
+
+        NextSocketAction state;
+        if(st.writeQueue.isEmpty()) {
+            if(st.finale) {
+                BayLog.debug("%s finale return Close", this);
+                state = NextSocketAction.Close;
+            }
+            else {
+                state = NextSocketAction.Read; // will be handled as "Write Off"
+            }
+        }
+        else
+            state = NextSocketAction.Continue;
+        return state;
+
+    }
 
     private void closeTimeoutSockets() {
         if(rudders.isEmpty())
@@ -481,7 +568,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
         synchronized (rudders) {
             long now = System.currentTimeMillis();
             for (RudderState st : rudders.values()) {
-                if(st.transporter.checkTimeout(st, (int)(now - st.lastAccessTime) / 1000)) {
+                if(st.transporter.checkTimeout(st.rudder, (int)(now - st.lastAccessTime) / 1000)) {
                     BayLog.debug("%s timeout: rd=%s", agent, st.rudder);
                     closeList.add(st);
                 }

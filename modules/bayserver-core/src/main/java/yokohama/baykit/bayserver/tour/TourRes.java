@@ -1,8 +1,10 @@
 package yokohama.baykit.bayserver.tour;
 
-import yokohama.baykit.bayserver.*;
+import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.BayServer;
+import yokohama.baykit.bayserver.HttpException;
+import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.docker.Trouble;
-import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.*;
 
 import java.io.IOException;
@@ -225,7 +227,7 @@ public class TourRes implements Reusable {
         }
 
         if (bytesLimit > 0 && bytesPosted > bytesLimit) {
-            throw new ProtocolException("Post data exceed content-length: " + bytesPosted + "/" + bytesLimit);
+            throw new IOException("Post data exceed content-length: " + bytesPosted + "/" + bytesLimit);
         }
 
         boolean oldAvailable = available;

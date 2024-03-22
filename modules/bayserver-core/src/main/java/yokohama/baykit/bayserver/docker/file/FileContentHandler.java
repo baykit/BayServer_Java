@@ -5,9 +5,9 @@ import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
 import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
 import yokohama.baykit.bayserver.common.Multiplexer;
-import yokohama.baykit.bayserver.common.SimpleDataListener;
 import yokohama.baykit.bayserver.rudder.AsynchronousFileChannelRudder;
 import yokohama.baykit.bayserver.rudder.ReadableByteChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
@@ -70,8 +70,6 @@ public class FileContentHandler implements ReqContentHandler {
         } else if (!file.exists()) {
             throw new HttpException(HttpStatus.NOT_FOUND, file.getPath());
         }
-
-        SendFileShip sendFileShip = new SendFileShip();
 
         String mimeType = null;
 
@@ -140,9 +138,15 @@ public class FileContentHandler implements ReqContentHandler {
                     throw new Sink();
             }
 
-            sendFileShip.init(rd, mpx, tur);
-            mpx.addState(rd, new RudderState(rd, new SimpleDataListener(sendFileShip)));
+            SendFileShip sendFileShip = new SendFileShip();
+            PlainTransporter tp = new PlainTransporter(
+                    mpx,
+                    sendFileShip,
+                    true,
+                    8192,
+                    false);
 
+            sendFileShip.init(rd, tp, tur);
             int sid = sendFileShip.id();
             tur.res.setConsumeListener((len, resume) -> {
                 if(resume) {
@@ -150,6 +154,7 @@ public class FileContentHandler implements ReqContentHandler {
                 }
             });
 
+            mpx.addRudderState(rd, new RudderState(rd, tp));
             mpx.reqRead(rd);
 
 

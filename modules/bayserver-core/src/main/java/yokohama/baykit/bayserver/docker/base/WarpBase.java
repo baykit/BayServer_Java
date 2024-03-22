@@ -7,10 +7,9 @@ import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
 import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
-import yokohama.baykit.bayserver.agent.multiplexer.TransporterBase;
+import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
-import yokohama.baykit.bayserver.common.SimpleDataListener;
 import yokohama.baykit.bayserver.common.WarpShip;
 import yokohama.baykit.bayserver.common.WarpShipStore;
 import yokohama.baykit.bayserver.docker.Docker;
@@ -68,7 +67,7 @@ public abstract class WarpBase extends ClubBase implements Warp {
     /////////////////////////////////////
     public abstract boolean secure();
     protected abstract String protocol();
-    protected abstract TransporterBase newTransporter(GrandAgent agent, SocketChannel ch) throws IOException;
+    protected abstract Transporter newTransporter(GrandAgent agent, SocketChannel ch, Ship sip) throws IOException;
 
     /////////////////////////////////////
     // Implements Docker
@@ -155,7 +154,7 @@ public abstract class WarpBase extends ClubBase implements Warp {
         try {
             BayLog.trace("%s got from store", wsip);
             boolean needConnect = false;
-            TransporterBase tp = null;
+            Transporter tp = null;
             if (!wsip.initialized) {
                 SocketChannel ch;
                 if(hostAddr instanceof InetSocketAddress)
@@ -165,9 +164,10 @@ public abstract class WarpBase extends ClubBase implements Warp {
 
                 ch.configureBlocking(false);
                 Rudder rd = new SocketChannelRudder(ch);
-                tp = newTransporter(agt, ch);
+                tp = newTransporter(agt, ch, wsip);
+
                 ProtocolHandler protoHnd = ProtocolHandlerStore.getStore(protocol(), false, agt.agentId).rent();
-                wsip.initWarp(rd, agt.agentId, agt.netMultiplexer, this, protoHnd);
+                wsip.initWarp(rd, agt.agentId, tp, WarpBase.this, protoHnd);
 
                 BayLog.debug("%s init warp ship", wsip);
                 needConnect = true;
@@ -180,8 +180,8 @@ public abstract class WarpBase extends ClubBase implements Warp {
             wsip.startWarpTour(tour);
 
             if(needConnect) {
-                agt.netMultiplexer.addState(wsip.rudder, new RudderState(wsip.rudder, new SimpleDataListener(wsip), tp));
-                agt.netMultiplexer.reqConnect(wsip.rudder, hostAddr);
+                agt.netMultiplexer.addRudderState(wsip.rudder, new RudderState(wsip.rudder, tp));
+                agt.netMultiplexer.getTransporter(wsip.rudder).reqConnect(wsip.rudder, hostAddr);
             }
 
         }
@@ -243,6 +243,14 @@ public abstract class WarpBase extends ClubBase implements Warp {
     //////////////////////////////////////////////////////
     // Private methods
     //////////////////////////////////////////////////////
+
+    private void startWarpTour(WarpShip wsip, Tour tour) throws IOException {
+        synchronized (tourList) {
+            tourList.add(tour);
+        }
+
+        wsip.startWarpTour(tour);
+    }
 
     private ProtocolHandlerStore getProtocolHandlerStore(int agtId) {
         return ProtocolHandlerStore.getStore(protocol(), false, agtId);

@@ -6,7 +6,9 @@ import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
 import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
-import yokohama.baykit.bayserver.common.*;
+import yokohama.baykit.bayserver.common.Cities;
+import yokohama.baykit.bayserver.common.InboundShip;
+import yokohama.baykit.bayserver.common.InboundShipStore;
 import yokohama.baykit.bayserver.docker.*;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
@@ -221,19 +223,14 @@ public abstract class PortBase extends DockerBase implements Port {
     }
 
     @Override
-    public DataListener newDataListener(int agentId, Rudder rd) {
-        InboundShip sip = getShipStore(agentId).rent();
-        ProtocolHandler protoHnd = getProtocolHandlerStore(protocol(), agentId).rent();
-        GrandAgent agt = GrandAgent.get(agentId);
-        sip.initInbound(rd, agentId, agt.netMultiplexer, this, protoHnd);
-        return new SimpleDataListener(sip);
-    }
-
-    @Override
     public Transporter newTransporter(int agentId, Rudder rd) {
+
+        InboundShip sip = getShipStore(agentId).rent();
         Transporter tp;
-        if(secure())
-            tp = secureDocker.createTransporter();
+
+        if(secure()) {
+            tp = secureDocker.newTransporter(agentId, sip);
+        }
         else {
             int size;
             try {
@@ -242,11 +239,21 @@ public abstract class PortBase extends DockerBase implements Port {
             catch(IOException e) {
                 size = 8192;
             }
-            tp = new PlainTransporter(true, size);
+
+            tp = new PlainTransporter(
+                    GrandAgent.get(agentId).netMultiplexer,
+                    sip,
+                    true,
+                    size,
+                    false);
+            tp.init();
         }
+
+        ProtocolHandler protoHnd = getProtocolHandlerStore(protocol(), agentId).rent();
+        sip.initInbound(rd, agentId, tp, this, protoHnd);
+
         return tp;
     }
-
 
     @Override
     public final void returnProtocolHandler(int agentId, ProtocolHandler protoHnd) {

@@ -140,6 +140,8 @@ public class H2PacketUnPacker extends PacketUnpacker<H2Packet> {
                 case ReadType:
                     if(readHeaderItem(buf)) {
                         type = H2Type.getType(item.get(0));
+                        if(type == null)
+                            throw new ProtocolException("Invalid H2 type: " + item.get(0));
                         item = new FrameHeaderItem(tmpBuf.length(), FRAME_LEN_FLAGS);
                         changeState(State.ReadFlags);
                     }

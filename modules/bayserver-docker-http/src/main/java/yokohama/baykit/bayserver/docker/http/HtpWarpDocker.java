@@ -1,25 +1,25 @@
 package yokohama.baykit.bayserver.docker.http;
 
-import yokohama.baykit.bayserver.agent.multiplexer.TransporterBase;
-import yokohama.baykit.bayserver.protocol.PacketStore;
+import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.BayMessage;
+import yokohama.baykit.bayserver.ConfigException;
+import yokohama.baykit.bayserver.Symbol;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
 import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
 import yokohama.baykit.bayserver.agent.multiplexer.SecureTransporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.base.WarpBase;
-import yokohama.baykit.bayserver.util.IOUtil;
-import yokohama.baykit.bayserver.util.StringUtil;
-import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.BayMessage;
-import yokohama.baykit.bayserver.ConfigException;
-import yokohama.baykit.bayserver.Symbol;
 import yokohama.baykit.bayserver.docker.http.h1.H1PacketFactory;
 import yokohama.baykit.bayserver.docker.http.h1.H1WarpHandler;
 import yokohama.baykit.bayserver.docker.http.h2.H2PacketFactory;
 import yokohama.baykit.bayserver.docker.http.h2.H2WarpHandler;
+import yokohama.baykit.bayserver.protocol.PacketStore;
+import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
+import yokohama.baykit.bayserver.ship.Ship;
+import yokohama.baykit.bayserver.util.IOUtil;
+import yokohama.baykit.bayserver.util.StringUtil;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -119,13 +119,32 @@ public class HtpWarpDocker extends WarpBase implements HtpDocker {
     }
 
     @Override
-    protected TransporterBase newTransporter(GrandAgent agent, SocketChannel ch) throws IOException {
+    protected PlainTransporter newTransporter(GrandAgent agent, SocketChannel ch, Ship sip) throws IOException {
         if(secure) {
             String[] appProtocols = supportH2 ? new String[]{"h2"} : null;
-            return new SecureTransporter(sslCtx, appProtocols, false, traceSSL);
+            SecureTransporter tp =
+                    new SecureTransporter(
+                            agent.netMultiplexer,
+                            sip,
+                            false,
+                            -1,
+                            traceSSL,
+                            sslCtx,
+                            appProtocols);
+            tp.init();
+            return tp;
         }
-        else
-            return new PlainTransporter(false, IOUtil.getSockRecvBufSize(ch));
+        else {
+            PlainTransporter tp =
+                    new PlainTransporter(
+                            agent.netMultiplexer,
+                            sip,
+                            false,
+                            IOUtil.getSockRecvBufSize(ch),
+                            false);
+            tp.init();
+            return tp;
+        }
     }
 
     static {

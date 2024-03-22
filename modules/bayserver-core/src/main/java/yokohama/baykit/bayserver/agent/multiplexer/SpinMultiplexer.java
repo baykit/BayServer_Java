@@ -59,7 +59,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
 
     @Override
     public void reqRead(Rudder rd) {
-        RudderState st = findRudderState(rd);
+        RudderState st = getRudderState(rd);
         if(st == null) {
             BayLog.error("%s Invalid rudder", this);
             return;
@@ -79,7 +79,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
 
     @Override
     public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) throws IOException {
-        RudderState st = findRudderState(rd);
+        RudderState st = getRudderState(rd);
         if(st == null)
             throw new IOException("Invalid rudder");
 
@@ -104,13 +104,13 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
 
     @Override
     public void reqEnd(Rudder rd) {
-        RudderState st = findRudderState(rd);
+        RudderState st = getRudderState(rd);
         st.finale = true;
     }
 
     @Override
     public void reqClose(Rudder rd) {
-        RudderState st = findRudderState(rd);
+        RudderState st = getRudderState(rd);
         st.closing = true;
     }
 
@@ -196,7 +196,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
             long now = System.currentTimeMillis();
             for (Object key: rudders.keySet()) {
                 RudderState st = rudders.get(key);
-                if (st.listener.checkTimeout((int) (now - st.lastAccessTime) / 1000)) {
+                if (st.transporter != null && st.transporter.checkTimeout(st.rudder, (int) (now - st.lastAccessTime) / 1000)) {
                     closeRudder(st);
                     removeList.add(key);
                 }
@@ -270,10 +270,11 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
                 if (len == -1) {
                     spun[0] = true;
                     BayLog.debug("%s Spin read: EOF\\(^o^)/", this);
-                    return state.listener.notifyEof();
+                    state.readBuf.clear();
+                    return state.transporter.onRead(state.rudder, state.readBuf, null);
                 } else {
                     state.readBuf.flip();
-                    NextSocketAction act = state.listener.notifyRead(state.readBuf, null);
+                    NextSocketAction act = state.transporter.onRead(state.rudder, state.readBuf, null);
                     if(act == NextSocketAction.Continue || act == NextSocketAction.Read)
                         next();
                     else
@@ -411,7 +412,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
                     }
                 }
 
-                return state.listener.notifyRead(state.readBuf, null);
+                return state.transporter.onRead(state.rudder, state.readBuf, null);
 
             } catch (Exception e) {
                 BayLog.error(e, "%s Error", this);

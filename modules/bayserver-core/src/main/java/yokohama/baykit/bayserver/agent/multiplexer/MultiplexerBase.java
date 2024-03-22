@@ -37,9 +37,24 @@ public abstract class MultiplexerBase implements Multiplexer {
     // Implements Multiplexer
     ////////////////////////////////////////////
     @Override
-    public final void addState(Rudder rd, RudderState st) {
-        addRudderState(rd, st);
+    public final void addRudderState(Rudder rd, RudderState st) {
+        BayLog.trace("%s add rd=%s chState=%s", agent, rd, st);
+        synchronized (rudders) {
+            rudders.put(rd.key(), st);
+        }
+        channelCount++;
+
         st.access();
+    }
+
+    @Override
+    public final RudderState getRudderState(Rudder rd) {
+        return findRudderStateByKey(rd.key());
+    }
+
+    @Override
+    public final Transporter getTransporter(Rudder rd) {
+        return getRudderState(rd).transporter;
     }
 
     @Override
@@ -76,17 +91,6 @@ public abstract class MultiplexerBase implements Multiplexer {
     ////////////////////////////////////////////
     // Custom methods
     ////////////////////////////////////////////
-    protected void addRudderState(Rudder rd, RudderState chState) {
-        BayLog.trace("%s add rd=%s chState=%s", agent, rd, chState);
-        synchronized (rudders) {
-            rudders.put(rd.key(), chState);
-        }
-        channelCount++;
-    }
-
-    protected RudderState findRudderState(Rudder rd) {
-        return findRudderStateByKey(rd.key());
-    }
 
     protected RudderState findRudderStateByKey(Object rdKey) {
         synchronized (rudders) {
@@ -131,7 +135,7 @@ public abstract class MultiplexerBase implements Multiplexer {
         }
 
         if (chState.transporter != null)
-            chState.transporter.onClosed(chState);
+            chState.transporter.onClosed(chState.rudder);
 
         removeRudderState(chState.rudder);
     }

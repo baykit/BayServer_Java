@@ -1,11 +1,11 @@
 package yokohama.baykit.bayserver.docker.ajp;
 
 import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
+import yokohama.baykit.bayserver.docker.base.WarpBase;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
-import yokohama.baykit.bayserver.docker.base.WarpBase;
-import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
-import yokohama.baykit.bayserver.agent.multiplexer.TransporterBase;
+import yokohama.baykit.bayserver.ship.Ship;
 import yokohama.baykit.bayserver.util.IOUtil;
 
 import java.io.IOException;
@@ -31,8 +31,10 @@ public class AjpWarpDocker extends WarpBase implements AjpDocker {
     }
 
     @Override
-    protected TransporterBase newTransporter(GrandAgent agent, SocketChannel ch) throws IOException {
-        return new PlainTransporter(false, IOUtil.getSockRecvBufSize(ch));
+    protected PlainTransporter newTransporter(GrandAgent agent, SocketChannel ch, Ship sip) throws IOException {
+        PlainTransporter tp = new PlainTransporter(agent.netMultiplexer, sip,false, IOUtil.getSockRecvBufSize(ch), false);
+        tp.init();
+        return tp;
     }
 
     static {

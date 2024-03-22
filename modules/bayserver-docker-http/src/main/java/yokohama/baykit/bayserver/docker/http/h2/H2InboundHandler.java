@@ -2,21 +2,20 @@ package yokohama.baykit.bayserver.docker.http.h2;
 
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.common.InboundHandler;
 import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.docker.http.h2.command.*;
 import yokohama.baykit.bayserver.protocol.*;
+import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.tour.TourReq;
 import yokohama.baykit.bayserver.tour.TourStore;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
+import yokohama.baykit.bayserver.util.Headers;
 import yokohama.baykit.bayserver.util.HttpStatus;
 
 import java.io.IOException;
-import java.net.Socket;
-import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
@@ -430,11 +429,27 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
 
         tur.req.protocol = httpProtocol;
 
-        Socket skt = ((SocketChannel)ChannelRudder.getChannel(sip.rudder)).socket();
-        tur.req.remotePort = skt.getPort();
+        // Get remote address
+        String clientAdr = tur.req.headers.get(Headers.X_FORWARDED_FOR);
+        if (clientAdr != null) {
+            tur.req.remoteAddress = clientAdr;
+            tur.req.remotePort = -1;
+        }
+        else {
+            try {
+                NetworkChannelRudder nrd = (NetworkChannelRudder) ship().rudder;
+                tur.req.remotePort = nrd.getRemotePort();
+                tur.req.remoteAddress = nrd.getRemoteAddress().getHostAddress();
+                tur.req.serverAddress = nrd.getLocalAddress().getHostAddress();
+            }
+            catch(IOException e) {
+                // Unix domain socket
+                tur.req.remotePort = -1;
+                tur.req.remoteAddress = null;
+                tur.req.serverAddress = null;
+            }
+        }
 
-        tur.req.remoteAddress = skt.getInetAddress().getHostAddress();
-        tur.req.serverAddress = skt.getLocalAddress().getHostAddress();
         tur.req.remoteHostFunc = new TourReq.DefaultRemoteHostResolver(tur.req.remoteAddress);
 
         tur.req.serverPort = tur.req.reqPort;
