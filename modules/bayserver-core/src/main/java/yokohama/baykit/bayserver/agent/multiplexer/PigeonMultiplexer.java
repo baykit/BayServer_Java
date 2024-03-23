@@ -266,7 +266,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
             NextSocketAction nextAct;
             try {
                 if (n <= 0) {
-                    st.readBuf.clear();
+                    st.readBuf.limit(0);
                     nextAct = st.transporter.onRead(st.rudder, st.readBuf, null);
                 }
                 else {
