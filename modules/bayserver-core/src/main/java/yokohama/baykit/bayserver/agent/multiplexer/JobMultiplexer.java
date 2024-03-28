@@ -48,6 +48,19 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
         for(Rudder rd: BayServer.anchorablePortMap.keySet()) {
             reqAccept(rd);
         }
+
+        // Set up unanchorable channel
+        if(!anchorable) {
+            for (Rudder rd : BayServer.unanchorablePortMap.keySet()) {
+                Port p = BayServer.unanchorablePortMap.get(rd);
+                try {
+                    p.onConnected(agent.agentId, rd);
+                }
+                catch(HttpException e) {
+                    // Ignore
+                }
+            }
+        }
     }
 
     public void reqConnect(Rudder rd, SocketAddress addr) throws IOException {
@@ -273,23 +286,9 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                         }
 
                         SocketChannelRudder clientRd = new SocketChannelRudder(ch);
+                        p.onConnected(agent.agentId, clientRd);
 
-                        try {
-                            p.checkAdmitted(clientRd);
-                        } catch (HttpException e) {
-                            BayLog.error(e);
-                            try {
-                                ch.close();
-                            } catch (IOException ex) {
-                            }
-                            return;
-                        }
-
-                        Transporter tp = p.newTransporter(agent.agentId, clientRd);
-                        RudderState st = new RudderState(clientRd, tp);
-                        agent.netMultiplexer.addRudderState(clientRd, st);
-                        agent.netMultiplexer.reqRead(clientRd);
-                    } catch (IOException e) {
+                    } catch (IOException | HttpException e) {
                         BayLog.error(e);
                         if (ch != null) {
                             try {

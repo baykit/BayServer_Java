@@ -184,22 +184,8 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
                             AsynchronousSocketChannelRudder clientRd = new AsynchronousSocketChannelRudder(clientCh);
 
                             try {
-                                p.checkAdmitted(clientRd);
+                                p.onConnected(agent.agentId, clientRd);
                             } catch (HttpException e) {
-                                BayLog.error(e);
-                                try {
-                                    ch.close();
-                                } catch (IOException ex) {
-                                }
-                                return;
-                            }
-
-                            try {
-                                Transporter tp = p.newTransporter(agent.agentId, clientRd);
-                                RudderState st = new RudderState(clientRd, tp);
-                                agent.netMultiplexer.addRudderState(clientRd, st);
-                                tp.reqRead(clientRd);
-                            } catch (IOException e) {
                                 BayLog.error(e);
                                 if (ch != null) {
                                     try {

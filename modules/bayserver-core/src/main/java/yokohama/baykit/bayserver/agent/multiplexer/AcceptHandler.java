@@ -55,23 +55,9 @@ public class AcceptHandler {
 
                 SocketChannelRudder rd = new SocketChannelRudder(ch);
                 rd.setNonBlocking();
+                p.onConnected(agent.agentId, rd);
 
-                try {
-                    p.checkAdmitted(rd);
-                } catch (HttpException e) {
-                    BayLog.error(e);
-                    try {
-                        ch.close();
-                    } catch (IOException ex) {
-                    }
-                    return;
-                }
-                //BayServer.debug(ch + " accepted");
-                Transporter tp = p.newTransporter(agent.agentId, rd);
-                RudderState st = new RudderState(rd, tp);
-                agent.netMultiplexer.addRudderState(rd, st);
-                agent.netMultiplexer.reqRead(rd);
-            } catch (IOException e) {
+            } catch (IOException | HttpException e) {
                 BayLog.error(e);
                 if (ch != null) {
                     try {
