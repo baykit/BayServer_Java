@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.docker.base;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
+import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
 import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
@@ -206,13 +207,6 @@ public abstract class PortBase extends DockerBase implements Port {
     }
 
     @Override
-    public final void checkAdmitted(NetworkChannelRudder rd) throws HttpException {
-        for(Permission p : permissionList) {
-            p.socketAdmitted(rd);
-        }
-    }
-
-    @Override
     public Collection<City> cities() {
         return cities.cities();
     }
@@ -223,10 +217,13 @@ public abstract class PortBase extends DockerBase implements Port {
     }
 
     @Override
-    public Transporter newTransporter(int agentId, Rudder rd) {
+    public void onConnected(int agentId, Rudder rd) throws HttpException {
+
+        checkAdmitted((NetworkChannelRudder) rd);
 
         InboundShip sip = getShipStore(agentId).rent();
         Transporter tp;
+        GrandAgent agt = GrandAgent.get(agentId);
 
         if(secure()) {
             tp = secureDocker.newTransporter(agentId, sip);
@@ -241,7 +238,7 @@ public abstract class PortBase extends DockerBase implements Port {
             }
 
             tp = new PlainTransporter(
-                    GrandAgent.get(agentId).netMultiplexer,
+                    agt.netMultiplexer,
                     sip,
                     true,
                     size,
@@ -252,7 +249,9 @@ public abstract class PortBase extends DockerBase implements Port {
         ProtocolHandler protoHnd = getProtocolHandlerStore(protocol(), agentId).rent();
         sip.initInbound(rd, agentId, tp, this, protoHnd);
 
-        return tp;
+        RudderState st = new RudderState(rd, tp);
+        agt.netMultiplexer.addRudderState(rd, st);
+        agt.netMultiplexer.reqRead(rd);
     }
 
     @Override
@@ -270,6 +269,12 @@ public abstract class PortBase extends DockerBase implements Port {
     ///////////////////////////////////////////////////////////////////////
     // private methods
     ///////////////////////////////////////////////////////////////////////
+    private void checkAdmitted(NetworkChannelRudder rd) throws HttpException {
+        for(Permission p : permissionList) {
+            p.socketAdmitted(rd);
+        }
+    }
+
     protected static InboundShipStore getShipStore(int agentId) {
         return InboundShipStore.getStore(agentId);
     }
