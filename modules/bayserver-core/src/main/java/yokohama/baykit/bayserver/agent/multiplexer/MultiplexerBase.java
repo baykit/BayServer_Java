@@ -116,6 +116,8 @@ public abstract class MultiplexerBase implements Multiplexer {
             chState.closed = true;
         }
 
+        removeRudderState(chState.rudder);
+
         try {
             chState.rudder.close();
         }
@@ -136,8 +138,6 @@ public abstract class MultiplexerBase implements Multiplexer {
 
         if (chState.transporter != null)
             chState.transporter.onClosed(chState.rudder);
-
-        removeRudderState(chState.rudder);
     }
 
     protected final void closeAll() {
