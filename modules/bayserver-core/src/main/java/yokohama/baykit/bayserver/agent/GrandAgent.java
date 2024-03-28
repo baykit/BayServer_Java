@@ -39,6 +39,7 @@ public class GrandAgent {
 
     public final int maxInboundShips;
     public boolean aborted;
+    private Timer timer;
     private ArrayList<TimerHandler> timerHandlers = new ArrayList<>();
 
     public GrandAgent(
@@ -73,7 +74,7 @@ public class GrandAgent {
         }
 
         if(!(netMultiplexer instanceof SensingMultiplexer)) {
-            Timer timer = new Timer();
+            timer = new Timer();
             TimerTask task = new TimerTask() {
                 @Override
                 public void run() {
@@ -107,6 +108,7 @@ public class GrandAgent {
             return;
 
         aborted = true;
+        timer.cancel();
         netMultiplexer.shutdown();
 
         listeners.forEach(lis -> lis.remove(agentId));
