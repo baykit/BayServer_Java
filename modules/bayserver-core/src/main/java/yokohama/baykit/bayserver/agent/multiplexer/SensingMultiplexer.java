@@ -93,10 +93,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
             if(!anchorable) {
                 for (Rudder rd : BayServer.unanchorablePortMap.keySet()) {
                     Port p = BayServer.unanchorablePortMap.get(rd);
-                    Transporter tp = p.newTransporter(agent.agentId, rd);
-                    RudderState st = new RudderState(rd, tp);
-                    addRudderState(rd, st);
-                    reqRead(rd);
+                    p.onConnected(agent.agentId, rd);
                 }
             }
 

@@ -7,9 +7,10 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayMessage;
 import yokohama.baykit.bayserver.ConfigException;
 import yokohama.baykit.bayserver.Symbol;
+import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
 import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
-import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.base.PortBase;
 import yokohama.baykit.bayserver.docker.builtin.BuiltInSecureDocker;
@@ -106,8 +107,13 @@ public class H3PortDocker extends PortBase implements H3Docker {
     */
 
     @Override
-    public Transporter newTransporter(int agentId, Rudder rd) {
-        return new QicTransporter();
+    public void onConnected(int agentId, Rudder rd) {
+        Transporter tp = new QicTransporter();
+        RudderState st = new RudderState(rd, tp);
+
+        GrandAgent agt = GrandAgent.get(agentId);
+        agt.netMultiplexer.addRudderState(rd, st);
+        agt.netMultiplexer.reqRead(rd);
     }
 
     ////////////////////////////////////////////
