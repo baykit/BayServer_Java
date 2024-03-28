@@ -189,7 +189,7 @@ public class TourRes implements Reusable {
         };
 
         if (tour.isZombie()) {
-            BayLog.debug("%s zombie return", this);
+            BayLog.debug("%s zombie tour. return", this);
             lis.dataConsumed();
             return true;
         }
@@ -206,7 +206,7 @@ public class TourRes implements Reusable {
 
         if(tour.isAborted()) {
             // Don't send peer any data. Do nothing
-            BayLog.debug("%s Aborted or zombie tour. do nothing: %s state=%s", this, tour, tour.state);
+            BayLog.debug("%s Aborted tour. do nothing: %s state=%s", this, tour, tour.state);
             tour.changeState(checkId, Tour.TourState.ENDED);
             lis.dataConsumed();
         }
@@ -331,8 +331,6 @@ public class TourRes implements Reusable {
         if(headerSent) {
             BayLog.debug("Try to send error after response header is sent (Ignore)");
             BayLog.debug("%s: status=%d, message=%s", this, status, message);
-            if (e != null)
-                BayLog.error(e);
         }
         else {
             setConsumeListener(ContentConsumeListener.devNull);
