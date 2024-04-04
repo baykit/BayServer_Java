@@ -22,6 +22,7 @@ public class Tour implements Reusable {
     public enum TourState {
         UNINITIALIZED,
         PREPARING,
+        READING,
         RUNNING,
         ABORTED,
         ENDED,
@@ -106,7 +107,12 @@ public class Tour implements Reusable {
         if(city == null)
             city = BayServer.findCity(req.reqHost);
 
-        changeState(Tour.TOUR_ID_NOCHECK, TourState.RUNNING);
+        if(req.headers.contentLength() > 0) {
+            changeState(Tour.TOUR_ID_NOCHECK, TourState.READING);
+        }
+        else {
+            changeState(Tour.TOUR_ID_NOCHECK, TourState.RUNNING);
+        }
 
         BayLog.debug("%s GO TOUR! ...( ^_^)/: city=%s url=%s", this, req.reqHost, req.uri);
 
@@ -130,6 +136,10 @@ public class Tour implements Reusable {
 
     public boolean isPreparing() {
         return state == TourState.PREPARING;
+    }
+
+    public boolean isReading() {
+        return state == TourState.READING;
     }
 
     public boolean isRunning() {
