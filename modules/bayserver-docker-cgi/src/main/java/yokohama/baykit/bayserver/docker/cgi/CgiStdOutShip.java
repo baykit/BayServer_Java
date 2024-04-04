@@ -7,7 +7,6 @@ import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.common.ReadOnlyShip;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.tour.Tour;
-import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.StringUtil;
 
 import java.io.IOException;
@@ -130,7 +129,13 @@ public class CgiStdOutShip extends ReadOnlyShip {
         }
         else {
             if(buf.hasRemaining()) {
-                available = tour.res.sendResContent(tourId, buf.array(), buf.position(), buf.limit() - buf.position());
+                try {
+                    available = tour.res.sendResContent(tourId, buf.array(), buf.position(), buf.limit() - buf.position());
+                }
+                catch(IOException e) {
+                    notifyError(e);
+                    return NextSocketAction.Close;
+                }
             }
         }
 
@@ -143,13 +148,7 @@ public class CgiStdOutShip extends ReadOnlyShip {
 
     @Override
     public void notifyError(Throwable e) {
-        BayLog.debug(e);
-        try {
-            tour.res.sendError(tourId, HttpStatus.INTERNAL_SERVER_ERROR, null, e);
-        }
-        catch(IOException ex) {
-            BayLog.debug(ex);
-        }
+        BayLog.debug(e, "%s CGI notifyError");
     }
 
     @Override
