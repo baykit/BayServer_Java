@@ -227,8 +227,8 @@ public class TourReq implements Reusable {
 
         boolean dataPassed = false;
 
-        if(!tour.isRunning()) {
-            BayLog.debug("%s tour is not running.", tour);
+        if(!tour.isReading()) {
+            throw new ProtocolException(tour + ": tour is not reading.");
         }
 
         else if (tour.req.contentHandler == null) {
@@ -275,6 +275,7 @@ public class TourReq implements Reusable {
         tour.checkTourId(checkId);
         if (ended)
             throw new Sink(tour + " Request content is already ended");
+        tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.RUNNING);
         ended = true;
 
         if (bytesLimit >= 0 && bytesPosted != bytesLimit) {
@@ -314,7 +315,7 @@ public class TourReq implements Reusable {
             tour.changeState(tour.tourId, Tour.TourState.ABORTED);
             return true;
         }
-        else if (tour.isRunning()) {
+        else if (tour.isReading()) {
             boolean aborted = true;
 
             if (contentHandler != null)
@@ -326,7 +327,7 @@ public class TourReq implements Reusable {
             return aborted;
         }
         else {
-            BayLog.debug("%s tour is not preparing or not running", tour);
+            BayLog.debug("%s tour is neither preparing nor reading", tour);
             return false;
         }
     }
