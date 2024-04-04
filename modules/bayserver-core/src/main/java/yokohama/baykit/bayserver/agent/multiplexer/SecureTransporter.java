@@ -110,7 +110,7 @@ public class SecureTransporter extends PlainTransporter {
                 BayLog.error("%s SSL connection closed by peer", this);
                 appIn.buffer.limit(0);
             }
-            if (status != NOT_HANDSHAKING && status != FINISHED)
+            else if (status != NOT_HANDSHAKING && status != FINISHED)
                 throw new IllegalStateException("Illegal handshake status: " + status);
             appIn.buffer.flip();
             if(traceSSL)
