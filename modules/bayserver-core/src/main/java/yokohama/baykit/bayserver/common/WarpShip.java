@@ -232,7 +232,7 @@ public final class WarpShip extends Ship {
                 Tour tur = getTour(warpId);
                 BayLog.debug("%s send error to owner: %s running=%b", this, tur, tur.isRunning());
                 try {
-                    if (tur.isRunning()) {
+                    if (tur.isRunning() || tur.isReading()) {
                         tur.res.sendError(Tour.TOUR_ID_NOCHECK, status, msg);
                     }
                     else {
@@ -276,6 +276,7 @@ public final class WarpShip extends Ship {
     }
 
     public void post(Command cmd, DataConsumeListener listener) throws IOException {
+        BayLog.debug("%s post", this);
         if(!connected) {
             Pair<Command, DataConsumeListener> p = new Pair<>(cmd, listener);
             cmdBuf.add(p);
@@ -286,6 +287,7 @@ public final class WarpShip extends Ship {
     }
 
     public void flush() throws IOException {
+        BayLog.debug("%s flush", this);
         for(Pair<Command, DataConsumeListener> cmdAndLis: cmdBuf) {
             protocolHandler.post(cmdAndLis.a, cmdAndLis.b);
         }
