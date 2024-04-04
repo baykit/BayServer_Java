@@ -50,19 +50,26 @@ public class SendFileShip extends ReadOnlyShip {
 
         fileWroteLen += buf.limit();
         BayLog.debug("%s read file %d bytes: total=%d", this, buf.limit(), fileWroteLen);
-        boolean available = tour.res.sendResContent(tourId, buf.array(), 0, buf.limit());
 
-        if(available) {
-            return NextSocketAction.Continue;
+        try {
+            boolean available = tour.res.sendResContent(tourId, buf.array(), 0, buf.limit());
+
+            if(available) {
+                return NextSocketAction.Continue;
+            }
+            else {
+                return NextSocketAction.Suspend;
+            }
         }
-        else {
-            return NextSocketAction.Suspend;
+        catch(IOException e) {
+            BayLog.debug(e, "Error on sending content");
+            return NextSocketAction.Close;
         }
     }
 
     @Override
     public void notifyError(Throwable e) {
-        BayLog.debug(e, "%s Notify Error", this);
+        BayLog.debug(e, "%s Error notified", this);
         try {
             tour.res.sendError(tourId, HttpStatus.INTERNAL_SERVER_ERROR, null, e);
         }
