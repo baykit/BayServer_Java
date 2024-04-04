@@ -38,4 +38,6 @@ public interface Multiplexer {
     void runCommandReceiver(Pipe.SourceChannel readCh, Pipe.SinkChannel writeCh);
 
     void shutdown();
+
+    boolean useAsyncAPI();
 }

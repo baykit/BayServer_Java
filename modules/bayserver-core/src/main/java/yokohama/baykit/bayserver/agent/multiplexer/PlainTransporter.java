@@ -43,7 +43,7 @@ public class PlainTransporter implements Transporter, Reusable {
     }
 
     public String toString() {
-        return "tp[]";
+        return "tp[" + ship + "]";
     }
 
     ////////////////////////////////////////////

@@ -76,6 +76,11 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
         closeAll();
     }
 
+    @Override
+    public boolean useAsyncAPI() {
+        return false;
+    }
+
     ////////////////////////////////////////////
     // Custom methods
     ////////////////////////////////////////////

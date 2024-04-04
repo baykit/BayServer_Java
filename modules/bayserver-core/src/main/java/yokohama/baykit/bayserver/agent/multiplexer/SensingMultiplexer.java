@@ -192,7 +192,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
         RudderState chState = getRudderState(rd);
         BayLog.debug("%s reqConnect addr=%s rd=%s chState=%s", agent, addr, rd, chState);
 
-        //rd.configureBlocking(false);
+        rd.setNonBlocking();
         ((SocketChannel)ChannelRudder.getChannel(rd)).connect(addr);
 
         if(!(addr instanceof InetSocketAddress)) {
@@ -275,6 +275,11 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
     @Override
     public void shutdown() {
         selector.wakeup();
+    }
+
+    @Override
+    public boolean useAsyncAPI() {
+        return false;
     }
 
     ////////////////////////////////////////////

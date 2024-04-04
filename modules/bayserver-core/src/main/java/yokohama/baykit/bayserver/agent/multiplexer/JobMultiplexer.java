@@ -83,17 +83,10 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                     SocketChannel ch = (SocketChannel)ChannelRudder.getChannel(rd);
                     ch.connect(addr);
 
-                    if(!(addr instanceof InetSocketAddress)) {
-                        // Unix domain socket does not support connect operation
-                        NextSocketAction nextSocketAction = st.transporter.onConnect(st.rudder);
-                        if(nextSocketAction == NextSocketAction.Continue)
-                            reqRead(rd);
-                    }
-                    else {
-                        ch.finishConnect();
-                        //addOperation(rd, OP_CONNECT);
-                    }
                     nextAct = st.transporter.onConnect(st.rudder);
+                    if(nextAct == NextSocketAction.Continue)
+                        reqRead(rd);
+
                 } catch (IOException e) {
                     st.transporter.onError(st.rudder, e);
                     nextAct = NextSocketAction.Close;
@@ -222,6 +215,11 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
         } catch (InterruptedException e) {
             BayLog.fatal(e);
         }
+    }
+
+    @Override
+    public boolean useAsyncAPI() {
+        return false;
     }
 
     ////////////////////////////////////////////

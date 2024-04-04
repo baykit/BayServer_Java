@@ -16,7 +16,8 @@ import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Warp;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
-import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.rudder.AsynchronousSocketChannelRudder;
+import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
 import yokohama.baykit.bayserver.rudder.SocketChannelRudder;
 import yokohama.baykit.bayserver.ship.Ship;
 import yokohama.baykit.bayserver.tour.Tour;
@@ -28,6 +29,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -67,7 +69,7 @@ public abstract class WarpBase extends ClubBase implements Warp {
     /////////////////////////////////////
     public abstract boolean secure();
     protected abstract String protocol();
-    protected abstract Transporter newTransporter(GrandAgent agent, SocketChannel ch, Ship sip) throws IOException;
+    protected abstract Transporter newTransporter(GrandAgent agent, NetworkChannelRudder rd, Ship sip) throws IOException;
 
     /////////////////////////////////////
     // Implements Docker
@@ -156,15 +158,26 @@ public abstract class WarpBase extends ClubBase implements Warp {
             boolean needConnect = false;
             Transporter tp = null;
             if (!wsip.initialized) {
-                SocketChannel ch;
-                if(hostAddr instanceof InetSocketAddress)
-                    ch = SocketChannel.open();
-                else
-                    ch = SysUtil.openUnixDomainSocketChannel();
+                NetworkChannelRudder rd;
 
-                ch.configureBlocking(false);
-                Rudder rd = new SocketChannelRudder(ch);
-                tp = newTransporter(agt, ch, wsip);
+                if(agt.netMultiplexer.useAsyncAPI()) {
+                    AsynchronousSocketChannel ch;
+                    if(hostAddr instanceof InetSocketAddress)
+                        ch = AsynchronousSocketChannel.open();
+                    else
+                        ch = SysUtil.openUnixDomainAsynchronousSocketChannel();
+                    rd = new AsynchronousSocketChannelRudder(ch);
+                }
+                else {
+                    SocketChannel ch;
+                    if(hostAddr instanceof InetSocketAddress)
+                        ch = SocketChannel.open();
+                    else
+                        ch = SysUtil.openUnixDomainSocketChannel();
+                    rd = new SocketChannelRudder(ch);
+                }
+
+                tp = newTransporter(agt, rd, wsip);
 
                 ProtocolHandler protoHnd = ProtocolHandlerStore.getStore(protocol(), false, agt.agentId).rent();
                 wsip.initWarp(rd, agt.agentId, tp, WarpBase.this, protoHnd);
