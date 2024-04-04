@@ -219,6 +219,7 @@ public class TourRes implements Reusable {
                     tour.ship.sendResContent(tour.shipId, tour, buf, ofs, len, lis);
                 }
                 catch(IOException e) {
+                    BayLog.debug("%s error on sending resContent: %s", this, e);
                     lis.dataConsumed();
                     tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
                     throw e;
@@ -446,13 +447,13 @@ public class TourRes implements Reusable {
      */
     private synchronized void consumed(int checkId, int length) {
         tour.checkTourId(checkId);
-        if (resConsumeListener == null)
-            throw new Sink("Response consume listener is null");
 
         bytesConsumed += length;
-
         BayLog.debug("%s resConsumed: len=%d posted=%d consumed=%d limit=%d",
                 tour, length, bytesPosted, bytesConsumed, bytesLimit);
+
+        if (resConsumeListener == null)
+            throw new Sink("%s Response consume listener is null", this);
 
         boolean resume = false;
         boolean oldAvailable = available;
