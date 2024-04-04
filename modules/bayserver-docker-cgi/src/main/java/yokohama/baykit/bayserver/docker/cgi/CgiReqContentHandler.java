@@ -116,7 +116,7 @@ public class CgiReqContentHandler implements ReqContentHandler {
     }
 
     private void processFinished() {
-        BayLog.debug("%s process_finished()", tour);
+        BayLog.debug("CGI: %s process_finished()", tour);
 
         try {
             process.waitFor();
@@ -126,16 +126,17 @@ public class CgiReqContentHandler implements ReqContentHandler {
 
         try {
             process.destroy();
-            BayLog.trace(tour + " CGITask: process ended");
+            BayLog.trace(tour + " CGI: process ended");
 
             int code = process.exitValue();
-            BayLog.debug("CGI Process finished: code=%d", code);
+            BayLog.debug("CGI: Process finished: code=%d", code);
 
             if (code != 0) {
                 // Exec failed
-                BayLog.error("CGI Exec error code=%d", code & 0xff);
+                BayLog.error("CGI: Exec error code=%d", code & 0xff);
                 tour.res.sendError(tourId, HttpStatus.INTERNAL_SERVER_ERROR, "Exec failed");
-            } else {
+            }
+            else {
                 tour.res.endResContent(tourId);
             }
         }
