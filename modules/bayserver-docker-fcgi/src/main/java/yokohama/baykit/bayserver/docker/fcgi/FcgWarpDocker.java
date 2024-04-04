@@ -10,11 +10,10 @@ import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.base.WarpBase;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
+import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
 import yokohama.baykit.bayserver.ship.Ship;
-import yokohama.baykit.bayserver.util.IOUtil;
 
 import java.io.IOException;
-import java.nio.channels.SocketChannel;
 
 public class FcgWarpDocker extends WarpBase implements FcgDocker {
 
@@ -66,13 +65,13 @@ public class FcgWarpDocker extends WarpBase implements FcgDocker {
     }
 
     @Override
-    protected PlainTransporter newTransporter(GrandAgent agt, SocketChannel ch, Ship sip) throws IOException {
+    protected PlainTransporter newTransporter(GrandAgent agt, NetworkChannelRudder rd, Ship sip) throws IOException {
         PlainTransporter tp =
                 new PlainTransporter(
                         agt.netMultiplexer,
                         sip,
                         false,
-                        IOUtil.getSockRecvBufSize(ch),
+                        rd.getSocketReceiveBufferSize(),
                         false);
         return tp;
     }

@@ -67,7 +67,7 @@ public class SecureTransporter extends PlainTransporter {
 
     @Override
     public String toString() {
-        return "stp[]";
+        return "stp[" + ship + "]";
     }
 
     ////////////////////////////////////////////
@@ -104,8 +104,12 @@ public class SecureTransporter extends PlainTransporter {
 
             appIn.buffer.clear();
             SSLEngineResult.HandshakeStatus status = sslWrapper.unwrap(netIn, appIn.buffer);
-            if (status == null)
-                throw new EOFException("SSL connection closed by peer");
+            if (status == null) {
+                // status: CLOSED
+                // Handles as EOF
+                BayLog.error("%s SSL connection closed by peer", this);
+                appIn.buffer.limit(0);
+            }
             if (status != NOT_HANDSHAKING && status != FINISHED)
                 throw new IllegalStateException("Illegal handshake status: " + status);
             appIn.buffer.flip();

@@ -17,15 +17,14 @@ import yokohama.baykit.bayserver.docker.http.h2.H2PacketFactory;
 import yokohama.baykit.bayserver.docker.http.h2.H2WarpHandler;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
+import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
 import yokohama.baykit.bayserver.ship.Ship;
-import yokohama.baykit.bayserver.util.IOUtil;
 import yokohama.baykit.bayserver.util.StringUtil;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
-import java.nio.channels.SocketChannel;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
@@ -119,7 +118,7 @@ public class HtpWarpDocker extends WarpBase implements HtpDocker {
     }
 
     @Override
-    protected PlainTransporter newTransporter(GrandAgent agent, SocketChannel ch, Ship sip) throws IOException {
+    protected PlainTransporter newTransporter(GrandAgent agent, NetworkChannelRudder rd, Ship sip) throws IOException {
         if(secure) {
             String[] appProtocols = supportH2 ? new String[]{"h2"} : null;
             SecureTransporter tp =
@@ -140,7 +139,7 @@ public class HtpWarpDocker extends WarpBase implements HtpDocker {
                             agent.netMultiplexer,
                             sip,
                             false,
-                            IOUtil.getSockRecvBufSize(ch),
+                            rd.getSocketReceiveBufferSize(),
                             false);
             tp.init();
             return tp;

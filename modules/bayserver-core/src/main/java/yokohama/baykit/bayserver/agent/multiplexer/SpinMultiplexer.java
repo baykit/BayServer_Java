@@ -119,6 +119,11 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
         closeAll();
     }
 
+    @Override
+    public boolean useAsyncAPI() {
+        return false;
+    }
+
     ////////////////////////////////////////////////////////////////////
     // Implements TimerHandler
     ////////////////////////////////////////////////////////////////////

@@ -119,6 +119,7 @@ public abstract class MultiplexerBase implements Multiplexer {
         removeRudderState(chState.rudder);
 
         try {
+            BayLog.debug("%s OS Close", agent);
             chState.rudder.close();
         }
         catch(AsynchronousCloseException e) {
@@ -128,14 +129,20 @@ public abstract class MultiplexerBase implements Multiplexer {
             BayLog.error(e);
         }
 
-        synchronized (chState.writeQueue) {
-            // Clear queue
-            for (WriteUnit wu : chState.writeQueue) {
-                wu.done();
+        BayLog.debug("%s Flush buffer", agent);
+
+        while(true) {
+            WriteUnit u;
+            synchronized (chState.writeQueue) {
+                if(chState.writeQueue.isEmpty())
+                    break;
+
+                u = chState.writeQueue.remove(0);
             }
-            chState.writeQueue.clear();
+            u.done();
         }
 
+        BayLog.debug("%s Call transporter", agent);
         if (chState.transporter != null)
             chState.transporter.onClosed(chState.rudder);
     }
