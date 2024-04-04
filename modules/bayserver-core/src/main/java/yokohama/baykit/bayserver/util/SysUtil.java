@@ -8,6 +8,7 @@ import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.net.StandardProtocolFamily;
 import java.nio.channels.AsynchronousServerSocketChannel;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
@@ -118,6 +119,18 @@ public class SysUtil {
         }
         catch(Exception e) {
             throw new IOException("Cannot open unix domain asynchronous server socket", e);
+        }
+    }
+
+    public static AsynchronousSocketChannel openUnixDomainAsynchronousSocketChannel() throws IOException {
+
+        try {
+            Method m = AsynchronousSocketChannel.class.getMethod("open", ProtocolFamily.class);
+
+            return (AsynchronousSocketChannel) m.invoke(null, StandardProtocolFamily.valueOf("UNIX"));
+        }
+        catch(Exception e) {
+            throw new IOException("Cannot open unix domain asynchronous socket", e);
         }
     }
 }
