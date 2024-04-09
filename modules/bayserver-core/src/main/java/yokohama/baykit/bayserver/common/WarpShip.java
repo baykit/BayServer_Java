@@ -217,7 +217,7 @@ public final class WarpShip extends Ship {
         }
 
         if(must)
-            throw new Sink("%s warp tours not found: id=%d", this, warpId);
+            throw new Sink("%s warp tour not found: id=%d", this, warpId);
         else
             return null;
     }
@@ -276,7 +276,7 @@ public final class WarpShip extends Ship {
     }
 
     public void post(Command cmd, DataConsumeListener listener) throws IOException {
-        BayLog.debug("%s post", this);
+        BayLog.debug("%s post: cmd=%s", this, cmd);
         if(!connected) {
             Pair<Command, DataConsumeListener> p = new Pair<>(cmd, listener);
             cmdBuf.add(p);

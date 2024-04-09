@@ -51,6 +51,7 @@ public class SSLWrapper {
             SSLEngineResult res = engine.unwrap(netIn, appIn);
             switch (res.getStatus()) {
                 case BUFFER_OVERFLOW: {
+                    BayLog.error("Buffer overflow!");
                     ByteBuffer newAppIn = ByteBuffer.allocate(appIn.capacity() * 2);
                     newAppIn.put(appIn.array(), 0, appIn.position());
                     appIn = newAppIn;
@@ -58,6 +59,7 @@ public class SSLWrapper {
                 }
 
                 case BUFFER_UNDERFLOW:
+                    BayLog.error("Buffer underflow!");
                     netIn.compact();
                     return res.getHandshakeStatus();
 

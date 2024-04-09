@@ -80,7 +80,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
     }
 
     ////////////////////////////////////////////
-    // Implements Thread
+    // Implements Runnable
     ////////////////////////////////////////////
     @Override
     public void run() {

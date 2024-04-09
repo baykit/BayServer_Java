@@ -54,7 +54,7 @@ public class InboundShip extends Ship {
 
     @Override
     public String toString() {
-        return "agt#" + agentId + " ship#" + shipId + "/" + objectId +
+        return "agt#" + agentId + "(" + Thread.currentThread().getName() + ") ship#" + shipId + "/" + objectId +
                 (protocolHandler != null ? ("[" + protocolHandler.protocol() + "]") : "");
     }
 
@@ -223,7 +223,7 @@ public class InboundShip extends Ship {
         BayLog.debug("%s sendEndTour: %s state=%s", this, tur, tur.state);
 
         if(!tur.isValid()) {
-            throw new Sink("Tour is not valid");
+            throw new Sink("%s Tour is not valid", this);
         }
         boolean keepAlive = false;
         if (tur.req.headers.getConnection() == Headers.ConnectionType.KeepAlive)
