@@ -14,8 +14,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
-import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
-import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING;
+import static javax.net.ssl.SSLEngineResult.HandshakeStatus.*;
 
 /**
  * Transporter for secure TCP/IP connection
@@ -75,6 +74,7 @@ public class SecureTransporter extends PlainTransporter {
     ////////////////////////////////////////////
     @Override
     public NextSocketAction onRead(Rudder rd, ByteBuffer netIn, InetSocketAddress adr) throws IOException {
+        BayLog.debug("%s onRead: buf=%s", this, netIn);
 
         if(netIn.limit() == 0)
             return ship.notifyEof();
@@ -102,21 +102,41 @@ public class SecureTransporter extends PlainTransporter {
                 }
             }
 
-            appIn.buffer.clear();
-            SSLEngineResult.HandshakeStatus status = sslWrapper.unwrap(netIn, appIn.buffer);
-            if (status == null) {
-                // status: CLOSED
-                // Handles as EOF
-                BayLog.error("%s SSL connection closed by peer", this);
-                appIn.buffer.limit(0);
-            }
-            else if (status != NOT_HANDSHAKING && status != FINISHED)
-                throw new IllegalStateException("Illegal handshake status: " + status);
-            appIn.buffer.flip();
-            if(traceSSL)
-                BayLog.info(this + " SSL: Decrypt " + netIn.position() + "->" + appIn.buffer.limit() + " bytes");
+            NextSocketAction nextAct = NextSocketAction.Continue;
+            loop:
+            while(true) {
+                appIn.buffer.clear();
+                SSLEngineResult res = sslWrapper.engine.unwrap(netIn, appIn.buffer);
+                //BayLog.debug("%s unwrapped: netIn=%s appIn=%s", this, netIn, appIn.buffer);
 
-            return super.onRead(rd, appIn.buffer, adr);
+                switch (res.getStatus()) {
+                    case CLOSED:
+                        // Handles as EOF
+                        BayLog.error("%s SSL connection closed by peer", this);
+                        appIn.buffer.limit(0);
+                        break;
+
+                    case BUFFER_OVERFLOW:
+                    case OK:
+                        appIn.buffer.flip();
+                        break;
+
+                    case BUFFER_UNDERFLOW:
+                        break loop;
+
+                    default:
+                        throw new IllegalStateException("Illegal unwrapper status: " + res.getStatus());
+                }
+
+                if (traceSSL)
+                    BayLog.info(this + " SSL: Decrypt " + netIn.position() + "->" + appIn.buffer.limit() + " bytes");
+
+                nextAct = super.onRead(rd, appIn.buffer, adr);
+                if(nextAct != NextSocketAction.Continue)
+                    break;
+            }
+
+            return nextAct;
         }
         finally {
             appInStore.Return(appIn);

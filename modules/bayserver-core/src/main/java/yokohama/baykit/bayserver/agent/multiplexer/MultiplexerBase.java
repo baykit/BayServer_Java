@@ -131,15 +131,7 @@ public abstract class MultiplexerBase implements Multiplexer {
 
         BayLog.debug("%s Flush buffer", agent);
 
-        while(true) {
-            WriteUnit u;
-            synchronized (chState.writeQueue) {
-                if(chState.writeQueue.isEmpty())
-                    break;
-
-                u = chState.writeQueue.remove(0);
-            }
-            u.done();
+        while(consumeOldestUnit(chState)) {
         }
 
         BayLog.debug("%s Call transporter", agent);
@@ -153,5 +145,17 @@ public abstract class MultiplexerBase implements Multiplexer {
             closeRudder(st);
         }
     }
+
+    protected boolean consumeOldestUnit(RudderState st) {
+        WriteUnit u;
+        synchronized (st.writeQueue) {
+            if(st.writeQueue.isEmpty())
+                return false;
+            u = st.writeQueue.remove(0);
+        }
+        u.done();
+        return true;
+    }
+
 
 }

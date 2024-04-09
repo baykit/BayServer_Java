@@ -12,7 +12,6 @@ import yokohama.baykit.bayserver.rudder.AsynchronousSocketChannelRudder;
 import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
-import yokohama.baykit.bayserver.util.Pair;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -39,6 +38,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
         agent.addTimerHandler(this);
     }
 
+
     ////////////////////////////////////////////
     // Implements Multiplexer
     ////////////////////////////////////////////
@@ -59,9 +59,11 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
             public void completed(Void result, Void attachment) {
                 RudderState st = getRudderState(rd);
 
+                BayLog.debug("%s connected rd=%s", agent, rd);
                 NextSocketAction nextAct;
                 try {
                     nextAct = st.transporter.onConnect(st.rudder);
+                    BayLog.debug("%s nextAct=%s", agent, nextAct);
                     if(nextAct == NextSocketAction.Continue)
                         reqRead(rd);
 
@@ -287,12 +289,13 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
         @Override
         public void completed(Integer n, Rudder rd) {
             RudderState st = getRudderState(rd);
-            if (st == null || st.closing) {
+            if (st == null || st.closed) {
                 // channel is already closed
                 BayLog.debug("%s Rudder is already closed: rd=%s", agent, rd);
                 return;
             }
 
+            BayLog.debug("%s read %d bytes (rd=%s) st=%d buf=%s", agent, n, rd, st.hashCode(), st.readBuf);
             st.bytesRead += n;
 
             NextSocketAction nextAct;
@@ -321,12 +324,13 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
         @Override
         public void failed(Throwable e, Rudder rd) {
             RudderState st = getRudderState(rd);
-            if (st == null || st.closing) {
+            if (st == null || st.closed) {
                 // channel is already closed
                 BayLog.debug("%s Rudder is already closed: err=%s rd=%s", agent, e, rd);
                 return;
             }
 
+            BayLog.debug("%s Failed to read: %s: %s", agent, rd, e);
             if(!(e instanceof IOException)) {
                 BayLog.fatal(e);
                 agent.shutdown();
@@ -339,14 +343,12 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
 
     }
 
-    private class WriteCompletionHandler implements CompletionHandler<Integer, Pair<Rudder, WriteUnit>> {
+    private class WriteCompletionHandler implements CompletionHandler<Integer, Rudder> {
 
         @Override
-        public void completed(Integer n, Pair<Rudder, WriteUnit> pair) {
-            Rudder rd = pair.a;
-            WriteUnit unit = pair.b;
+        public void completed(Integer n, Rudder rd) {
             RudderState st = getRudderState(rd);
-            if (st == null || st.closing) {
+            if (st == null || st.closed) {
                 // channel is already closed
                 BayLog.debug("%s Rudder is already closed: rd=%s", agent, rd);
                 return;
@@ -355,21 +357,16 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
             BayLog.debug("%s wrote %d bytes rd=%s", PigeonMultiplexer.this, n, rd);
             st.bytesWrote += n;
 
-            try {
-                if (n != unit.buf.limit()) {
-                    throw new IOException("Could not write enough data");
-                }
-                unit.done();
+            boolean writeMore = true;
+            WriteUnit unit = st.writeQueue.get(0);
+            if (unit.buf.hasRemaining()) {
+                BayLog.debug("Could not write enough data buf=%s", unit.buf);
+                writeMore = true;
             }
-            catch (IOException e) {
-                st.transporter.onError(st.rudder, e);
-            }
-            catch (Throwable e) {
-                BayLog.fatal(e);
-                agent.shutdown();
+            else {
+                consumeOldestUnit(st);
             }
 
-            boolean writeMore = true;
             synchronized (st.writing) {
                 if (st.writeQueue.isEmpty()) {
                     writeMore = false;
@@ -386,25 +383,30 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
         }
 
         @Override
-        public void failed(Throwable e, Pair<Rudder, WriteUnit> pair) {
-            Rudder rd = pair.a;
+        public void failed(Throwable e, Rudder rd) {
             RudderState st = getRudderState(rd);
-            if (st == null || st.closing) {
+            if (st == null || st.closed) {
                 // channel is already closed
                 BayLog.debug("%s Rudder is already closed: err=%s rd=%s", agent, e, rd);
                 return;
             }
 
-            if(!(e instanceof IOException)) {
-                BayLog.fatal(e);
-                agent.shutdown();
+            try {
+                if (!(e instanceof IOException)) {
+                    throw e;
+                }
+                else {
+                    st.transporter.onError(st.rudder, e);
+                    consumeOldestUnit(st);
+                    nextAction(st, NextSocketAction.Close, true);
+                }
             }
-            else {
-                st.transporter.onError(st.rudder, e);
-                nextAction(st, NextSocketAction.Close, true);
+            catch(Throwable err) {
+                BayLog.fatal(err);
+                agent.shutdown();
+
             }
         }
-
     }
 
     private void nextAction(RudderState st, NextSocketAction act, boolean reading) {
@@ -466,10 +468,7 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
     }
 
     private void nextFileWrite(RudderState st) {
-        WriteUnit unit;
-        synchronized (st.writeQueue) {
-            unit = st.writeQueue.remove(0);
-        }
+        WriteUnit unit = st.writeQueue.get(0);
         BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b", this, unit.tag, unit.buf.limit(), st.closed);
         //BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
 
@@ -479,47 +478,46 @@ public class PigeonMultiplexer extends MultiplexerBase implements TimerHandler, 
             ch.write(
                     unit.buf,
                     st.bytesWrote,
-                    new Pair<>(st.rudder, unit),
+                    st.rudder,
                     new WriteCompletionHandler());
 
         }
         else {
-            new WriteCompletionHandler().completed(unit.buf.limit(), new Pair<>(st.rudder, unit));
+            new WriteCompletionHandler().completed(unit.buf.limit(), st.rudder);
         }
     }
 
     private void nextNetworkRead(RudderState state) {
         AsynchronousSocketChannel ch = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(state.rudder);
+        BayLog.debug("%s Try to Read (rd=%s) (buf=%s) timeout=%d", agent, state.rudder, state.readBuf, agent.timeoutSec);
         state.readBuf.clear();
         ch.read(
                 state.readBuf,
                 agent.timeoutSec,
-                TimeUnit.MINUTES,
+                TimeUnit.SECONDS,
                 state.rudder,
                 new ReadCompletionHandler());
+        BayLog.debug("%s call read OK", agent);
     }
 
     private void nextNetworkWrite(RudderState st) {
-        WriteUnit unit;
-        synchronized (st.writeQueue) {
-            unit = st.writeQueue.remove(0);
-        }
-        BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b rd=%s", this, unit.tag, unit.buf.limit(), st.closed, st.rudder);
+        WriteUnit unit = st.writeQueue.get(0);
+        BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b rd=%s timeout=%d", this, unit.tag, unit.buf.limit(), st.closed, st.rudder, agent.timeoutSec);
        // BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
 
         if(!st.closed && unit.buf.limit() > 0) {
             AsynchronousSocketChannel ch = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(st.rudder);
-            st.readBuf.clear();
             ch.write(
                     unit.buf,
                     agent.timeoutSec,
-                    TimeUnit.MINUTES,
-                    new Pair<>(st.rudder, unit),
+                    TimeUnit.SECONDS,
+                    st.rudder,
                     new WriteCompletionHandler());
 
         }
         else {
-            new WriteCompletionHandler().completed(unit.buf.limit(), new Pair<>(st.rudder, unit));
+            new WriteCompletionHandler().completed(unit.buf.limit(), st.rudder);
         }
     }
+
 }
