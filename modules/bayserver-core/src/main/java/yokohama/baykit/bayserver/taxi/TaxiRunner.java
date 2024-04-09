@@ -15,7 +15,7 @@ public class TaxiRunner {
     }
 
     public static boolean post(int agtId, Taxi txi) {
-        BayLog.debug("Agt#%d post taxi: thread=%s taxi=%s", agtId, Thread.currentThread().getName(), txi);
+        BayLog.debug("agt#%d(%s) post taxi: taxi=%s", agtId, Thread.currentThread().getName(), txi);
         return runner.post(agtId, txi);
     }
 }
