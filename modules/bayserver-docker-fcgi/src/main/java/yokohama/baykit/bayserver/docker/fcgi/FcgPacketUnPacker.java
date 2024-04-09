@@ -45,6 +45,10 @@ public class FcgPacketUnPacker extends PacketUnpacker<FcgPacket> {
         reset();
     }
 
+    public String toString() {
+        return "FcgPacketUnPacker#" + hashCode() + " (" + Thread.currentThread().getName() + ")";
+    }
+
 
     @Override
     public void reset() {
@@ -183,8 +187,8 @@ public class FcgPacketUnPacker extends PacketUnpacker<FcgPacket> {
         length = bytesToInt(pre[4], pre[5]);
         padding = byteToInt(pre[6]);
         int reserved = byteToInt(pre[7]);
-        BayLog.debug("fcg Read packet header: version=%s type=%s reqId=%d length=%d padding=%d",
-                        version, type, reqId, length, padding);
+        BayLog.debug("%s fcg Read packet header: version=%s type=%s reqId=%d length=%d padding=%d",
+                        this, version, type, reqId, length, padding);
     }
 
     private int byteToInt(byte b) {

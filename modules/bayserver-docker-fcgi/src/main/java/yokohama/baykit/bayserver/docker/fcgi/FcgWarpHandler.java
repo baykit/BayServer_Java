@@ -114,7 +114,7 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
 
     @Override
     public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
-        sendStdIn(tur, null, 0, 0, lis);
+        sendStdIn(tur, new byte[0], 0, 0, lis);
     }
 
     @Override

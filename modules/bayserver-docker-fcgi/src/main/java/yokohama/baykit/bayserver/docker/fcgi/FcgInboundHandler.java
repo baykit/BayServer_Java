@@ -197,8 +197,7 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
     @Override
     public NextSocketAction handleParams(CmdParams cmd) throws IOException {
         InboundShip sip = ship();
-        if (BayLog.isDebugMode())
-            BayLog.debug(sip + " handleParams reqId=" + cmd.reqId + " nParams=" + cmd.params.size());
+        BayLog.debug("%s handleParams reqId=%d nParams=%d", sip, cmd.reqId, cmd.params.size());
 
         if(state != ReadParams)
             throw new ProtocolException("fcgi: Invalid command: " + cmd.type + " state=" + state);
@@ -223,8 +222,8 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
             int reqContLen = tur.req.headers.contentLength();
 
             // end params
-            if (BayLog.isDebugMode())
-                BayLog.debug(tur + " read header method=" + tur.req.method + " protocol=" + tur.req.protocol + " uri=" + tur.req.uri + " contlen=" + reqContLen);
+            BayLog.debug("%s read header method=%s protocol=%s uri=%s contlen=%d",
+                    tur, tur.req.method, tur.req.protocol, tur.req.uri, reqContLen);
             if (BayServer.harbor.traceHeader()) {
                 for (String name : tur.req.headers.headerNames()) {
                     for(String value: tur.req.headers.headerValues(name)) {
@@ -304,8 +303,7 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
     @Override
     public NextSocketAction handleStdIn(CmdStdIn cmd) throws IOException {
         InboundShip sip = ship();
-        if (BayLog.isDebugMode())
-            BayLog.debug(sip + " handleStdIn reqId=" + cmd.reqId + " len=" + cmd.length);
+        BayLog.debug("%s handleStdIn reqId=%d len=%d", sip, cmd.reqId, cmd.length);
 
         if(state != ReadStdIn)
             throw new ProtocolException("fcgi: Invalid FCGI command: " + cmd.type + " state=" + state);
