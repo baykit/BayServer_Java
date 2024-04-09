@@ -30,6 +30,8 @@ public abstract class InOutCommandBase extends FcgCommand {
 
     public InOutCommandBase(FcgType type, int reqId, byte[] data, int start, int len) {
         super(type, reqId);
+        if(data == null)
+            throw new NullPointerException();
         this.data = data;
         this.start = start;
         this.length = len;
