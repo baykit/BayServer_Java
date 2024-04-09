@@ -227,23 +227,19 @@ public class TourReq implements Reusable {
 
         boolean dataPassed = false;
 
-        if(!tour.isReading()) {
+        // If has error, only read content. (Do not call content handler)
+        if(tour.error != null) {
+            BayLog.debug("%s tour has error.", tour);
+        }
+        else if(!tour.isReading()) {
             throw new ProtocolException(tour + ": tour is not reading.");
         }
-
         else if (tour.req.contentHandler == null) {
             BayLog.warn("%s content read, but no content handler", tour);
         }
-
         else if (bytesPosted + len > bytesLimit) {
             throw new ProtocolException(BayMessage.get(Symbol.HTP_READ_DATA_EXCEEDED, bytesPosted + len,  bytesLimit));
         }
-
-        // If has error, only read content. (Do not call content handler)
-        else if(tour.error != null) {
-            BayLog.debug("%s tour has error.", tour);
-        }
-
         else {
             contentHandler.onReadReqContent(tour, data, start, len, lis);
             dataPassed = true;
