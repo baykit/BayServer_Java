@@ -128,6 +128,7 @@ public class BayLog {
         }
         if(e != null) {
             if(isDebugMode()) {
+                log(lvl, stackIdx, "%s", "Exception!");
                 e.printStackTrace(System.err);
             }
             else {
