@@ -131,7 +131,7 @@ public class Tour implements Reusable {
     }
 
     public boolean isValid() {
-        return state == TourState.PREPARING || state == TourState.RUNNING;
+        return state == TourState.PREPARING || state == TourState.READING || state == TourState.RUNNING;
     }
 
     public boolean isPreparing() {

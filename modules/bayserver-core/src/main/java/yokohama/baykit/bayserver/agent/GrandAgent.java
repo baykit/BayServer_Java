@@ -82,8 +82,8 @@ public class GrandAgent {
                         ring();
                     }
                     catch(Throwable e) {
-                        BayLog.fatal(e);
-                        abort();
+                        BayLog.fatal(e, "Error on timer");
+                        shutdown();
                     }
                 }
             };
@@ -94,7 +94,7 @@ public class GrandAgent {
     }
 
     public String toString() {
-        return "agt#" + agentId;
+        return "agt#" + agentId + "(" + Thread.currentThread().getName() + ")";
     }
 
 
@@ -109,8 +109,11 @@ public class GrandAgent {
 
         aborted = true;
         timer.cancel();
+
+        BayLog.debug("%s shutdown netMultiplexer", this);
         netMultiplexer.shutdown();
 
+        BayLog.debug("%s remove listeners", this);
         listeners.forEach(lis -> lis.remove(agentId));
 
         agents.remove(this);
