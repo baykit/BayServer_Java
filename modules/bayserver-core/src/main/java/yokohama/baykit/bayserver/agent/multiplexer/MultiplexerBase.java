@@ -107,6 +107,10 @@ public abstract class MultiplexerBase implements Multiplexer {
         channelCount--;
     }
 
+    protected final boolean isBusy() {
+        return channelCount >= agent.maxInboundShips;
+    }
+
     protected final void closeRudder(RudderState chState) {
         BayLog.debug("%s closeRd %s state=%s closed=%b", agent, chState.rudder, chState, chState.closed);
 

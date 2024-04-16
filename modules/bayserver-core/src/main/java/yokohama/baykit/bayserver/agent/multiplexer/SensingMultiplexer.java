@@ -100,7 +100,7 @@ public class SensingMultiplexer extends MultiplexerBase implements Runnable, Tim
             boolean busy = true;
             while (true) {
                 if(acceptHandler != null) {
-                    boolean testBusy = channelCount >= agent.maxInboundShips;
+                    boolean testBusy = isBusy();
                     if (testBusy != busy) {
                         busy = testBusy;
                         if(busy) {
