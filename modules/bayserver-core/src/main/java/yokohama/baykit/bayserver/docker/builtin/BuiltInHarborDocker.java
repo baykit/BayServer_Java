@@ -168,12 +168,6 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                     elm.lineNo));
             cgiMultiplexer = DEFAULT_CGI_MULTIPLEXER;
         }
-
-        if (netMultiplexer == MultiPlexerType.Pigeon ||
-            netMultiplexer == MultiPlexerType.Job) {
-            BayLog.warn(BayMessage.get(Symbol.CFG_MULTIPLEXER_NEEDS_A_GRAND_AGENT));
-            grandAgents = 1;
-        }
     }
 
     ///////////////////////////////////////////////////////////////////////
