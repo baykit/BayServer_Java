@@ -1,12 +1,7 @@
 package yokohama.baykit.bayserver.agent.multiplexer;
 
-import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.agent.CommandReceiver;
+import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.agent.TimerHandler;
-import yokohama.baykit.bayserver.common.Multiplexer;
-import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.rudder.SocketChannelRudder;
@@ -17,51 +12,21 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousCloseException;
-import java.nio.channels.Pipe;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
 
 /**
  * The purpose of JobMultiplexer is handling sockets, pipes, or files by thread/fiber/goroutine.
  */
-public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Multiplexer {
-
-    private final boolean anchorable;
-    private CommandReceiver commandReceiver;
-
+public class JobMultiplexer extends JobMultiplexerBase {
 
     public JobMultiplexer(GrandAgent agent, boolean anchorable) {
-        super(agent);
-
-        this.anchorable = anchorable;
-        agent.addTimerHandler(this);
+        super(agent, anchorable);
     }
 
     ////////////////////////////////////////////
     // Implements Multiplexer
     ////////////////////////////////////////////
-
-    @Override
-    public void start() {
-        BayLog.info(BayMessage.get(Symbol.MSG_RUNNING_GRAND_AGENT, this));
-        for(Rudder rd: BayServer.anchorablePortMap.keySet()) {
-            reqAccept(rd);
-        }
-
-        // Set up unanchorable channel
-        if(!anchorable) {
-            for (Rudder rd : BayServer.unanchorablePortMap.keySet()) {
-                Port p = BayServer.unanchorablePortMap.get(rd);
-                try {
-                    p.onConnected(agent.agentId, rd);
-                }
-                catch(HttpException e) {
-                    // Ignore
-                }
-            }
-        }
-    }
 
     public void reqConnect(Rudder rd, SocketAddress addr) throws IOException {
         if(rd == null)
@@ -69,34 +34,24 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
         BayLog.debug("%s reqConnect addr=%s rd=%s", agent, addr, rd);
 
         new Thread(() -> {
-            try {
-                RudderState st = getRudderState(rd);
-                if (st == null || st.closed) {
-                    // channel is already closed
-                    BayLog.debug("%s Rudder is already closed: rd=%s", agent, rd);
-                    return;
-                }
 
-
-                NextSocketAction nextAct;
-                try {
-                    SocketChannel ch = (SocketChannel)ChannelRudder.getChannel(rd);
-                    ch.connect(addr);
-
-                    nextAct = st.transporter.onConnect(st.rudder);
-                    if(nextAct == NextSocketAction.Continue)
-                        reqRead(rd);
-
-                } catch (IOException e) {
-                    st.transporter.onError(st.rudder, e);
-                    nextAct = NextSocketAction.Close;
-                }
-
-                nextAction(st, nextAct, false);
-            } catch(Throwable e) {
-                BayLog.fatal(e);
-                agent.shutdown();
+            RudderState st = getRudderState(rd);
+            if (st == null || st.closed) {
+                // channel is already closed
+                BayLog.debug("%s Rudder is already closed: rd=%s", agent, rd);
+                return;
             }
+
+            try {
+                SocketChannel ch = (SocketChannel)ChannelRudder.getChannel(rd);
+                ch.connect(addr);
+            } catch (IOException e) {
+                sendLetter(new Letter(LetterType.Connect, rd, e));
+                return;
+            }
+
+            sendLetter(new Letter(LetterType.Connect, rd));
+
         }).start();
 
         RudderState st = getRudderState(rd);
@@ -108,22 +63,23 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
         if(rd == null)
             throw new NullPointerException();
 
-        RudderState state = getRudderState(rd);
-        if(state == null)
+        RudderState st = getRudderState(rd);
+        if(st == null)
             return;
 
+        BayLog.debug("%s reqRead rd=%s state=%s", agent, st.rudder, st);
         boolean needRead = false;
-        synchronized (state.reading) {
-            if (!state.reading[0]) {
+        synchronized (st.reading) {
+            if (!st.reading[0]) {
                 needRead = true;
-                state.reading[0] = true;
+                st.reading[0] = true;
             }
         }
 
         if(needRead)
-            nextRead(rd);
+            nextRead(st);
 
-        state.access();
+        st.access();
     }
 
     public synchronized void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener)
@@ -151,7 +107,7 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
         }
 
         if(needWrite) {
-            nextWrite(state.rudder);
+            nextWrite(state);
         }
 
         state.access();
@@ -198,63 +154,17 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
         state.access();
     }
 
-    public void runCommandReceiver(Pipe.SourceChannel readCh, Pipe.SinkChannel writeCh) {
-        commandReceiver = new CommandReceiver(agent, readCh, writeCh);
-        new Thread(() -> {
-            while (!commandReceiver.closed) {
-                commandReceiver.onPipeReadable();
-            }
-        }).start();
-    }
-
-    public void shutdown() {
-        commandReceiver.end();
-        closeAll();
-        try {
-            Thread.sleep(5);
-        } catch (InterruptedException e) {
-            BayLog.fatal(e);
-        }
-    }
-
     @Override
     public boolean useAsyncAPI() {
         return false;
     }
 
     ////////////////////////////////////////////
-    // Implements TimerHandler
+    // Implements JobMultiplexerBase
     ////////////////////////////////////////////
+
     @Override
-    public void onTimer() {
-        closeTimeoutSockets();
-    }
-
-
-    ////////////////////////////////////////////
-    // Private methods
-    ////////////////////////////////////////////
-
-    public void closeTimeoutSockets() {
-        if(rudders.isEmpty())
-            return;
-
-        ArrayList<RudderState> closeList = new ArrayList<>();;
-        synchronized (rudders) {
-            long now = System.currentTimeMillis();
-            for (RudderState st : rudders.values()) {
-                if(st.transporter.checkTimeout(st.rudder, (int)(now - st.lastAccessTime) / 1000)) {
-                    BayLog.debug("%s timeout: rd=%s", agent, st.rudder);
-                    closeList.add(st);
-                }
-            }
-        }
-        for (RudderState c : closeList) {
-            closeRudder(c);
-        }
-    }
-
-    private void reqAccept(Rudder rd) {
+    protected void reqAccept(Rudder rd) {
         BayLog.debug("%s AcceptHandler:reqAccept isShutdown=%b", agent, agent.aborted);
         if (agent.aborted) {
             return;
@@ -266,37 +176,27 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
                     return;
                 }
 
-                Port p = BayServer.anchorablePortMap.get(rd);
+                SocketChannel ch;
+                try {
+                    ch = ((ServerSocketChannel) ChannelRudder.getChannel(rd)).accept();
+                } catch (IOException e) {
+                    sendLetter(new Letter(LetterType.Accept, rd, e));
+                    return;
+                }
 
-                while (true) {
-                    SocketChannel ch = null;
+                BayLog.debug("%s Accepted ch=%s", agent, ch);
+                if(agent.aborted) {
+                    BayLog.error("%s Agent is not alive (close)", agent);
                     try {
-                        ch = ((ServerSocketChannel) ChannelRudder.getChannel(rd)).accept();
-                        BayLog.debug("%s Accepted ch=%s", agent, ch);
-                        if(agent.aborted) {
-                            BayLog.error("%s Agent is not alive (close)", agent);
-                            try {
-                                ch.close();
-                            }
-                            catch(IOException e) {
-                            }
-                            return;
-                        }
-
-                        SocketChannelRudder clientRd = new SocketChannelRudder(ch);
-                        p.onConnected(agent.agentId, clientRd);
-
-                    } catch (IOException | HttpException e) {
-                        BayLog.error(e);
-                        if (ch != null) {
-                            try {
-                                ch.close();
-                            } catch (IOException ex) {
-                                BayLog.error(ex);
-                            }
-                        }
+                        ch.close();
+                    }
+                    catch(IOException e) {
                     }
                 }
+                else {
+                    sendLetter(new Letter(LetterType.Accept, rd, new SocketChannelRudder(ch)));
+                }
+
             } catch(Throwable e) {
                 BayLog.fatal(e);
                 agent.shutdown();
@@ -304,160 +204,67 @@ public class JobMultiplexer extends MultiplexerBase implements TimerHandler, Mul
         }).start();
     }
 
-    private void nextRead(Rudder rd) {
+    @Override
+    protected void nextRead(RudderState st) {
+
         new Thread(() -> {
-            try {
-                RudderState st = getRudderState(rd);
-                if (st == null || st.closed) {
-                    // channel is already closed
-                    BayLog.debug("%s Rudder is already closed: rd=%s", agent, rd);
-                    return;
-                }
-
-                NextSocketAction nextAct;
-                try {
-                    st.readBuf.compact();
-                    int n = rd.read(st.readBuf);
-                    BayLog.debug("%s read %d bytes (rd=%s) buf=%s", agent, n, rd, st.readBuf);
-                    if (n < 0) {
-                        BayLog.debug("%s set limit 0", agent);
-                        st.readBuf.limit(0);
-                        nextAct = st.transporter.onRead(st.rudder, st.readBuf, null);
-                    }
-                    else if (n == 0) {
-                        // Continue
-                        nextAct = NextSocketAction.Continue;
-                    }
-                    else {
-                        st.readBuf.flip();
-                        nextAct = st.transporter.onRead(st.rudder, st.readBuf, null);
-                    }
-                    BayLog.debug("%s Next action %s", agent, nextAct);
-
-                } catch (AsynchronousCloseException e) {
-                    BayLog.debug(e, "%s Closed by another thread: %s", this, st.rudder);
-                    return; // Do not do next action
-                } catch (IOException e) {
-                    st.transporter.onError(st.rudder, e);
-                    nextAct = NextSocketAction.Close;
-                } catch (Throwable e) {
-                    BayLog.fatal(e);
-                    agent.shutdown();
-                    nextAct = NextSocketAction.Close;
-                }
-
-                nextAction(st, nextAct, true);
-            } catch(Throwable e) {
-                BayLog.fatal(e);
-                agent.shutdown();
+            if (st.closed) {
+                // channel is already closed
+                BayLog.debug("%s Rudder is already closed: rd=%s", agent, st.rudder);
+                return;
             }
+
+            int n;
+            try {
+                st.readBuf.clear();
+                BayLog.debug("%s Try to Read (rd=%s) (buf=%s) timeout=%d", agent, st.rudder, st.readBuf, agent.timeoutSec);
+                n = st.rudder.read(st.readBuf);
+                if(n > 0)
+                    st.readBuf.flip();
+            } catch (AsynchronousCloseException e) {
+                BayLog.debug(e, "%s Closed by another thread: %s", this, st.rudder);
+                return; // Do not do next action
+            } catch (IOException e) {
+                sendLetter(new Letter(LetterType.Read, st.rudder, e));
+                return;
+            }
+
+            sendLetter(new Letter(LetterType.Read, st.rudder, n));
         }).start();
     }
 
-    private void nextWrite(Rudder rd) {
+    @Override
+    protected void nextWrite(RudderState st) {
+
         new Thread(() -> {
-            try {
-                RudderState st = getRudderState(rd);
-                if (st == null || st.closed) {
-                    // channel is already closed
-                    BayLog.debug("%s Rudder is already closed: rd=%s", agent, rd);
-                    return;
-                }
-
-                try {
-                    WriteUnit unit;
-                    synchronized (st.writeQueue) {
-                        unit = st.writeQueue.get(0);
-                        BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b", this, unit.tag, unit.buf.limit(), st.closed);
-                        //BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
-
-                        int n = 0;
-                        if(!st.closed && unit.buf.limit() > 0) {
-                            n = rd.write(unit.buf);
-                            //BayLog.debug("wrote %d bytes", n);
-                        }
-
-                        if (n != unit.buf.limit()) {
-                            throw new IOException("Could not write enough data: " + n + "/" + unit.buf.limit());
-                        }
-                        st.writeQueue.remove(0);
-                    }
-
-                    unit.done();
-
-                    boolean writeMore = true;
-                    synchronized (st.writing) {
-                        if (st.writeQueue.isEmpty()) {
-                            writeMore = false;
-                            st.writing[0] = false;
-                        }
-                    }
-
-                    if(writeMore) {
-                        nextWrite(st.rudder);
-                    }
-
-                } catch (IOException e) {
-                    if(st.closed) {
-                        BayLog.debug(e, "Rudder is closed. Ignore error");
-                    }
-                    else {
-                        st.transporter.onError(st.rudder, e);
-                        nextAction(st, NextSocketAction.Close, false);
-                    }
-                }
-
-            } catch(Throwable e) {
-                BayLog.fatal(e);
-                agent.shutdown();
+            if (st == null || st.closed) {
+                // channel is already closed
+                BayLog.debug("%s Rudder is already closed: rd=%s", agent, st.rudder);
+                return;
             }
+
+            WriteUnit u = st.writeQueue.get(0);
+            BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b", this, u.tag, u.buf.limit(), st.closed);
+
+            int n = 0;
+            try {
+                if(!st.closed && u.buf.limit() > 0) {
+                    n = st.rudder.write(u.buf);
+                }
+            } catch (IOException e) {
+                sendLetter(new Letter(LetterType.Write, st.rudder, e));
+                return;
+            }
+            sendLetter(new Letter(LetterType.Write, st.rudder, n));
 
         }).start();
 
     }
 
-    private void nextAction(RudderState st, NextSocketAction act, boolean reading) {
-        try {
-            switch (act) {
-                case Continue:
-                    if(reading)
-                        nextRead(st.rudder);
-                    break;
 
-                case Read:
-                    nextRead(st.rudder);
-                    break;
+    ////////////////////////////////////////////
+    // Private methods
+    ////////////////////////////////////////////
 
-                case Write:
-                    if(reading)
-                        cancelRead(st);
-                    nextWrite(st.rudder);
-                    break;
-
-                case Close:
-                    if(reading)
-                        cancelRead(st);
-                    closeRudder(st);
-                    break;
-
-                case Suspend:
-                    if(reading)
-                        cancelRead(st);
-                    break;
-            }
-            st.access();
-        }
-        catch(Throwable e) {
-            BayLog.fatal(e);
-            agent.shutdown();
-        }
-    }
-
-    private void cancelRead(RudderState st) {
-        synchronized (st.reading) {
-            BayLog.debug("%s Reading off %s", agent, st.rudder);
-            st.reading[0] = false;
-        }
-    }
 
 }
