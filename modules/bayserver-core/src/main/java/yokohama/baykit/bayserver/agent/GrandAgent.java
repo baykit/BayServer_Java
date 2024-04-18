@@ -89,7 +89,7 @@ public class GrandAgent {
             };
 
             long period = timeoutSec * 1000; // 10seconds
-            timer.scheduleAtFixedRate(task, 0, period);
+            timer.scheduleAtFixedRate(task, period, period);
         }
     }
 
