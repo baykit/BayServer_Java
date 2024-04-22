@@ -1,20 +1,24 @@
 package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.common.EOFChecker;
+import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.rudder.Rudder;
 
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
 import java.util.ArrayList;
 
 public class RudderState {
 
-    final Rudder rudder;
-    final Transporter transporter;
+    public final Rudder rudder;
+    public final Transporter transporter;
+    public Multiplexer multiplexer;
 
     long lastAccessTime;
     boolean closing;
-    final ByteBuffer readBuf;
+    public final ByteBuffer readBuf;
     public ArrayList<WriteUnit> writeQueue = new ArrayList<>();
+    public SelectionKey selectionKey;
     public boolean reading[] = new boolean[]{false};
     public boolean writing[] = new boolean[]{false};
     public int bytesRead;
@@ -41,7 +45,7 @@ public class RudderState {
         }
     }
 
-    void access() {
+    public void access() {
         lastAccessTime = System.currentTimeMillis();
     }
 

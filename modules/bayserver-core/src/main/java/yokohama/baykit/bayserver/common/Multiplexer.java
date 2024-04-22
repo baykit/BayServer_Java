@@ -17,8 +17,6 @@ import java.nio.channels.Pipe;
  */
 public interface Multiplexer {
 
-    void start();
-
     void addRudderState(Rudder rd, RudderState st);
 
     RudderState getRudderState(Rudder rd);
@@ -37,7 +35,24 @@ public interface Multiplexer {
 
     void runCommandReceiver(Pipe.SourceChannel readCh, Pipe.SinkChannel writeCh);
 
+    void cancelRead(RudderState st);
+
+    void cancelWrite(RudderState st);
+
+    void nextAccept(RudderState state);
+    void nextRead(RudderState st);
+    void nextWrite(RudderState st);
+
     void shutdown();
 
+    boolean isBusy();
+
     boolean useAsyncAPI();
+
+    boolean consumeOldestUnit(RudderState st);
+    void closeRudder(RudderState st);
+
+    void onBusy();
+
+    void onFree();
 }

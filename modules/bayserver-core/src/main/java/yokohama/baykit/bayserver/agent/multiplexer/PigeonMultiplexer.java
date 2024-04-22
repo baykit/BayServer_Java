@@ -30,17 +30,18 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
 
     @Override
     public void reqConnect(Rudder rd, SocketAddress addr) throws IOException {
+        RudderState st = findRudderStateByKey(ChannelRudder.getChannel(rd));
         AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(rd).connect(
                 addr, null, new CompletionHandler<Void, Void>() {
 
             @Override
             public void completed(Void result, Void attachment) {
-                sendLetter(new Letter(LetterType.Connect, rd));
+                agent.sendConnectedLetter(st, null, true);
             }
 
             @Override
             public void failed(Throwable e, Void attachment) {
-                sendLetter(new Letter(LetterType.Connect, rd, e));
+                agent.sendConnectedLetter(st, e, true);
             }
         });
     }
@@ -119,12 +120,39 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
 
     @Override
     public void reqClose(Rudder rd) {
-        sendLetter(new Letter(LetterType.CloseReq, rd));
+        RudderState st = findRudderStateByKey(ChannelRudder.getChannel(rd));
+        if(st == null || st.closed) {
+            BayLog.debug("%s Rudder is closed: %s", this, rd);
+            return;
+        }
+        else {
+            agent.sendCloseReqLetter(st, true);
+        }
+    }
+
+    @Override
+    public void cancelRead(RudderState st) {
+
+    }
+
+    @Override
+    public void cancelWrite(RudderState st) {
+
+    }
+
+    @Override
+    public void nextAccept(RudderState state) {
+        reqAccept(state.rudder);
     }
 
     @Override
     public boolean useAsyncAPI() {
         return true;
+    }
+
+    @Override
+    public void onBusy() {
+
     }
 
     ////////////////////////////////////////////
@@ -137,20 +165,23 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
         if (agent.aborted) {
             return;
         }
+        AsynchronousServerSocketChannel sch = (AsynchronousServerSocketChannel) ChannelRudder.getChannel(rd);
+        RudderState st = findRudderStateByKey(sch);
 
         try {
             AsynchronousSocketChannel ch = null;
-            ((AsynchronousServerSocketChannel) ChannelRudder.getChannel(rd)).accept(
+            sch.accept(
                     rd,
                     new CompletionHandler<AsynchronousSocketChannel, Rudder>() {
                         @Override
                         public void completed(AsynchronousSocketChannel clientCh, Rudder serverRd) {
-                            sendLetter(new Letter(LetterType.Accept, serverRd, new AsynchronousSocketChannelRudder(clientCh)));
+                            BayLog.debug("%s Accepted: cli=%s", PigeonMultiplexer.this, clientCh);
+                            agent.sendAcceptedLetter(st, new AsynchronousSocketChannelRudder(clientCh), null, true);
                         }
 
                         @Override
                         public void failed(Throwable e, Rudder serverRd) {
-                            sendLetter(new Letter(LetterType.Accept, serverRd, e));
+                            agent.sendAcceptedLetter(st, null, e, true);
                         }
                     });
         }
@@ -160,7 +191,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
     }
 
     @Override
-    protected void nextRead(RudderState state) {
+    public void nextRead(RudderState state) {
         if(state.rudder instanceof AsynchronousFileChannelRudder)
             nextFileRead(state);
         else
@@ -168,7 +199,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
     }
 
     @Override
-    protected void nextWrite(RudderState st) {
+    public void nextWrite(RudderState st) {
         if (st.rudder instanceof AsynchronousFileChannelRudder)
             nextFileWrite(st);
         else
@@ -181,27 +212,41 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
     ////////////////////////////////////////////
 
     private class ReadCompletionHandler implements CompletionHandler<Integer, Rudder> {
+        final RudderState state;
+
+        private ReadCompletionHandler(RudderState state) {
+            this.state = state;
+        }
+
         @Override
         public void completed(Integer n, Rudder rd) {
-            sendLetter(new Letter(LetterType.Read, rd, n));
+            BayLog.debug("%s read completed: rd=%s buf=%s", PigeonMultiplexer.this, rd, state.readBuf);
+            state.readBuf.flip();
+            agent.sendReadLetter(state, n, null, true);
         }
 
         @Override
         public void failed(Throwable e, Rudder rd) {
-            sendLetter(new Letter(LetterType.Read, rd, e));
+            agent.sendReadLetter(state, -1, e, true);
         }
 
     }
 
     private class WriteCompletionHandler implements CompletionHandler<Integer, Rudder> {
+        final RudderState state;
+
+        private WriteCompletionHandler(RudderState state) {
+            this.state = state;
+        }
+
         @Override
         public void completed(Integer n, Rudder rd) {
-            sendLetter(new Letter(LetterType.Write, rd, n));
+            agent.sendWroteLetter(state, n, null, true);
         }
 
         @Override
         public void failed(Throwable e, Rudder rd) {
-            sendLetter(new Letter(LetterType.Write, rd, e));
+            agent.sendWroteLetter(state, -1, e, true);
         }
     }
 
@@ -214,7 +259,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
                 state.readBuf,
                 state.bytesRead,
                 state.rudder,
-                new ReadCompletionHandler());
+                new ReadCompletionHandler(state));
     }
 
     private void nextFileWrite(RudderState st) {
@@ -228,11 +273,11 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
                     unit.buf,
                     st.bytesWrote,
                     st.rudder,
-                    new WriteCompletionHandler());
+                    new WriteCompletionHandler(st));
 
         }
         else {
-            new WriteCompletionHandler().completed(unit.buf.limit(), st.rudder);
+            new WriteCompletionHandler(st).completed(unit.buf.limit(), st.rudder);
         }
     }
 
@@ -245,7 +290,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
                 agent.timeoutSec,
                 TimeUnit.SECONDS,
                 state.rudder,
-                new ReadCompletionHandler());
+                new ReadCompletionHandler(state));
     }
 
     private void nextNetworkWrite(RudderState st) {
@@ -260,11 +305,11 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
                     agent.timeoutSec,
                     TimeUnit.SECONDS,
                     st.rudder,
-                    new WriteCompletionHandler());
+                    new WriteCompletionHandler(st));
 
         }
         else {
-            new WriteCompletionHandler().completed(unit.buf.limit(), st.rudder);
+            new WriteCompletionHandler(st).completed(unit.buf.limit(), st.rudder);
         }
     }
 }
