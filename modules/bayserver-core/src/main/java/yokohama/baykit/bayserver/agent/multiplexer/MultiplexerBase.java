@@ -30,7 +30,7 @@ public abstract class MultiplexerBase implements Multiplexer {
 
     @Override
     public String toString() {
-        return agent.toString();
+        return agent.toString() + ":" + super.toString();
     }
 
     ////////////////////////////////////////////
@@ -39,6 +39,7 @@ public abstract class MultiplexerBase implements Multiplexer {
     @Override
     public final void addRudderState(Rudder rd, RudderState st) {
         BayLog.trace("%s add rd=%s chState=%s", agent, rd, st);
+        st.multiplexer = this;
         synchronized (rudders) {
             rudders.put(rd.key(), st);
         }
@@ -107,11 +108,11 @@ public abstract class MultiplexerBase implements Multiplexer {
         channelCount--;
     }
 
-    protected final boolean isBusy() {
+    public final boolean isBusy() {
         return channelCount >= agent.maxInboundShips;
     }
 
-    protected final void closeRudder(RudderState chState) {
+    public final void closeRudder(RudderState chState) {
         BayLog.debug("%s closeRd %s state=%s closed=%b", agent, chState.rudder, chState, chState.closed);
 
         synchronized (this) {
@@ -150,7 +151,7 @@ public abstract class MultiplexerBase implements Multiplexer {
         }
     }
 
-    protected boolean consumeOldestUnit(RudderState st) {
+    public boolean consumeOldestUnit(RudderState st) {
         WriteUnit u;
         synchronized (st.writeQueue) {
             if(st.writeQueue.isEmpty())

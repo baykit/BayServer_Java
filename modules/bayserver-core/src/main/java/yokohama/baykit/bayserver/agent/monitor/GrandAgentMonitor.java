@@ -162,7 +162,7 @@ public class GrandAgentMonitor extends Thread {
         monitors.put(agtId, mon);
         mon.start();
 
-        agt.netMultiplexer.start();
+        agt.start();
     }
 
     static synchronized void agentAborted(int agtId, boolean anchorable) {

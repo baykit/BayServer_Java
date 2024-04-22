@@ -141,11 +141,6 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
             fileMultiplexer = DEFAULT_FILE_MULTIPLEXER;
         }
 
-        if (fileMultiplexer == MultiPlexerType.Spin && netMultiplexer != MultiPlexerType.Sensor) {
-            BayLog.warn(BayMessage.get(Symbol.CFG_SPIN_MULTIPLEXER_NEEDS_SENSOR));
-            fileMultiplexer = DEFAULT_FILE_MULTIPLEXER;
-        }
-
         if((logMultiplexer == Harbor.MultiPlexerType.Sensor && !SysUtil.supportSelectFile()) ||
                 (logMultiplexer == Harbor.MultiPlexerType.Train)) {
             BayLog.warn(

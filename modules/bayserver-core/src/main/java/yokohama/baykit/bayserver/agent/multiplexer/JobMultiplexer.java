@@ -46,11 +46,11 @@ public class JobMultiplexer extends JobMultiplexerBase {
                 SocketChannel ch = (SocketChannel)ChannelRudder.getChannel(rd);
                 ch.connect(addr);
             } catch (IOException e) {
-                sendLetter(new Letter(LetterType.Connect, rd, e));
+                agent.sendConnectedLetter(st, e, true);
                 return;
             }
 
-            sendLetter(new Letter(LetterType.Connect, rd));
+            agent.sendConnectedLetter(st, null, true);
 
         }).start();
 
@@ -155,8 +155,28 @@ public class JobMultiplexer extends JobMultiplexerBase {
     }
 
     @Override
+    public void cancelRead(RudderState st) {
+
+    }
+
+    @Override
+    public void cancelWrite(RudderState st) {
+
+    }
+
+    @Override
+    public void nextAccept(RudderState state) {
+        reqAccept(state.rudder);
+    }
+
+    @Override
     public boolean useAsyncAPI() {
         return false;
+    }
+
+    @Override
+    public void onBusy() {
+
     }
 
     ////////////////////////////////////////////
@@ -170,6 +190,9 @@ public class JobMultiplexer extends JobMultiplexerBase {
             return;
         }
 
+        ServerSocketChannel sch = (ServerSocketChannel) ChannelRudder.getChannel(rd);
+        RudderState st = findRudderStateByKey(sch);
+
         new Thread(() -> {
             try {
                 if (agent.aborted) {
@@ -178,9 +201,9 @@ public class JobMultiplexer extends JobMultiplexerBase {
 
                 SocketChannel ch;
                 try {
-                    ch = ((ServerSocketChannel) ChannelRudder.getChannel(rd)).accept();
+                    ch = sch.accept();
                 } catch (IOException e) {
-                    sendLetter(new Letter(LetterType.Accept, rd, e));
+                    agent.sendAcceptedLetter(st, null, e, true);
                     return;
                 }
 
@@ -194,7 +217,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
                     }
                 }
                 else {
-                    sendLetter(new Letter(LetterType.Accept, rd, new SocketChannelRudder(ch)));
+                    agent.sendAcceptedLetter(st, new SocketChannelRudder(ch), null, true);
                 }
 
             } catch(Throwable e) {
@@ -205,7 +228,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
     }
 
     @Override
-    protected void nextRead(RudderState st) {
+    public void nextRead(RudderState st) {
 
         new Thread(() -> {
             if (st.closed) {
@@ -222,19 +245,19 @@ public class JobMultiplexer extends JobMultiplexerBase {
                 if(n > 0)
                     st.readBuf.flip();
             } catch (AsynchronousCloseException e) {
-                BayLog.debug(e, "%s Closed by another thread: %s", this, st.rudder);
+                BayLog.debug("%s Closed by another thread: %s (%s)", this, st.rudder, e);
                 return; // Do not do next action
             } catch (IOException e) {
-                sendLetter(new Letter(LetterType.Read, st.rudder, e));
+                agent.sendReadLetter(st, -1, e, true);
                 return;
             }
 
-            sendLetter(new Letter(LetterType.Read, st.rudder, n));
+            agent.sendReadLetter(st, n, null, true);
         }).start();
     }
 
     @Override
-    protected void nextWrite(RudderState st) {
+    public void nextWrite(RudderState st) {
 
         new Thread(() -> {
             if (st == null || st.closed) {
@@ -252,10 +275,10 @@ public class JobMultiplexer extends JobMultiplexerBase {
                     n = st.rudder.write(u.buf);
                 }
             } catch (IOException e) {
-                sendLetter(new Letter(LetterType.Write, st.rudder, e));
+                agent.sendWroteLetter(st, -1, e, true);
                 return;
             }
-            sendLetter(new Letter(LetterType.Write, st.rudder, n));
+            agent.sendWroteLetter(st, n, null, true);
 
         }).start();
 

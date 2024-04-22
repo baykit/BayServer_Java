@@ -31,11 +31,6 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
     ////////////////////////////////////////////
 
     @Override
-    public void start() {
-        throw new Sink();
-    }
-
-    @Override
     public void reqConnect(Rudder rd, SocketAddress addr) throws IOException {
         throw new Sink();
     }
@@ -72,6 +67,31 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
     }
 
     @Override
+    public void cancelRead(RudderState st) {
+
+    }
+
+    @Override
+    public void cancelWrite(RudderState st) {
+
+    }
+
+    @Override
+    public void nextAccept(RudderState state) {
+        throw new Sink();
+    }
+
+    @Override
+    public void nextRead(RudderState st) {
+        nextRead(st.rudder);
+    }
+
+    @Override
+    public void nextWrite(RudderState st) {
+        nextWrite(st.rudder);
+    }
+
+    @Override
     public void shutdown() {
         closeAll();
     }
@@ -79,6 +99,16 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
     @Override
     public boolean useAsyncAPI() {
         return false;
+    }
+
+    @Override
+    public void onBusy() {
+        throw new Sink();
+    }
+
+    @Override
+    public void onFree() {
+        throw new Sink();
     }
 
     ////////////////////////////////////////////

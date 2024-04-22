@@ -53,11 +53,6 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
     ////////////////////////////////////////////
 
     @Override
-    public void start() {
-        throw new Sink();
-    }
-
-    @Override
     public void reqRead(Rudder rd) {
         RudderState st = getRudderState(rd);
         if(st == null) {
@@ -115,6 +110,21 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
     }
 
     @Override
+    public void cancelRead(RudderState st) {
+
+    }
+
+    @Override
+    public void cancelWrite(RudderState st) {
+
+    }
+
+    @Override
+    public void nextAccept(RudderState state) {
+        throw new Sink();
+    }
+
+    @Override
     public void shutdown() {
         closeAll();
     }
@@ -122,6 +132,16 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
     @Override
     public boolean useAsyncAPI() {
         return false;
+    }
+
+    @Override
+    public void onBusy() {
+        throw new Sink();
+    }
+
+    @Override
+    public void onFree() {
+        throw new Sink();
     }
 
     ////////////////////////////////////////////////////////////////////
@@ -139,7 +159,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
         return runningList.isEmpty();
     }
 
-    boolean processData() {
+    public boolean processData() {
         if (isEmpty())
             return false;
 
@@ -215,7 +235,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
         }
     }
 
-    private void nextRead(RudderState st) {
+    public void nextRead(RudderState st) {
         Lapper lpr;
 
         if(st.rudder instanceof AsynchronousFileChannelRudder) {
@@ -235,14 +255,14 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
 
     }
 
-    private void nextWrite(RudderState st) throws IOException {
+    public void nextWrite(RudderState st) {
         Lapper lpr = null;
 
         if(st.rudder instanceof AsynchronousFileChannelRudder) {
             lpr = new AsyncWriteLapper(st);
         }
         else {
-            throw new IOException("Spin write not supported");
+            throw new Sink("Spin write not supported");
         }
 
         lpr.next();
