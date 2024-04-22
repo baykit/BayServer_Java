@@ -148,7 +148,7 @@ public class CgiStdOutShip extends ReadOnlyShip {
 
     @Override
     public void notifyError(Throwable e) {
-        BayLog.debug(e, "%s CGI notifyError");
+        BayLog.debug(e, "%s CGI notifyError", this);
     }
 
     @Override
