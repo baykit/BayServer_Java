@@ -38,11 +38,13 @@ public class BuiltInLogDocker extends DockerBase implements Log {
             int size = (int)new File(fileName).length();
             try {
                 GrandAgent agt = GrandAgent.get(agentId);
+                Multiplexer mpx;
+                Rudder rd;
                 switch(BayServer.harbor.logMultiplexer()) {
                     case Taxi: {
                         WritableByteChannel output = new FileOutputStream(fileName).getChannel();
-                        rudder = new WritableByteChannelRudder(output);
-                        multiplexer = agt.taxiMultiplexer;
+                        rd = new WritableByteChannelRudder(output);
+                        mpx = agt.taxiMultiplexer;
                         break;
                     }
                     case Spin: {
@@ -51,17 +53,19 @@ public class BuiltInLogDocker extends DockerBase implements Log {
                                         Paths.get(fileName),
                                         StandardOpenOption.CREATE,
                                         StandardOpenOption.WRITE);
-                        rudder = new AsynchronousFileChannelRudder(ch);
-                        multiplexer = agt.spinMultiplexer;
+                        rd = new AsynchronousFileChannelRudder(ch);
+                        mpx = agt.spinMultiplexer;
                         break;
                     }
                     default:
                         throw new Sink("Not supported");
                 }
 
-                RudderState st = new RudderState(rudder);
+                RudderState st = new RudderState(rd);
                 st.bytesWrote = size;
-                multiplexer.addRudderState(rudder, st);
+                mpx.addRudderState(rd, st);
+                multiplexers.add(mpx);
+                rudders.add(rd);
             }
             catch(IOException e) {
                 BayLog.fatal(BayMessage.get(Symbol.INT_CANNOT_OPEN_LOG_FILE, fileName));
@@ -71,7 +75,10 @@ public class BuiltInLogDocker extends DockerBase implements Log {
 
         @Override
         public void remove(int agentId) {
-            multiplexer.reqClose(rudder);
+            Rudder rd = rudders.get(agentId - 1);
+            multiplexers.get(agentId - 1).reqClose(rd);
+            multiplexers.set(agentId - 1, null);
+            rudders.set(agentId - 1, null);
         }
     }
 
@@ -89,10 +96,10 @@ public class BuiltInLogDocker extends DockerBase implements Log {
     /** Log items */
     LogItem[] logItems;
 
-    Rudder rudder;
+    ArrayList<Rudder> rudders = new ArrayList<>();
 
     /** Multiplexer to write to file */
-    Multiplexer multiplexer;
+    ArrayList<Multiplexer> multiplexers = new ArrayList<>();
 
     static {
         // Create mapping table
@@ -198,8 +205,8 @@ public class BuiltInLogDocker extends DockerBase implements Log {
         if (sb.length() > 0) {
             byte[] bytes = StringUtil.toBytes(sb.toString() + CharUtil.LF);
             ByteBuffer buf = ByteBuffer.wrap(bytes, 0, bytes.length);
-            multiplexer.reqWrite(
-                    rudder, buf, null, "log", null);
+            multiplexers.get(tour.ship.agentId - 1).reqWrite(
+                    rudders.get(tour.ship.agentId - 1), buf, null, "log", null);
         }
     }
 
