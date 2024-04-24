@@ -24,6 +24,10 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
         super(agent, anchorable);
     }
 
+    public String toString() {
+        return "PigeonMpx[" + agent + "]";
+    }
+
     ////////////////////////////////////////////
     // Implements Multiplexer
     ////////////////////////////////////////////
@@ -88,7 +92,6 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
         synchronized (state.writeQueue) {
             state.writeQueue.add(unt);
         }
-        state.access();
 
         boolean needWrite = false;
         synchronized (state.writing) {

@@ -24,6 +24,7 @@ public class VehicleRunner {
 
         @Override
         public void remove(int agentId) {
+            BayLog.debug("agt#%d remove VehicleRunner", agentId);
             services.get(agentId - 1).terminate();
             services.set(agentId - 1, null);
         }
@@ -58,7 +59,7 @@ public class VehicleRunner {
         // Private methods
         //////////////////////////////////////////////
         private void terminate() {
-            BayLog.debug("%s terminate TaxiRunner", agent);
+            BayLog.debug("%s terminate VehicleRunner: %s", agent, this);
             agent.removeTimerHandler(this);
             exe.shutdown();
         }
@@ -67,7 +68,7 @@ public class VehicleRunner {
             try {
                 exe.submit(() -> {
                     if(agent.aborted) {
-                        BayLog.fatal("Agent is aborted");
+                        BayLog.fatal("%s Agent is aborted", agent);
                         return;
                     }
                     synchronized (runnings) {

@@ -45,7 +45,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
     }
 
     public String toString() {
-        return "SpinMultiplexer[" + agent + "]";
+        return "SpinMpx[" + agent + "]";
     }
 
     ////////////////////////////////////////////
@@ -290,11 +290,11 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
             spun[0] = true;
             try {
                 int len = curFuture.get();
-                BayLog.debug("%s Spin read: %d bytes", this, len);
+                BayLog.debug("%s Spin read: %d bytes", SpinMultiplexer.this, len);
 
                 if (len == -1) {
                     spun[0] = true;
-                    BayLog.debug("%s Spin read: EOF\\(^o^)/", this);
+                    BayLog.debug("%s Spin read: EOF\\(^o^)/", SpinMultiplexer.this);
                     state.readBuf.clear();
                     return state.transporter.onRead(state.rudder, state.readBuf, null);
                 } else {
@@ -308,7 +308,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
                 }
 
             } catch (Exception e) {
-                BayLog.error(e, "%s Error", this);
+                BayLog.error(e, "%s Error", SpinMultiplexer.this);
                 closeRudder(state);
                 return NextSocketAction.Close;
             }
@@ -323,7 +323,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
 
         private void cancelRead() {
             synchronized (state.reading) {
-                BayLog.debug("%s Reading off %s", agent, state.rudder);
+                BayLog.debug("%s Reading off %s", SpinMultiplexer.this, state.rudder);
                 state.reading[0] = false;
             }
         }
@@ -348,7 +348,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
 
             try {
                 int len = curFuture.get();
-                BayLog.debug("%s wrote %d bytes", this, len);
+                BayLog.debug("%s wrote %d bytes", SpinMultiplexer.this, len);
 
                 WriteUnit unit;
                 synchronized (state.writeQueue) {
@@ -380,7 +380,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
                     return NextSocketAction.Suspend;
             }
             catch (Exception e) {
-                BayLog.error(e, "%s Error", this);
+                BayLog.error(e, "%s Error", SpinMultiplexer.this);
                 closeRudder(state);
                 return NextSocketAction.Close;
             }
@@ -390,7 +390,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
         @Override
         public void next() {
             WriteUnit unit = state.writeQueue.get(0);
-            BayLog.debug("%s write req %d bytes", this, unit.buf.limit());
+            BayLog.debug("%s write req %d bytes", SpinMultiplexer.this, unit.buf.limit());
             curFuture = AsynchronousFileChannelRudder.getAsynchronousFileChannel(state.rudder).write(unit.buf, state.bytesWrote);
             state.bytesWrote += state.readBuf.limit();
         }

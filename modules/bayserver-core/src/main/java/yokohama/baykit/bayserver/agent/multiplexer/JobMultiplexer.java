@@ -24,6 +24,11 @@ public class JobMultiplexer extends JobMultiplexerBase {
         super(agent, anchorable);
     }
 
+    public String toString() {
+        return "JobMpx[" + agent + "]";
+    }
+
+
     ////////////////////////////////////////////
     // Implements Multiplexer
     ////////////////////////////////////////////
