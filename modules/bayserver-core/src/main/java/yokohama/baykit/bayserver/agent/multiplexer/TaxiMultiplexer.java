@@ -3,9 +3,8 @@ package yokohama.baykit.bayserver.agent.multiplexer;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.rudder.ReadableByteChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.taxi.Taxi;
@@ -26,6 +25,10 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
         super(agt);
     }
 
+    public String toString() {
+        return "TaxiMultiplexer[" + agent + "]";
+    }
+
     ////////////////////////////////////////////
     // Implements Multiplexer
     ////////////////////////////////////////////
@@ -39,14 +42,46 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
     public void reqRead(Rudder rd) {
         BayLog.debug("%s TaxiMpx reqRead rd=%s", this, rd);
         RudderState st = getRudderState(rd);
-        nextRun(st);
+
+        boolean needRead = false;
+        synchronized (st.reading) {
+            if (!st.reading[0]) {
+                needRead = true;
+                st.reading[0] = true;
+            }
+        }
+
+        BayLog.debug("%s needRead=%s", agent, needRead);
+        if(needRead) {
+            nextRun(st);
+        }
     }
 
     @Override
     public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) throws IOException {
-        BayLog.debug("%s TaxiMpx reqWrite rd=%s", this, rd);
+        BayLog.debug("%s TaxiMpx reqWrite rd=%s buf=%s", this, rd, buf);
         RudderState st = getRudderState(rd);
-        nextRun(st);
+        if(st == null || st.closed) {
+            throw new IOException(this + " Invalid rudder: " + rd);
+        }
+        WriteUnit unt = new WriteUnit(buf, adr, tag, listener);
+        synchronized (st.writeQueue) {
+            st.writeQueue.add(unt);
+        }
+
+        boolean needWrite = false;
+        synchronized (st.writing) {
+            if (!st.writing[0]) {
+                needWrite = true;
+                st.writing[0] = true;
+            }
+        }
+
+        if(needWrite) {
+            nextRun(st);
+        }
+
+        st.access();
     }
 
     @Override
@@ -153,40 +188,18 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
         RudderState st = getRudderState(rd);
 
         try {
-            ByteBuffer buf = ByteBuffer.allocate(8192);
-            int len = ((ReadableByteChannel)ChannelRudder.getChannel(rd)).read(buf);
-            BayLog.debug("%s Read %d bytes rd=%s", this, len, rd);
-            NextSocketAction act;
+            int len = ((ReadableByteChannel)ChannelRudder.getChannel(rd)).read(st.readBuf);
+
             if (len <= 0) {
-                buf.limit(0);
-                act = st.transporter.onRead(st.rudder, buf, null);
+                st.readBuf.limit(st.readBuf.position());
             }
             else {
-                buf.flip();
-                act = st.transporter.onRead(st.rudder, buf, null);
+                st.readBuf.flip();
             }
-            BayLog.debug("Next action: %s", act);
-            switch(act) {
-                case Read:
-                case Continue:
-                    nextRun(st);
-                    break;
-                case Close:
-                    closeRudder(st);
-                    break;
-                default:
-                    throw new Sink();
-
-            }
+            agent.sendReadLetter(st, len, null, true);
         }
-        catch(IOException e) {
-            BayLog.error(e);
-            closeRudder(st);
-        }
-        catch(RuntimeException | Error e) {
-            BayLog.error(e);
-            closeRudder(st);
-            throw e;
+        catch(Throwable e) {
+            agent.sendReadLetter(st, -1, e, true);
         }
     }
 
@@ -195,16 +208,20 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
         st.access();
 
         try {
-            ((WritableByteChannel)ChannelRudder.getChannel(rd)).write(st.readBuf);
+            if(st.writeQueue.isEmpty())
+                throw new IllegalStateException(this + " Write queue is empty!");
+            WriteUnit u = st.writeQueue.get(0);
+            int len;
+            if(u.buf.limit() == 0) {
+                len = 0;
+            }
+            else {
+                len = ((WritableByteChannel) ChannelRudder.getChannel(rd)).write(u.buf);
+            }
+            agent.sendWroteLetter(st, len, null, true);
         }
-        catch(IOException e) {
-            BayLog.error(e);
-            closeRudder(st);
-        }
-        catch(RuntimeException | Error e) {
-            BayLog.error(e);
-            closeRudder(st);
-            throw e;
+        catch(Throwable e) {
+            agent.sendWroteLetter(st, -1, e, true);
         }
     }
 }
