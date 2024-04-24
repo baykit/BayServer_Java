@@ -184,7 +184,7 @@ public class GrandAgent extends Thread {
                     count = sensingMultiplexer.select(timeoutSec);
                 }
 
-                BayLog.debug("selected: %d", count);
+                //BayLog.debug("selected: %d", count);
                 if(aborted) {
                     BayLog.info("%s aborted by another thread", this);
                     break;
@@ -223,7 +223,9 @@ public class GrandAgent extends Thread {
         }
         catch (Throwable e) {
             // If error occurs, grand agent ends
-            BayLog.fatal(e);
+            BayLog.fatal(e, "%s Fatal error!", this);
+            shutdown();
+            System.exit(1);
         }
         finally {
             BayLog.info("%s end", this);
@@ -243,7 +245,8 @@ public class GrandAgent extends Thread {
             return;
 
         aborted = true;
-        timer.cancel();
+        if(timer != null)
+            timer.cancel();
 
         BayLog.debug("%s shutdown netMultiplexer", this);
         netMultiplexer.shutdown();
@@ -410,6 +413,9 @@ public class GrandAgent extends Thread {
             }
             else {
                 nextAct = st.transporter.onRead(st.rudder, st.readBuf, null);
+                BayLog.debug("%s return read before buf=%s", this, st.readBuf);
+                st.readBuf.compact();
+                BayLog.debug("%s return read buf=%s", this, st.readBuf);
             }
 
         }
@@ -434,11 +440,15 @@ public class GrandAgent extends Thread {
                 throw let.err;
             }
 
-            BayLog.debug("%s wrote %d bytes rd=%s", this, let.nBytes, st.rudder);
+            BayLog.debug("%s wrote %d bytes rd=%s qlen=%d", this, let.nBytes, st.rudder, st.writeQueue.size());
             st.bytesWrote += let.nBytes;
+
+            if(st.writeQueue.isEmpty())
+                throw new IllegalStateException(this + " Write queue is empty: rd=" + st.rudder);
 
             boolean writeMore = true;
             WriteUnit unit = st.writeQueue.get(0);
+            //BayLog.debug("%s wrote buf=%s", this, unit.buf);
             if (unit.buf.hasRemaining()) {
                 BayLog.debug("Could not write enough data buf=%s", unit.buf);
                 writeMore = true;
