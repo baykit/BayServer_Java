@@ -98,7 +98,6 @@ public class BayLog {
                 System.err.print(LOG_LEVEL_NAME[lvl]);
                 System.err.print(". ");
                 String msg = "";
-                Exception err = null;
                 try {
                     if(args == null || args.length == 0)
                         msg = String.format("%s", fmt);
@@ -115,9 +114,6 @@ public class BayLog {
                 System.err.print(":");
                 System.err.print(caller.getLineNumber());
                 System.err.println(")");
-
-                if(err != null)
-                    error(err);
             }
         }
     }
@@ -142,7 +138,6 @@ public class BayLog {
             log(LOG_LEVEL_FATAL, stackIdx, fmt, args);
         if(e != null)
             e.printStackTrace();
-        System.exit(1);
     }
 
     public static boolean isDebugMode() {
