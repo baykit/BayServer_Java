@@ -139,6 +139,7 @@ public class CgiStdOutShip extends ReadOnlyShip {
             }
         }
 
+        buf.position(buf.limit());
         handler.access();
         if(available)
             return NextSocketAction.Continue;
