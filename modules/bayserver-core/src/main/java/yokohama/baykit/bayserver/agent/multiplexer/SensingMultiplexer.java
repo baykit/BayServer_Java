@@ -65,6 +65,11 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
         agent.addTimerHandler(this);
     }
 
+    public String toString() {
+        return "SensorMpx[" + agent + "]";
+    }
+
+
     ////////////////////////////////////////////
     // Implements Runnable
     ////////////////////////////////////////////
@@ -205,7 +210,7 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
 
         //BayLog.debug("askToWrite");
         RudderState st = getRudderState(rd);
-        BayLog.debug("%s reqWrite chState=%s len=%d", agent, st, buf.remaining());
+        BayLog.debug("%s reqWrite chState=%s tag=%s len=%d", agent, st, tag, buf.remaining());
         if(st == null || st.closed) {
             throw new IOException("Invalid channel");
         }
@@ -340,7 +345,7 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
             for (ChannelOperation cop : operations) {
                 RudderState st = getRudderState(cop.rudder);
                 if (st == null) {
-                    BayLog.debug("%s rudder is closed");
+                    BayLog.debug("%s cannot register rudder: (rudder is closed)");
                     continue;
                 }
 
@@ -547,6 +552,9 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
 
     private void onWritable(RudderState st) {
         try {
+            if(st.writeQueue.isEmpty())
+                throw new IOException(agent + " No data to write");
+
             WriteUnit wUnit = st.writeQueue.get(0);
 
             BayLog.debug("%s Try to write: pkt=%s pos=%d len=%d closed=%b adr=%s", this, wUnit.tag, wUnit.buf.position(), wUnit.buf.limit(), st.closed, wUnit.adr);
@@ -569,6 +577,7 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
     }
 
     private void onCloseReq(RudderState st) {
+        BayLog.debug("%s onCloseReq: rd=%s", this, st.rudder);
         agent.sendCloseReqLetter(st, false);
     }
 
