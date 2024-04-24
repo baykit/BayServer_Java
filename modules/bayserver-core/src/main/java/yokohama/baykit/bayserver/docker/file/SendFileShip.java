@@ -53,6 +53,7 @@ public class SendFileShip extends ReadOnlyShip {
 
         try {
             boolean available = tour.res.sendResContent(tourId, buf.array(), 0, buf.limit());
+            buf.position(buf.limit());
 
             if(available) {
                 return NextSocketAction.Continue;
