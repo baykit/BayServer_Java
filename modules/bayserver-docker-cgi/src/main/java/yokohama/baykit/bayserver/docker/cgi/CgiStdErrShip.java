@@ -47,6 +47,7 @@ public class CgiStdErrShip extends ReadOnlyShip  {
         if(msg.length() > 0)
             BayLog.error("CGI Stderr: %s", msg);
 
+        buf.position(buf.limit());
         handler.access();
         return NextSocketAction.Continue;
     }
