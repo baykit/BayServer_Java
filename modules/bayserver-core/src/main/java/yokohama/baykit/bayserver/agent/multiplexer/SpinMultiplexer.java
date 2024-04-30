@@ -111,12 +111,53 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
 
     @Override
     public void cancelRead(RudderState st) {
-
+        synchronized (st.reading) {
+            BayLog.debug("%s Reading off %s", SpinMultiplexer.this, st.rudder);
+            st.reading[0] = false;
+        }
     }
 
     @Override
     public void cancelWrite(RudderState st) {
 
+    }
+
+    @Override
+    public void nextRead(RudderState st) {
+        Lapper lpr;
+
+        if(st.rudder instanceof AsynchronousFileChannelRudder) {
+            lpr = new AsyncReadLapper(st);
+        }
+        else if(st.rudder instanceof InputStreamRudder) {
+            lpr = new ReadStreamLapper(st);
+        }
+        else {
+            throw new Sink("Spin read not supported for this rudder");
+        }
+
+        lpr.next();
+        synchronized (runningList) {
+            runningList.add(lpr);
+        }
+
+    }
+
+    @Override
+    public void nextWrite(RudderState st) {
+        Lapper lpr = null;
+
+        if(st.rudder instanceof AsynchronousFileChannelRudder) {
+            lpr = new AsyncWriteLapper(st);
+        }
+        else {
+            throw new Sink("Spin write not supported");
+        }
+
+        lpr.next();
+        synchronized (runningList) {
+            runningList.add(lpr);
+        }
     }
 
     @Override
@@ -235,42 +276,6 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
         }
     }
 
-    public void nextRead(RudderState st) {
-        Lapper lpr;
-
-        if(st.rudder instanceof AsynchronousFileChannelRudder) {
-            lpr = new AsyncReadLapper(st);
-        }
-        else if(st.rudder instanceof InputStreamRudder) {
-            lpr = new ReadStreamLapper(st);
-        }
-        else {
-            throw new Sink("Spin read not supported for this rudder");
-        }
-
-        lpr.next();
-        synchronized (runningList) {
-            runningList.add(lpr);
-        }
-
-    }
-
-    public void nextWrite(RudderState st) {
-        Lapper lpr = null;
-
-        if(st.rudder instanceof AsynchronousFileChannelRudder) {
-            lpr = new AsyncWriteLapper(st);
-        }
-        else {
-            throw new Sink("Spin write not supported");
-        }
-
-        lpr.next();
-        synchronized (runningList) {
-            runningList.add(lpr);
-        }
-    }
-
     private class AsyncReadLapper extends Lapper {
 
         private Future<Integer> curFuture;
@@ -295,7 +300,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
                 if (len == -1) {
                     spun[0] = true;
                     BayLog.debug("%s Spin read: EOF\\(^o^)/", SpinMultiplexer.this);
-                    state.readBuf.clear();
+                    state.readBuf.limit(0);
                     return state.transporter.onRead(state.rudder, state.readBuf, null);
                 } else {
                     state.readBuf.flip();
@@ -303,7 +308,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
                     if(act == NextSocketAction.Continue || act == NextSocketAction.Read)
                         next();
                     else
-                        cancelRead();
+                        cancelRead(state);
                     return act;
                 }
 
@@ -320,14 +325,6 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
             curFuture = AsynchronousFileChannelRudder.getAsynchronousFileChannel(state.rudder).read(state.readBuf, state.bytesRead);
             state.bytesRead += state.readBuf.limit();
         }
-
-        private void cancelRead() {
-            synchronized (state.reading) {
-                BayLog.debug("%s Reading off %s", SpinMultiplexer.this, state.rudder);
-                state.reading[0] = false;
-            }
-        }
-
     }
 
     private class AsyncWriteLapper extends Lapper {
