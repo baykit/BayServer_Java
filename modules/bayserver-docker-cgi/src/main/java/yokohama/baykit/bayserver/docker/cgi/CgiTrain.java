@@ -78,7 +78,7 @@ public class CgiTrain extends Train {
 
     @Override
     protected void onTimer() {
-        BayLog.warn("%s onTimer: %s", this, tour);
+        BayLog.debug("%s onTimer: %s", this, tour);
         if (handler.timedOut()) {
             // Kill cgi process instead of handing timeout
             BayLog.warn("%s Kill process!: %s", tour, handler.process);
