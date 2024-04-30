@@ -170,6 +170,63 @@ public class JobMultiplexer extends JobMultiplexerBase {
     }
 
     @Override
+    public void nextRead(RudderState st) {
+
+        new Thread(() -> {
+            if (st.closed) {
+                // channel is already closed
+                BayLog.debug("%s Rudder is already closed: rd=%s", agent, st.rudder);
+                return;
+            }
+
+            int n;
+            try {
+                st.readBuf.clear();
+                BayLog.debug("%s Try to Read (rd=%s) (buf=%s) timeout=%d", agent, st.rudder, st.readBuf, agent.timeoutSec);
+                n = st.rudder.read(st.readBuf);
+                if(n > 0)
+                    st.readBuf.flip();
+            } catch (AsynchronousCloseException e) {
+                BayLog.debug("%s Closed by another thread: %s (%s)", this, st.rudder, e);
+                return; // Do not do next action
+            } catch (IOException e) {
+                agent.sendReadLetter(st, -1, e, true);
+                return;
+            }
+
+            agent.sendReadLetter(st, n, null, true);
+        }).start();
+    }
+
+    @Override
+    public void nextWrite(RudderState st) {
+
+        new Thread(() -> {
+            if (st == null || st.closed) {
+                // channel is already closed
+                BayLog.debug("%s Rudder is already closed: rd=%s", agent, st.rudder);
+                return;
+            }
+
+            WriteUnit u = st.writeQueue.get(0);
+            BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b", this, u.tag, u.buf.limit(), st.closed);
+
+            int n = 0;
+            try {
+                if(!st.closed && u.buf.limit() > 0) {
+                    n = st.rudder.write(u.buf);
+                }
+            } catch (IOException e) {
+                agent.sendWroteLetter(st, -1, e, true);
+                return;
+            }
+            agent.sendWroteLetter(st, n, null, true);
+
+        }).start();
+
+    }
+
+    @Override
     public void nextAccept(RudderState state) {
         reqAccept(state.rudder);
     }
@@ -230,63 +287,6 @@ public class JobMultiplexer extends JobMultiplexerBase {
                 agent.shutdown();
             }
         }).start();
-    }
-
-    @Override
-    public void nextRead(RudderState st) {
-
-        new Thread(() -> {
-            if (st.closed) {
-                // channel is already closed
-                BayLog.debug("%s Rudder is already closed: rd=%s", agent, st.rudder);
-                return;
-            }
-
-            int n;
-            try {
-                st.readBuf.clear();
-                BayLog.debug("%s Try to Read (rd=%s) (buf=%s) timeout=%d", agent, st.rudder, st.readBuf, agent.timeoutSec);
-                n = st.rudder.read(st.readBuf);
-                if(n > 0)
-                    st.readBuf.flip();
-            } catch (AsynchronousCloseException e) {
-                BayLog.debug("%s Closed by another thread: %s (%s)", this, st.rudder, e);
-                return; // Do not do next action
-            } catch (IOException e) {
-                agent.sendReadLetter(st, -1, e, true);
-                return;
-            }
-
-            agent.sendReadLetter(st, n, null, true);
-        }).start();
-    }
-
-    @Override
-    public void nextWrite(RudderState st) {
-
-        new Thread(() -> {
-            if (st == null || st.closed) {
-                // channel is already closed
-                BayLog.debug("%s Rudder is already closed: rd=%s", agent, st.rudder);
-                return;
-            }
-
-            WriteUnit u = st.writeQueue.get(0);
-            BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b", this, u.tag, u.buf.limit(), st.closed);
-
-            int n = 0;
-            try {
-                if(!st.closed && u.buf.limit() > 0) {
-                    n = st.rudder.write(u.buf);
-                }
-            } catch (IOException e) {
-                agent.sendWroteLetter(st, -1, e, true);
-                return;
-            }
-            agent.sendWroteLetter(st, n, null, true);
-
-        }).start();
-
     }
 
 

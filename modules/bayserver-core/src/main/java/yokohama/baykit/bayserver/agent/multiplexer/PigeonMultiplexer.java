@@ -144,6 +144,22 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
     }
 
     @Override
+    public void nextRead(RudderState state) {
+        if(state.rudder instanceof AsynchronousFileChannelRudder)
+            nextFileRead(state);
+        else
+            nextNetworkRead(state);
+    }
+
+    @Override
+    public void nextWrite(RudderState st) {
+        if (st.rudder instanceof AsynchronousFileChannelRudder)
+            nextFileWrite(st);
+        else
+            nextNetworkWrite(st);
+    }
+
+    @Override
     public void nextAccept(RudderState state) {
         reqAccept(state.rudder);
     }
@@ -192,23 +208,6 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
             // Another thread already accepting
         }
     }
-
-    @Override
-    public void nextRead(RudderState state) {
-        if(state.rudder instanceof AsynchronousFileChannelRudder)
-            nextFileRead(state);
-        else
-            nextNetworkRead(state);
-    }
-
-    @Override
-    public void nextWrite(RudderState st) {
-        if (st.rudder instanceof AsynchronousFileChannelRudder)
-            nextFileWrite(st);
-        else
-            nextNetworkWrite(st);
-    }
-
 
     ////////////////////////////////////////////
     // Private methods
