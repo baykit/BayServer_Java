@@ -206,7 +206,7 @@ public final class WarpShip extends Ship {
         notifyErrorToOwnerTour(HttpStatus.SERVICE_UNAVAILABLE, msg);
     }
 
-    public Tour getTour(int warpId, boolean must) {
+    public Tour getTour(int warpId, boolean must) throws ProtocolException {
         Pair<Integer, Tour> pair= tourMap.get(warpId);
         if(pair != null) {
             Tour tur = pair.b;
@@ -217,21 +217,22 @@ public final class WarpShip extends Ship {
         }
 
         if(must)
-            throw new Sink("%s warp tour not found: id=%d", this, warpId);
+            throw new ProtocolException(this + " warp tour not found: id=" + warpId);
         else
             return null;
     }
 
-    public Tour getTour(int warpId) {
+    public Tour getTour(int warpId) throws ProtocolException {
         return getTour(warpId, true);
     }
 
     void notifyErrorToOwnerTour(int status, String msg) {
         synchronized (tourMap) {
             tourMap.keySet().forEach(warpId -> {
-                Tour tur = getTour(warpId);
-                BayLog.debug("%s send error to owner: %s running=%b", this, tur, tur.isRunning());
                 try {
+                    Tour tur = getTour(warpId);
+                    BayLog.debug("%s send error to owner: %s running=%b", this, tur, tur.isRunning());
+
                     if (tur.isRunning() || tur.isReading()) {
                         tur.res.sendError(Tour.TOUR_ID_NOCHECK, status, msg);
                     }
