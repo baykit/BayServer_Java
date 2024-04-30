@@ -61,7 +61,7 @@ public class FileDocker extends ClubBase {
         try {
             relPath = URLDecoder.decode(relPath, tur.req.charset());
         }
-        catch(UnsupportedEncodingException e) {
+        catch(UnsupportedEncodingException | NumberFormatException e) {
             BayLog.error("Cannot decode path: %s: %s", relPath, e);
         }
 
