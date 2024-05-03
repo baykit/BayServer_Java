@@ -10,8 +10,6 @@ import yokohama.baykit.bayserver.rudder.Rudder;
 
 import java.io.IOException;
 import java.nio.channels.Pipe;
-import java.util.ArrayList;
-import java.util.HashSet;
 
 /**
  * The purpose of JobMultiplexer is handling sockets, pipes, or files by thread/fiber/goroutine.
@@ -24,12 +22,6 @@ public abstract class JobMultiplexerBase extends MultiplexerBase implements Time
     private CommandReceiver commandReceiver;
 
     ////////////////////////////////////////////
-    // Abstract methods
-    ////////////////////////////////////////////
-
-    protected abstract void reqAccept(Rudder rd);
-
-        ////////////////////////////////////////////
     // Constructor
     ////////////////////////////////////////////
 
@@ -68,6 +60,16 @@ public abstract class JobMultiplexerBase extends MultiplexerBase implements Time
         closeAll();
     }
 
+    @Override
+    public void onFree() {
+        if(agent.aborted)
+            return;
+
+        for(Rudder rd: BayServer.anchorablePortMap.keySet()) {
+            reqAccept(rd);
+        }
+    }
+
 
     ////////////////////////////////////////////
     // Implements TimerHandler
@@ -81,41 +83,6 @@ public abstract class JobMultiplexerBase extends MultiplexerBase implements Time
     ////////////////////////////////////////////
     // Private methods
     ////////////////////////////////////////////
-
-    protected final void closeTimeoutSockets() {
-        if(rudders.isEmpty())
-            return;
-
-        ArrayList<RudderState> closeList = new ArrayList<>();
-        HashSet<RudderState> copied = null;
-        synchronized (rudders) {
-            copied = new HashSet<>(this.rudders.values());
-        }
-
-        long now = System.currentTimeMillis();
-
-        for (RudderState st : copied) {
-            if(st.transporter != null) {
-                if (st.transporter.checkTimeout(st.rudder, (int) (now - st.lastAccessTime) / 1000)) {
-                    BayLog.debug("%s timeout: rd=%s", agent, st.rudder);
-                    closeList.add(st);
-                }
-            }
-        }
-
-        for (RudderState c : closeList) {
-            closeRudder(c);
-        }
-    }
-
-    public void onFree() {
-        if(agent.aborted)
-            return;
-
-        for(Rudder rd: BayServer.anchorablePortMap.keySet()) {
-            reqAccept(rd);
-        }
-    }
 
 
     /*

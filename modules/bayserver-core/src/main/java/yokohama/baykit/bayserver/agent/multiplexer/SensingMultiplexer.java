@@ -1,12 +1,16 @@
 package yokohama.baykit.bayserver.agent.multiplexer;
 
-import yokohama.baykit.bayserver.*;
+import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.BayServer;
+import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.CommandReceiver;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.TimerHandler;
 import yokohama.baykit.bayserver.common.Multiplexer;
-import yokohama.baykit.bayserver.docker.Port;
-import yokohama.baykit.bayserver.rudder.*;
+import yokohama.baykit.bayserver.rudder.ChannelRudder;
+import yokohama.baykit.bayserver.rudder.DatagramChannelRudder;
+import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.rudder.SocketChannelRudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 
 import java.io.IOException;
@@ -14,7 +18,9 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Set;
 
 import static java.nio.channels.SelectionKey.*;
 
@@ -69,106 +75,16 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
         return "SensorMpx[" + agent + "]";
     }
 
-
-    ////////////////////////////////////////////
-    // Implements Runnable
-    ////////////////////////////////////////////
-    public void run() {
-        BayLog.info(BayMessage.get(Symbol.MSG_RUNNING_GRAND_AGENT, this));
-        try {
-            commandReceiver.comRecvChannel.configureBlocking(false);
-            commandReceiver.comRecvChannel.register(selector, SelectionKey.OP_READ);
-
-            // Set up unanchorable channel
-            if(!anchorable) {
-                for (Rudder rd : BayServer.unanchorablePortMap.keySet()) {
-                    Port p = BayServer.unanchorablePortMap.get(rd);
-                    p.onConnected(agent.agentId, rd);
-                }
-            }
-
-            boolean busy = true;
-            while (true) {
-                boolean testBusy = isBusy();
-                if (testBusy != busy) {
-                    busy = testBusy;
-                    if(busy) {
-                        onBusy();
-                    }
-                    else {
-                        onFree();
-                    }
-                }
-
-                /*
-                System.err.println("selecting...");
-                selector.keys().forEach((key) -> {
-                    System.err.println(this + " readable=" + (key.isValid() ? "" + key.interestOps() : "invalid "));
-                });
-                */
-
-                if(agent.aborted) {
-                    BayLog.info("%s aborted by another thread", this);
-                    break;
-                }
-
-                int count;
-                if (!agent.spinMultiplexer.isEmpty()) {
-                    count = selector.selectNow();
-                }
-                else {
-                    count = selector.select(agent.timeoutSec * 1000L);
-                }
-
-                if(agent.aborted) {
-                    BayLog.info("%s aborted by another thread", this);
-                    break;
-                }
-
-                //BayLog.debug(this + " select count=" + count);
-                boolean processed = registerChannelOps() > 0;
-
-                Set<SelectionKey> selKeys = selector.selectedKeys();
-                if(selKeys.isEmpty()) {
-                    processed |= agent.spinMultiplexer.processData();
-                }
-
-                for(Iterator<SelectionKey> it = selKeys.iterator(); it.hasNext(); ) {
-                    SelectionKey key = it.next();
-                    it.remove();
-                    //BayLog.debug(this + " selected key=" + key);
-                    if(key.channel() == commandReceiver.comRecvChannel)
-                        commandReceiver.onPipeReadable();
-                    else if(key.isAcceptable())
-                        //onAcceptable(key);
-                        return;
-                    else
-                        handleChannel(key);
-                    processed = true;
-                }
-
-                if(!processed) {
-                    // timeout check if there is nothing to do
-                    agent.ring();
-                }
-            }
-        }
-        catch (Throwable e) {
-            // If error occurs, grand agent ends
-            BayLog.fatal(e);
-        }
-        finally {
-            BayLog.info("%s end", this);
-            doShutdown();
-            agent.shutdown();
-        }
-    }
-
-
     ////////////////////////////////////////////
     // Implements Multiplexer
     ////////////////////////////////////////////
 
+    @Override
+    public void reqAccept(Rudder rd) {
+        throw new Sink();
+    }
+
+    @Override
     public void reqConnect(Rudder rd, SocketAddress addr) throws IOException {
         if(rd == null)
             throw new NullPointerException();
@@ -188,6 +104,7 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
         }
     }
 
+    @Override
     public void reqRead(Rudder rd) {
         if(rd == null)
             throw new NullPointerException();
@@ -203,6 +120,7 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
         st.access();
     }
 
+    @Override
     public synchronized void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener)
         throws IOException {
         if(rd == null)
@@ -263,6 +181,66 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
     public boolean useAsyncAPI() {
         return false;
     }
+
+    @Override
+    public void cancelRead(RudderState st) {
+        st.selectionKey.cancel();
+    }
+
+    @Override
+    public void cancelWrite(RudderState st) {
+        SelectionKey key = st.selectionKey;
+        // Write OP Off
+        int op = key.interestOps() & ~OP_WRITE;
+        if (op != OP_READ)
+            key.cancel();
+        else
+            key.interestOps(op);
+    }
+
+    @Override
+    public void nextAccept(RudderState state) {
+
+    }
+
+    @Override
+    public void nextRead(RudderState st) {
+        SelectionKey key = st.selectionKey;
+        key.interestOps(key.interestOps() | OP_READ);
+    }
+
+    @Override
+    public void nextWrite(RudderState st) {
+        SelectionKey key = st.selectionKey;
+        key.interestOps(key.interestOps() | OP_WRITE);
+    }
+
+    @Override
+    public synchronized void onBusy() {
+        BayLog.debug("%s onBusy", agent);
+        for(Rudder rd: BayServer.anchorablePortMap.keySet()) {
+            SelectionKey key = ((ServerSocketChannel)ChannelRudder.getChannel(rd)).keyFor(selector);
+            if(key != null)
+                key.cancel();
+        }
+    }
+
+    @Override
+    public synchronized void onFree() {
+        BayLog.debug("%s onFree aborted=%s", agent, agent.aborted);
+        if(agent.aborted)
+            return;
+
+        for(Rudder rd: BayServer.anchorablePortMap.keySet()) {
+            try {
+                ((ServerSocketChannel)ChannelRudder.getChannel(rd)).register(selector, SelectionKey.OP_ACCEPT);
+            }
+            catch(ClosedChannelException e) {
+                BayLog.error(e);
+            }
+        }
+    }
+
 
     ////////////////////////////////////////////
     // Implements TimerHandler
@@ -381,35 +359,6 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
         }
     }
 
-    public void cancelRead(RudderState st) {
-        st.selectionKey.cancel();
-    }
-
-    public void cancelWrite(RudderState st) {
-        SelectionKey key = st.selectionKey;
-        // Write OP Off
-        int op = key.interestOps() & ~OP_WRITE;
-        if (op != OP_READ)
-            key.cancel();
-        else
-            key.interestOps(op);
-    }
-
-    @Override
-    public void nextAccept(RudderState state) {
-
-    }
-
-    @Override
-    public void nextRead(RudderState st) {
-        SelectionKey key = st.selectionKey;
-        key.interestOps(key.interestOps() | OP_READ);
-    }
-
-    public void nextWrite(RudderState st) {
-        SelectionKey key = st.selectionKey;
-        key.interestOps(key.interestOps() | OP_WRITE);
-    }
 
     private void handleChannel(SelectionKey key) {
 
@@ -543,7 +492,7 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
             }
         }
         catch(IOException e) {
-            agent.sendReadLetter(st, c, e, false);
+            agent.sendReadLetter(st, -1, e, false);
             return;
 
         }
@@ -581,48 +530,6 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
         agent.sendCloseReqLetter(st, false);
     }
 
-    private void closeTimeoutSockets() {
-        if(rudders.isEmpty())
-            return;
-
-        ArrayList<RudderState> closeList = new ArrayList<>();;
-        synchronized (rudders) {
-            long now = System.currentTimeMillis();
-            for (RudderState st : rudders.values()) {
-                if(st.transporter.checkTimeout(st.rudder, (int)(now - st.lastAccessTime) / 1000)) {
-                    BayLog.debug("%s timeout: rd=%s", agent, st.rudder);
-                    closeList.add(st);
-                }
-            }
-        }
-        for (RudderState c : closeList) {
-            closeRudder(c);
-        }
-    }
-
-    public synchronized void onBusy() {
-        BayLog.debug("%s onBusy", agent);
-        for(Rudder rd: BayServer.anchorablePortMap.keySet()) {
-            SelectionKey key = ((ServerSocketChannel)ChannelRudder.getChannel(rd)).keyFor(selector);
-            if(key != null)
-                key.cancel();
-        }
-    }
-
-    public synchronized void onFree() {
-        BayLog.debug("%s onFree aborted=%s", agent, agent.aborted);
-        if(agent.aborted)
-            return;
-
-        for(Rudder rd: BayServer.anchorablePortMap.keySet()) {
-            try {
-                ((ServerSocketChannel)ChannelRudder.getChannel(rd)).register(selector, SelectionKey.OP_ACCEPT);
-            }
-            catch(ClosedChannelException e) {
-                BayLog.error(e);
-            }
-        }
-    }
 
     private static String opMode(int mode) {
         String modeStr = null;

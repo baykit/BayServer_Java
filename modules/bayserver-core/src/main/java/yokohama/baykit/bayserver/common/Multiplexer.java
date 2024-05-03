@@ -23,6 +23,8 @@ public interface Multiplexer {
 
     Transporter getTransporter(Rudder rd);
 
+    void reqAccept(Rudder rd);
+
     void reqConnect(Rudder rd, SocketAddress addr) throws IOException;
 
     void reqRead(Rudder rd);
@@ -45,14 +47,12 @@ public interface Multiplexer {
 
     void shutdown();
 
-    boolean isBusy();
-
     boolean useAsyncAPI();
 
     boolean consumeOldestUnit(RudderState st);
     void closeRudder(RudderState st);
 
+    boolean isBusy();
     void onBusy();
-
     void onFree();
 }

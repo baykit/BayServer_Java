@@ -13,6 +13,7 @@ import yokohama.baykit.bayserver.util.DataConsumeListener;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.concurrent.Future;
@@ -51,6 +52,16 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
     ////////////////////////////////////////////
     // Implements Multiplexer
     ////////////////////////////////////////////
+
+    @Override
+    public void reqAccept(Rudder rd) {
+        throw new Sink();
+    }
+
+    @Override
+    public void reqConnect(Rudder rd, SocketAddress addr) throws IOException {
+        throw new Sink();
+    }
 
     @Override
     public void reqRead(Rudder rd) {

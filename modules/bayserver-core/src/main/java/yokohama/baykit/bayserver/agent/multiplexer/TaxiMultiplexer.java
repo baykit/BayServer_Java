@@ -25,13 +25,14 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
         super(agt);
     }
 
-    public String toString() {
-        return "TaxiMultiplexer[" + agent + "]";
-    }
-
     ////////////////////////////////////////////
     // Implements Multiplexer
     ////////////////////////////////////////////
+
+    @Override
+    public void reqAccept(Rudder rd) {
+        throw new Sink();
+    }
 
     @Override
     public void reqConnect(Rudder rd, SocketAddress addr) throws IOException {

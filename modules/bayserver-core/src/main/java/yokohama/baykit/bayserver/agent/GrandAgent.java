@@ -10,8 +10,10 @@ import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class GrandAgent extends Thread {
 
@@ -68,7 +70,6 @@ public class GrandAgent extends Thread {
     public final int maxInboundShips;
     public boolean aborted;
     private boolean anchorable;
-    private Timer timer;
     private ArrayList<TimerHandler> timerHandlers = new ArrayList<>();
 
     public GrandAgent(
@@ -102,25 +103,6 @@ public class GrandAgent extends Thread {
             case Taxi:
             case Train:
                 throw new Sink("Multiplexer not supported: %s", Harbor.getMultiplexerTypeName(BayServer.harbor.netMultiplexer()));
-        }
-
-        if(!(netMultiplexer instanceof SensingMultiplexer)) {
-            timer = new Timer();
-            TimerTask task = new TimerTask() {
-                @Override
-                public void run() {
-                    try {
-                        ring();
-                    }
-                    catch(Throwable e) {
-                        BayLog.fatal(e, "Error on timer");
-                        shutdown();
-                    }
-                }
-            };
-
-            long period = timeoutSec * 1000; // 10seconds
-            timer.scheduleAtFixedRate(task, period, period);
         }
     }
 
@@ -245,8 +227,6 @@ public class GrandAgent extends Thread {
             return;
 
         aborted = true;
-        if(timer != null)
-            timer.cancel();
 
         BayLog.debug("%s shutdown netMultiplexer", this);
         netMultiplexer.shutdown();
@@ -331,7 +311,7 @@ public class GrandAgent extends Thread {
         synchronized (letterQueue) {
             letterQueue.add(let);
         }
-        ByteBuffer buf = ByteBuffer.allocate(4);
+
         if(wakeup)
             sensingMultiplexer.wakeup();
     }
