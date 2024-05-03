@@ -33,6 +33,50 @@ public class JobMultiplexer extends JobMultiplexerBase {
     // Implements Multiplexer
     ////////////////////////////////////////////
 
+    @Override
+    public void reqAccept(Rudder rd) {
+        BayLog.debug("%s AcceptHandler:reqAccept isShutdown=%b", agent, agent.aborted);
+        if (agent.aborted) {
+            return;
+        }
+
+        ServerSocketChannel sch = (ServerSocketChannel) ChannelRudder.getChannel(rd);
+        RudderState st = findRudderStateByKey(sch);
+
+        new Thread(() -> {
+            try {
+                if (agent.aborted) {
+                    return;
+                }
+
+                SocketChannel ch;
+                try {
+                    ch = sch.accept();
+                } catch (IOException e) {
+                    agent.sendAcceptedLetter(st, null, e, true);
+                    return;
+                }
+
+                BayLog.debug("%s Accepted ch=%s", agent, ch);
+                if(agent.aborted) {
+                    BayLog.error("%s Agent is not alive (close)", agent);
+                    try {
+                        ch.close();
+                    }
+                    catch(IOException e) {
+                    }
+                }
+                else {
+                    agent.sendAcceptedLetter(st, new SocketChannelRudder(ch), null, true);
+                }
+
+            } catch(Throwable e) {
+                BayLog.fatal(e);
+                agent.shutdown();
+            }
+        }).start();
+    }
+
     public void reqConnect(Rudder rd, SocketAddress addr) throws IOException {
         if(rd == null)
             throw new NullPointerException();
@@ -170,6 +214,11 @@ public class JobMultiplexer extends JobMultiplexerBase {
     }
 
     @Override
+    public void nextAccept(RudderState state) {
+        reqAccept(state.rudder);
+    }
+
+    @Override
     public void nextRead(RudderState st) {
 
         new Thread(() -> {
@@ -227,11 +276,6 @@ public class JobMultiplexer extends JobMultiplexerBase {
     }
 
     @Override
-    public void nextAccept(RudderState state) {
-        reqAccept(state.rudder);
-    }
-
-    @Override
     public boolean useAsyncAPI() {
         return false;
     }
@@ -240,55 +284,6 @@ public class JobMultiplexer extends JobMultiplexerBase {
     public void onBusy() {
 
     }
-
-    ////////////////////////////////////////////
-    // Implements JobMultiplexerBase
-    ////////////////////////////////////////////
-
-    @Override
-    protected void reqAccept(Rudder rd) {
-        BayLog.debug("%s AcceptHandler:reqAccept isShutdown=%b", agent, agent.aborted);
-        if (agent.aborted) {
-            return;
-        }
-
-        ServerSocketChannel sch = (ServerSocketChannel) ChannelRudder.getChannel(rd);
-        RudderState st = findRudderStateByKey(sch);
-
-        new Thread(() -> {
-            try {
-                if (agent.aborted) {
-                    return;
-                }
-
-                SocketChannel ch;
-                try {
-                    ch = sch.accept();
-                } catch (IOException e) {
-                    agent.sendAcceptedLetter(st, null, e, true);
-                    return;
-                }
-
-                BayLog.debug("%s Accepted ch=%s", agent, ch);
-                if(agent.aborted) {
-                    BayLog.error("%s Agent is not alive (close)", agent);
-                    try {
-                        ch.close();
-                    }
-                    catch(IOException e) {
-                    }
-                }
-                else {
-                    agent.sendAcceptedLetter(st, new SocketChannelRudder(ch), null, true);
-                }
-
-            } catch(Throwable e) {
-                BayLog.fatal(e);
-                agent.shutdown();
-            }
-        }).start();
-    }
-
 
     ////////////////////////////////////////////
     // Private methods

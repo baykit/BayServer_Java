@@ -33,6 +33,37 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
     ////////////////////////////////////////////
 
     @Override
+    public void reqAccept(Rudder rd) {
+        BayLog.debug("%s reqAccept rd=%s aborted=%b", agent, rd, agent.aborted);
+        if (agent.aborted) {
+            return;
+        }
+        AsynchronousServerSocketChannel sch = (AsynchronousServerSocketChannel) ChannelRudder.getChannel(rd);
+        RudderState st = findRudderStateByKey(sch);
+
+        try {
+            AsynchronousSocketChannel ch = null;
+            sch.accept(
+                    rd,
+                    new CompletionHandler<AsynchronousSocketChannel, Rudder>() {
+                        @Override
+                        public void completed(AsynchronousSocketChannel clientCh, Rudder serverRd) {
+                            BayLog.debug("%s Accepted: cli=%s", PigeonMultiplexer.this, clientCh);
+                            agent.sendAcceptedLetter(st, new AsynchronousSocketChannelRudder(clientCh), null, true);
+                        }
+
+                        @Override
+                        public void failed(Throwable e, Rudder serverRd) {
+                            agent.sendAcceptedLetter(st, null, e, true);
+                        }
+                    });
+        }
+        catch(AcceptPendingException e) {
+            // Another thread already accepting
+        }
+    }
+
+    @Override
     public void reqConnect(Rudder rd, SocketAddress addr) throws IOException {
         RudderState st = findRudderStateByKey(ChannelRudder.getChannel(rd));
         AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(rd).connect(
@@ -172,41 +203,6 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
     @Override
     public void onBusy() {
 
-    }
-
-    ////////////////////////////////////////////
-    // Implements JobMultiplexerBase
-    ////////////////////////////////////////////
-
-    @Override
-    protected void reqAccept(Rudder rd) {
-        BayLog.debug("%s reqAccept rd=%s aborted=%b", agent, rd, agent.aborted);
-        if (agent.aborted) {
-            return;
-        }
-        AsynchronousServerSocketChannel sch = (AsynchronousServerSocketChannel) ChannelRudder.getChannel(rd);
-        RudderState st = findRudderStateByKey(sch);
-
-        try {
-            AsynchronousSocketChannel ch = null;
-            sch.accept(
-                    rd,
-                    new CompletionHandler<AsynchronousSocketChannel, Rudder>() {
-                        @Override
-                        public void completed(AsynchronousSocketChannel clientCh, Rudder serverRd) {
-                            BayLog.debug("%s Accepted: cli=%s", PigeonMultiplexer.this, clientCh);
-                            agent.sendAcceptedLetter(st, new AsynchronousSocketChannelRudder(clientCh), null, true);
-                        }
-
-                        @Override
-                        public void failed(Throwable e, Rudder serverRd) {
-                            agent.sendAcceptedLetter(st, null, e, true);
-                        }
-                    });
-        }
-        catch(AcceptPendingException e) {
-            // Another thread already accepting
-        }
     }
 
     ////////////////////////////////////////////
