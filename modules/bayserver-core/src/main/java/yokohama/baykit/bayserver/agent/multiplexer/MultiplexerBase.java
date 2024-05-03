@@ -5,16 +5,13 @@ import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.rudder.Rudder;
-import yokohama.baykit.bayserver.util.DataConsumeListener;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.Pipe;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 public abstract class MultiplexerBase implements Multiplexer {
@@ -59,21 +56,6 @@ public abstract class MultiplexerBase implements Multiplexer {
     }
 
     @Override
-    public void reqConnect(Rudder rd, SocketAddress addr) throws IOException {
-        throw new Sink();
-    }
-
-    @Override
-    public void reqRead(Rudder rd) {
-        throw new Sink();
-    }
-
-    @Override
-    public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) throws IOException {
-        throw new Sink();
-    }
-
-    @Override
     public void reqEnd(Rudder rd) {
         throw new Sink();
     }
@@ -88,30 +70,19 @@ public abstract class MultiplexerBase implements Multiplexer {
         throw new Sink();
     }
 
-
-    ////////////////////////////////////////////
-    // Custom methods
-    ////////////////////////////////////////////
-
-    protected RudderState findRudderStateByKey(Object rdKey) {
-        synchronized (rudders) {
-            return rudders.get(rdKey);
+    @Override
+    public boolean consumeOldestUnit(RudderState st) {
+        WriteUnit u;
+        synchronized (st.writeQueue) {
+            if(st.writeQueue.isEmpty())
+                return false;
+            u = st.writeQueue.remove(0);
         }
+        u.done();
+        return true;
     }
 
-    protected void removeRudderState(Rudder rd) {
-        BayLog.trace("%s remove rd=%s", agent, rd);
-        synchronized (rudders) {
-            RudderState cm = rudders.remove(rd.key());
-            //BayServer.debug(cm.tpt.ship() + " removed");
-        }
-        channelCount--;
-    }
-
-    public final boolean isBusy() {
-        return channelCount >= agent.maxInboundShips;
-    }
-
+    @Override
     public final void closeRudder(RudderState chState) {
         BayLog.debug("%s closeRd %s state=%s closed=%b", agent, chState.rudder, chState, chState.closed);
 
@@ -144,22 +115,60 @@ public abstract class MultiplexerBase implements Multiplexer {
             chState.transporter.onClosed(chState.rudder);
     }
 
+    @Override
+    public final boolean isBusy() {
+        return channelCount >= agent.maxInboundShips;
+    }
+
+    ////////////////////////////////////////////
+    // Custom methods
+    ////////////////////////////////////////////
+
+    protected RudderState findRudderStateByKey(Object rdKey) {
+        synchronized (rudders) {
+            return rudders.get(rdKey);
+        }
+    }
+
+    protected void removeRudderState(Rudder rd) {
+        BayLog.trace("%s remove rd=%s", agent, rd);
+        synchronized (rudders) {
+            RudderState cm = rudders.remove(rd.key());
+            //BayServer.debug(cm.tpt.ship() + " removed");
+        }
+        channelCount--;
+    }
+
+    protected final void closeTimeoutSockets() {
+        if(rudders.isEmpty())
+            return;
+
+        ArrayList<RudderState> closeList = new ArrayList<>();
+        HashSet<RudderState> copied = null;
+        synchronized (rudders) {
+            copied = new HashSet<>(this.rudders.values());
+        }
+
+        long now = System.currentTimeMillis();
+
+        for (RudderState st : copied) {
+            if(st.transporter != null) {
+                if (st.transporter.checkTimeout(st.rudder, (int) (now - st.lastAccessTime) / 1000)) {
+                    BayLog.debug("%s timeout: rd=%s", agent, st.rudder);
+                    closeList.add(st);
+                }
+            }
+        }
+
+        for (RudderState c : closeList) {
+            closeRudder(c);
+        }
+    }
     protected final void closeAll() {
         // Use copied ArrayList to avoid ConcurrentModificationException
         for (RudderState st : new ArrayList<>(rudders.values())) {
             closeRudder(st);
         }
-    }
-
-    public boolean consumeOldestUnit(RudderState st) {
-        WriteUnit u;
-        synchronized (st.writeQueue) {
-            if(st.writeQueue.isEmpty())
-                return false;
-            u = st.writeQueue.remove(0);
-        }
-        u.done();
-        return true;
     }
 
 
