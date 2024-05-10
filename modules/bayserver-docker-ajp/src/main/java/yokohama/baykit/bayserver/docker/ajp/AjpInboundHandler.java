@@ -1,22 +1,20 @@
 package yokohama.baykit.bayserver.docker.ajp;
 
 import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.agent.monitor.GrandAgentMonitor;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.rudder.ChannelRudder;
+import yokohama.baykit.bayserver.agent.monitor.GrandAgentMonitor;
 import yokohama.baykit.bayserver.common.InboundHandler;
 import yokohama.baykit.bayserver.common.InboundShip;
+import yokohama.baykit.bayserver.docker.ajp.command.*;
 import yokohama.baykit.bayserver.protocol.*;
+import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
-import yokohama.baykit.bayserver.docker.ajp.command.*;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.StringUtil;
 
 import java.io.IOException;
-import java.net.Socket;
-import java.nio.channels.SocketChannel;
 
 
 public class AjpInboundHandler implements InboundHandler, AjpHandler {
@@ -332,12 +330,16 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
         tur.req.parseHostPort(reqCommand.isSsl ? 443 : 80);
         tur.req.parseAuthorization();
 
-        Socket socket = ((SocketChannel)ChannelRudder.getChannel(ship().rudder)).socket();
         tur.req.remotePort = -1;
         tur.req.remoteAddress = reqCommand.remoteAddr;
         tur.req.remoteHostFunc = () ->  reqCommand.remoteHost;
 
-        tur.req.serverAddress = socket.getLocalAddress().getHostAddress();
+        NetworkChannelRudder nrd = (NetworkChannelRudder) ship().rudder;
+        try {
+            tur.req.serverAddress = nrd.getLocalAddress().getHostAddress();
+        } catch (IOException e) {
+            tur.req.serverAddress = "";
+        }
         tur.req.serverPort = reqCommand.serverPort;
         tur.req.serverName = reqCommand.serverName;
         tur.isSecure = reqCommand.isSsl;
