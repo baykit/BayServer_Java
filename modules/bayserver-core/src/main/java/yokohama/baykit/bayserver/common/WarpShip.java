@@ -283,14 +283,20 @@ public final class WarpShip extends Ship {
             cmdBuf.add(p);
         }
         else {
-            protocolHandler.post(cmd, listener);
+            if(cmd == null)
+                listener.dataConsumed();
+            else
+                protocolHandler.post(cmd, listener);
         }
     }
 
     public void flush() throws IOException {
         BayLog.debug("%s flush", this);
         for(Pair<Command, DataConsumeListener> cmdAndLis: cmdBuf) {
-            protocolHandler.post(cmdAndLis.a, cmdAndLis.b);
+            if(cmdAndLis.a == null)
+                cmdAndLis.b.dataConsumed();
+            else
+                protocolHandler.post(cmdAndLis.a, cmdAndLis.b);
         }
         cmdBuf.clear();
     }
