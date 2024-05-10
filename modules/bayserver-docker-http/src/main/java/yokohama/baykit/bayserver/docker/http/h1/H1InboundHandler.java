@@ -170,7 +170,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
 
     @Override
     public boolean onProtocolError(ProtocolException e) throws IOException {
-        BayLog.debug(e);
+        BayLog.debug("onProtocolError: %s", e);
         Tour tur;
         if(curTour == null)
             tur = ship().getErrorTour();
@@ -280,6 +280,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
             BayLog.debug(this + " Http error occurred: " + e);
             if(reqContLen <= 0) {
                 // no post data
+                tur.req.abort();
                 tur.res.sendHttpException(Tour.TOUR_ID_NOCHECK, e);
 
                 resetState(); // next: read empty stdin command
@@ -308,41 +309,43 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
 
         Tour tur = curTour;
         int tourId = curTourId;
-        int sid = ship().shipId;
-        boolean success =
-                tur.req.postReqContent(
-                        tourId,
-                        cmd.buffer,
-                        cmd.start,
-                        cmd.len,
-                        (len, resume) -> {
-                            if (resume)
-                                tur.ship.resumeRead(sid);
-                        });
 
-        if (tur.req.bytesPosted == tur.req.bytesLimit) {
-            if(tur.error != null){
-                // Error has occurred on header completed
-                tur.res.sendHttpException(tourId, tur.error);
-                resetState();
-                return NextSocketAction.Write;
-            }
-            else {
-                try {
+        try {
+            int sid = ship().shipId;
+            boolean success =
+                    tur.req.postReqContent(
+                            tourId,
+                            cmd.buffer,
+                            cmd.start,
+                            cmd.len,
+                            (len, resume) -> {
+                                if (resume)
+                                    tur.ship.resumeRead(sid);
+                            });
+
+            if (tur.req.bytesPosted == tur.req.bytesLimit) {
+                if (tur.error != null) {
+                    // Error has occurred on header completed
+                    BayLog.debug("%s Delay send error", tur);
+                    throw tur.error;
+                }
+                else {
                     endReqContent(tourId, tur);
                     return NextSocketAction.Continue;
-                } catch (HttpException e) {
-                    tur.res.sendHttpException(tourId, e);
-                    resetState();
-                    return NextSocketAction.Write;
                 }
             }
-        }
 
-        if(!success)
-            return NextSocketAction.Suspend; // end reading
-        else
-            return NextSocketAction.Continue;
+            if (!success)
+                return NextSocketAction.Suspend; // end reading
+            else
+                return NextSocketAction.Continue;
+        }
+        catch(HttpException e) {
+            tur.req.abort();
+            tur.res.sendHttpException(tourId, e);
+            resetState();
+            return NextSocketAction.Write;
+        }
     }
 
     @Override
