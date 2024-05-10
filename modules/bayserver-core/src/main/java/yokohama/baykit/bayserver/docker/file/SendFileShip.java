@@ -46,7 +46,7 @@ public class SendFileShip extends ReadOnlyShip {
     ////////////////////////////////////////////////////////////////////
 
     @Override
-    public NextSocketAction notifyRead(ByteBuffer buf) throws IOException {
+    public NextSocketAction notifyRead(ByteBuffer buf) {
 
         fileWroteLen += buf.limit();
         BayLog.debug("%s read file %d bytes: total=%d", this, buf.limit(), fileWroteLen);
@@ -63,7 +63,7 @@ public class SendFileShip extends ReadOnlyShip {
             }
         }
         catch(IOException e) {
-            BayLog.debug(e, "Error on sending content");
+            notifyError(e);
             return NextSocketAction.Close;
         }
     }
