@@ -2,10 +2,7 @@ package yokohama.baykit.bayserver.tour;
 
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
-import yokohama.baykit.bayserver.util.Headers;
-import yokohama.baykit.bayserver.util.HttpUtil;
-import yokohama.baykit.bayserver.util.Reusable;
-import yokohama.baykit.bayserver.util.StringUtil;
+import yokohama.baykit.bayserver.util.*;
 
 import java.io.IOException;
 import java.util.Base64;
@@ -222,7 +219,7 @@ public class TourReq implements Reusable {
      * This method passes a part of the POST request's content to the ReqContentHandler.
      * Additionally, it reduces the internal buffer space by the size of the data passed
      */
-    public boolean postReqContent(int checkId, byte[] data, int start, int len, ContentConsumeListener lis) throws IOException {
+    public boolean postReqContent(int checkId, byte[] data, int start, int len, ContentConsumeListener lis) throws HttpException {
         tour.checkTourId(checkId);
 
         boolean dataPassed = false;
@@ -232,17 +229,23 @@ public class TourReq implements Reusable {
             BayLog.debug("%s tour has error.", tour);
         }
         else if(!tour.isReading()) {
-            throw new ProtocolException(tour + ": tour is not reading.");
+            throw new HttpException(HttpStatus.BAD_REQUEST, "%s tour is not reading.", tour);
         }
         else if (tour.req.contentHandler == null) {
             BayLog.warn("%s content read, but no content handler", tour);
         }
         else if (bytesPosted + len > bytesLimit) {
-            throw new ProtocolException(BayMessage.get(Symbol.HTP_READ_DATA_EXCEEDED, bytesPosted + len,  bytesLimit));
+            throw new HttpException(HttpStatus.BAD_REQUEST, BayMessage.get(Symbol.HTP_READ_DATA_EXCEEDED, bytesPosted + len,  bytesLimit));
         }
         else {
-            contentHandler.onReadReqContent(tour, data, start, len, lis);
-            dataPassed = true;
+            try {
+                contentHandler.onReadReqContent(tour, data, start, len, lis);
+                dataPassed = true;
+            }
+            catch(IOException e) {
+                BayLog.debug(e);
+                throw new HttpException(HttpStatus.BAD_REQUEST, "%s Error on call onReadReqContent", tour);
+            }
         }
 
         bytesPosted += len;
@@ -308,7 +311,6 @@ public class TourReq implements Reusable {
     public synchronized boolean abort() {
         BayLog.debug("%s req abort", tour);
         if (tour.isPreparing()) {
-            tour.changeState(tour.tourId, Tour.TourState.ABORTED);
             return true;
         }
         else if (tour.isReading()) {
@@ -316,14 +318,10 @@ public class TourReq implements Reusable {
 
             if (contentHandler != null)
                 aborted = contentHandler.onAbortReq(tour);
-
-            if (aborted)
-                tour.changeState(tour.tourId, Tour.TourState.ABORTED);
-
             return aborted;
         }
         else {
-            BayLog.debug("%s tour is neither preparing nor reading", tour);
+            BayLog.debug("%s tour is neither preparing nor reading: state=%s", tour, tour.state);
             return false;
         }
     }

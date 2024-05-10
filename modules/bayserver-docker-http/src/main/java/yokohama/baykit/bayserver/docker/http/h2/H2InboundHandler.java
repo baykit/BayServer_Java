@@ -235,6 +235,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
                 BayLog.debug("%s Http error occurred: %s", this, e);
                 if(reqContLen <= 0) {
                     // no post data
+                    tur.req.abort();
                     tur.res.sendHttpException(Tour.TOUR_ID_NOCHECK, e);
 
                     return NextSocketAction.Continue;
@@ -261,60 +262,60 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
             throw new ProtocolException("Post content not allowed");
         }
 
-        boolean success = true;
-        if(cmd.length > 0) {
-            int tid = tur.tourId;
-            success =
-                    tur.req.postReqContent(
-                            Tour.TOUR_ID_NOCHECK,
-                            cmd.data,
-                            cmd.start,
-                            cmd.length,
-                            (len, resume) -> {
-                                tur.checkTourId(tid);
+        try {
+            boolean success = true;
+            if(cmd.length > 0) {
+                int tid = tur.tourId;
+                success =
+                        tur.req.postReqContent(
+                                Tour.TOUR_ID_NOCHECK,
+                                cmd.data,
+                                cmd.start,
+                                cmd.length,
+                                (len, resume) -> {
+                                    tur.checkTourId(tid);
 
-                                if (len > 0) {
-                                    CmdWindowUpdate upd = new CmdWindowUpdate(cmd.streamId);
-                                    upd.windowSizeIncrement = len;
-                                    CmdWindowUpdate upd2 = new CmdWindowUpdate(0);
-                                    upd2.windowSizeIncrement = len;
-                                    CommandPacker cmdPacker = protocolHandler.commandPacker;
-                                    try {
-                                        protocolHandler.post(upd);
-                                        protocolHandler.post(upd2);
+                                    if (len > 0) {
+                                        CmdWindowUpdate upd = new CmdWindowUpdate(cmd.streamId);
+                                        upd.windowSizeIncrement = len;
+                                        CmdWindowUpdate upd2 = new CmdWindowUpdate(0);
+                                        upd2.windowSizeIncrement = len;
+                                        CommandPacker cmdPacker = protocolHandler.commandPacker;
+                                        try {
+                                            protocolHandler.post(upd);
+                                            protocolHandler.post(upd2);
+                                        }
+                                        catch(IOException e) {
+                                            BayLog.error(e);
+                                        }
                                     }
-                                    catch(IOException e) {
-                                        BayLog.error(e);
-                                    }
-                                }
 
-                                if (resume)
-                                    tur.ship.resumeRead(tur.shipId);
-                            });
+                                    if (resume)
+                                        tur.ship.resumeRead(tur.shipId);
+                                });
 
-            if (tur.req.bytesPosted >= tur.req.headers.contentLength()) {
+                if (tur.req.bytesPosted >= tur.req.headers.contentLength()) {
 
-                if(tur.error != null){
-                    // Error has occurred on header completed
-
-                    tur.res.sendHttpException(Tour.TOUR_ID_NOCHECK, tur.error);
-                    return NextSocketAction.Continue;
-                }
-                else {
-                    try {
+                    if(tur.error != null){
+                        // Error has occurred on header completed
+                        BayLog.debug("%s Delay send error", tur);
+                        throw tur.error;
+                    }
+                    else {
                         endReqContent(tur.id(), tur);
-                    } catch (HttpException e) {
-                        tur.res.sendHttpException(Tour.TOUR_ID_NOCHECK, e);
-                        return NextSocketAction.Continue;
                     }
                 }
             }
-        }
 
-        if(!success)
-            return NextSocketAction.Suspend;
-        else
+            if(!success)
+                return NextSocketAction.Suspend;
+            else
+                return NextSocketAction.Continue;
+        } catch (HttpException e) {
+            tur.req.abort();
+            tur.res.sendHttpException(Tour.TOUR_ID_NOCHECK, e);
             return NextSocketAction.Continue;
+        }
     }
 
     @Override

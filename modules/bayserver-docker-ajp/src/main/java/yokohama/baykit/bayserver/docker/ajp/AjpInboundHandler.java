@@ -206,8 +206,8 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
 
         } catch (HttpException e) {
             if(reqContLen <= 0) {
+                tur.req.abort();
                 tur.res.sendHttpException(Tour.TOUR_ID_NOCHECK, e);
-                //tur.zombie = true;
                 resetState();
                 return NextSocketAction.Write;
             }
@@ -231,51 +231,51 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
             throw new ProtocolException("Invalid AJP command: " + cmd.type + " state=" + state);
 
         Tour tur = sip.getTour(DUMMY_KEY);
-        int sid = sip.shipId;
-        boolean success =
-                tur.req.postReqContent(
-                        Tour.TOUR_ID_NOCHECK,
-                        cmd.data,
-                        cmd.start,
-                        cmd.length,
-                        (len, resume) -> {
-                            if (resume)
-                                sip.resumeRead(sid);
-                        });
 
-        if(tur.req.bytesPosted == tur.req.bytesLimit) {
-            // request content completed
+        try {
+            int sid = sip.shipId;
+            boolean success =
+                    tur.req.postReqContent(
+                            Tour.TOUR_ID_NOCHECK,
+                            cmd.data,
+                            cmd.start,
+                            cmd.length,
+                            (len, resume) -> {
+                                if (resume)
+                                    sip.resumeRead(sid);
+                            });
 
-            if(tur.error != null){
-                // Error has occurred on header completed
+            if(tur.req.bytesPosted == tur.req.bytesLimit) {
+                // request content completed
 
-                tur.res.sendHttpException(Tour.TOUR_ID_NOCHECK, tur.error);
-                resetState();
-                return NextSocketAction.Write;
-            }
-            else {
-                try {
+                if(tur.error != null){
+                    // Error has occurred on header completed
+                    BayLog.debug("%s Delay send error", tur);
+                    throw tur.error;
+                }
+                else {
                     endReqContent(tur);
                     return NextSocketAction.Continue;
-                } catch (HttpException e) {
-                    tur.res.sendHttpException(Tour.TOUR_ID_NOCHECK, e);
-                    resetState();
-                    return NextSocketAction.Write;
                 }
             }
-        }
-        else {
-            CmdGetBodyChunk bch = new CmdGetBodyChunk();
-            bch.reqLen = tur.req.bytesLimit - tur.req.bytesPosted;
-            if(bch.reqLen > AjpPacket.MAX_DATA_LEN) {
-                bch.reqLen = AjpPacket.MAX_DATA_LEN;
-            }
-            protocolHandler.post(bch);
+            else {
+                CmdGetBodyChunk bch = new CmdGetBodyChunk();
+                bch.reqLen = tur.req.bytesLimit - tur.req.bytesPosted;
+                if(bch.reqLen > AjpPacket.MAX_DATA_LEN) {
+                    bch.reqLen = AjpPacket.MAX_DATA_LEN;
+                }
+                protocolHandler.post(bch);
 
-            if(!success)
-                return NextSocketAction.Suspend;
-            else
-                return NextSocketAction.Continue;
+                if(!success)
+                    return NextSocketAction.Suspend;
+                else
+                    return NextSocketAction.Continue;
+            }
+        } catch (HttpException e) {
+            tur.req.abort();
+            tur.res.sendHttpException(Tour.TOUR_ID_NOCHECK, e);
+            resetState();
+            return NextSocketAction.Write;
         }
     }
 

@@ -245,6 +245,7 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
             } catch (HttpException e) {
                 BayLog.debug(this + " Http error occurred: " + e);
                 if(reqContLen <= 0) {
+                    tur.req.abort();
                     // no post data
                     tur.res.sendHttpException(Tour.TOUR_ID_NOCHECK, e);
 
@@ -308,46 +309,46 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
         if(state != ReadStdIn)
             throw new ProtocolException("fcgi: Invalid FCGI command: " + cmd.type + " state=" + state);
 
-        checkReqId(cmd.reqId);
-
         Tour tur = sip.getTour(cmd.reqId);
-        if(cmd.length == 0) {
-            // request content completed
 
-            if(tur.error != null){
-                // Error has occurred on header completed
+        try {
+            checkReqId(cmd.reqId);
 
-                tur.res.sendHttpException(Tour.TOUR_ID_NOCHECK, tur.error);
-                resetState();
-                return NextSocketAction.Write;
-            }
-            else {
-                try {
+            if(cmd.length == 0) {
+                // request content completed
+                if(tur.error != null){
+                    // Error has occurred on header completed
+                    BayLog.debug("%s Delay send error", tur);
+                    throw tur.error;
+                }
+                else {
                     endReqContent(Tour.TOUR_ID_NOCHECK, tur);
                     return NextSocketAction.Continue;
-                } catch (HttpException e) {
-                    tur.res.sendHttpException(Tour.TOUR_ID_NOCHECK, e);
-                    return NextSocketAction.Write;
                 }
             }
-        }
-        else {
-            int sid = ship().shipId;
-            boolean success =
-                    tur.req.postReqContent(
-                            Tour.TOUR_ID_NOCHECK,
-                            cmd.data,
-                            cmd.start,
-                            cmd.length,
-                            (len, resume) -> {
-                                if (resume)
-                                    sip.resumeRead(sid);
-                            });
+            else {
+                int sid = ship().shipId;
+                boolean success =
+                        tur.req.postReqContent(
+                                Tour.TOUR_ID_NOCHECK,
+                                cmd.data,
+                                cmd.start,
+                                cmd.length,
+                                (len, resume) -> {
+                                    if (resume)
+                                        sip.resumeRead(sid);
+                                });
 
-            if (!success)
-                return NextSocketAction.Suspend;
-            else
-                return NextSocketAction.Continue;
+                if (!success)
+                    return NextSocketAction.Suspend;
+                else
+                    return NextSocketAction.Continue;
+            }
+        } catch (HttpException e) {
+            tur.req.abort();
+            tur.res.sendHttpException(Tour.TOUR_ID_NOCHECK, e);
+            resetState();
+            return NextSocketAction.Write;
         }
     }
 
