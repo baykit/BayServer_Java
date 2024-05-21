@@ -49,7 +49,7 @@ public class SocketChannelRudder extends NetworkChannelRudder {
     // Static methods
     ////////////////////////////////////////////
 
-    public static SocketChannel SocketChannel(Rudder rd) {
+    public static SocketChannel socketChannel(Rudder rd) {
         return (SocketChannel)((ChannelRudder)rd).channel;
     }
 }

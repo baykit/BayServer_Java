@@ -191,6 +191,11 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
     }
 
     @Override
+    public boolean isNonBlocking() {
+        return false;
+    }
+
+    @Override
     public void nextAccept(RudderState state) {
         reqAccept(state.rudder);
     }
@@ -283,12 +288,20 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
         AsynchronousSocketChannel ch = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(state.rudder);
         BayLog.debug("%s Try to Read (rd=%s) (buf=%s) timeout=%d", agent, state.rudder, state.readBuf, agent.timeoutSec);
         state.readBuf.clear();
-        ch.read(
-                state.readBuf,
-                agent.timeoutSec,
-                TimeUnit.SECONDS,
-                state.rudder,
-                new ReadCompletionHandler(state));
+        if(state.timeoutSec > 0) {
+            ch.read(
+                    state.readBuf,
+                    state.timeoutSec,
+                    TimeUnit.SECONDS,
+                    state.rudder,
+                    new ReadCompletionHandler(state));
+        }
+        else {
+            ch.read(
+                    state.readBuf,
+                    state.rudder,
+                    new ReadCompletionHandler(state));
+        }
     }
 
     private void nextNetworkWrite(RudderState st) {

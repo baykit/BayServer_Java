@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.agent;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.multiplexer.*;
 import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.common.Recipient;
 import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.docker.base.PortBase;
@@ -22,7 +23,7 @@ public class GrandAgent extends Thread {
         Connected,
         Read,
         Wrote,
-        CloseReq
+        CloseReq,
     }
 
     private static class Letter {
@@ -64,13 +65,15 @@ public class GrandAgent extends Thread {
     public Multiplexer jobMultiplexer;
     public Multiplexer taxiMultiplexer;
     public SpinMultiplexer spinMultiplexer;
-    public SensingMultiplexer sensingMultiplexer;
+    public Multiplexer sensingMultiplexer;
     public Multiplexer pegionMultiplexer;
+    public Recipient recipient;
 
     public final int maxInboundShips;
     public boolean aborted;
     private boolean anchorable;
     private ArrayList<TimerHandler> timerHandlers = new ArrayList<>();
+    CommandReceiver commandReceiver;
 
     public GrandAgent(
             int agentId,
@@ -85,6 +88,16 @@ public class GrandAgent extends Thread {
         this.spinMultiplexer = new SpinMultiplexer(this);
         this.pegionMultiplexer = new PigeonMultiplexer(this, anchorable);
         this.anchorable = anchorable;
+
+        switch(BayServer.harbor.recipient()) {
+            case Spider:
+                this.recipient = (Recipient)this.sensingMultiplexer;
+                break;
+
+            case Pipe:
+                this.recipient = new PipeRecipient();
+                break;
+        }
 
         switch(BayServer.harbor.netMultiplexer()) {
             case Sensor:
@@ -118,25 +131,30 @@ public class GrandAgent extends Thread {
     public void run() {
         BayLog.info(BayMessage.get(Symbol.MSG_RUNNING_GRAND_AGENT, this));
         try {
-            //commandReceiver.comRecvChannel.configureBlocking(false);
-            //commandReceiver.comRecvChannel.register(selector, SelectionKey.OP_READ);
+            // Adds read channel of command receiver
+            if(netMultiplexer.isNonBlocking())
+                commandReceiver.rudder.setNonBlocking();
+
+            Transporter comTransporter = new PlainTransporter(netMultiplexer, commandReceiver, true, 8, false);
+            netMultiplexer.addRudderState(commandReceiver.rudder, new RudderState(commandReceiver.rudder, comTransporter));
+            netMultiplexer.reqRead(commandReceiver.rudder);
 
             if(anchorable) {
+                // Adds server socket channel of anchorable ports
                 for(NetworkChannelRudder rd: BayServer.anchorablePortMap.keySet()) {
-                    if(netMultiplexer == sensingMultiplexer) {
+                    if(netMultiplexer.isNonBlocking()) {
                         try {
                             rd.setNonBlocking();
                         }
                         catch(IOException e) {
-                            BayLog.error(e);
+                            BayLog.fatal(e);
                         }
                     }
                     netMultiplexer.addRudderState(rd, new RudderState(rd));
                 }
             }
-
-            // Set up unanchorable channel
-            if(!anchorable) {
+            else {
+                // Adds server socket  up unanchorable ports
                 for (Rudder rd : BayServer.unanchorablePortMap.keySet()) {
                     Port p = BayServer.unanchorablePortMap.get(rd);
                     p.onConnected(agentId, rd);
@@ -156,20 +174,25 @@ public class GrandAgent extends Thread {
                     }
                 }
 
-                int count;
+                boolean received;
                 if (!spinMultiplexer.isEmpty()) {
                     // If "SpinHandler" is running, the select function does not block.
-                    count = sensingMultiplexer.select(-1);
+                    received = recipient.receive(false);
                     spinMultiplexer.processData();
                 }
                 else {
-                    count = sensingMultiplexer.select(timeoutSec);
+                    received = recipient.receive(true);
                 }
 
                 //BayLog.debug("selected: %d", count);
                 if(aborted) {
                     BayLog.info("%s aborted by another thread", this);
                     break;
+                }
+
+                if(spinMultiplexer.isEmpty() && letterQueue.isEmpty()) {
+                    // timed out
+                    ring();
                 }
 
                 //spinMultiplexer.processData();
@@ -233,7 +256,7 @@ public class GrandAgent extends Thread {
 
         BayLog.debug("%s remove listeners", this);
         listeners.forEach(lis -> lis.remove(agentId));
-
+        commandReceiver.end();
         agents.remove(this);
     }
 
@@ -271,6 +294,10 @@ public class GrandAgent extends Thread {
         for(TimerHandler th: timerHandlers) {
             th.onTimer();
         }
+    }
+
+    public void addCommandReceiver(Rudder rd) {
+        commandReceiver = new CommandReceiver(this, rd);
     }
 
     public void sendAcceptedLetter(RudderState st, Rudder clientRd, Throwable e, boolean wakeup) {
@@ -313,7 +340,7 @@ public class GrandAgent extends Thread {
         }
 
         if(wakeup)
-            sensingMultiplexer.wakeup();
+            recipient.wakeup();
     }
 
     private void onAccept(Letter let) throws Throwable {

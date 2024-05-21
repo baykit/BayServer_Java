@@ -26,17 +26,23 @@ public class RudderState {
     public boolean closed;
     public boolean finale;
     EOFChecker eofChecker;
+    public int timeoutSec;
 
     public RudderState(Rudder rd) {
         this(rd, null);
     }
 
     public RudderState(Rudder rd, Transporter tp) {
+        this(rd, tp, 0);
+    }
+
+    public RudderState(Rudder rd, Transporter tp, int timeoutSec) {
         if (rd == null)
             throw new NullPointerException();
         this.rudder = rd;
         this.transporter = tp;
         this.closed = false;
+        this.timeoutSec = timeoutSec;
         if(tp != null) {
             this.readBuf = ByteBuffer.allocate(tp.getReadBufferSize());
         }

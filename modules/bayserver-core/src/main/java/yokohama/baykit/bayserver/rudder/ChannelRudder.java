@@ -10,6 +10,8 @@ public abstract class ChannelRudder implements Rudder {
     public final Channel channel;
 
     public ChannelRudder(Channel channel) {
+        if(channel == null)
+            throw new NullPointerException();
         this.channel = channel;
     }
 

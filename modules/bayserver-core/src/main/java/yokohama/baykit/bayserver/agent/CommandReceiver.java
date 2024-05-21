@@ -2,21 +2,25 @@ package yokohama.baykit.bayserver.agent;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.MemUsage;
+import yokohama.baykit.bayserver.Sink;
+import yokohama.baykit.bayserver.agent.monitor.GrandAgentMonitor;
+import yokohama.baykit.bayserver.protocol.ProtocolException;
+import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.rudder.SocketChannelRudder;
+import yokohama.baykit.bayserver.ship.Ship;
 import yokohama.baykit.bayserver.util.IOUtil;
 
 import java.io.IOException;
-import java.nio.channels.Pipe;
+import java.nio.ByteBuffer;
 
-public class CommandReceiver {
+public class CommandReceiver extends Ship {
     GrandAgent agent;
-    public Pipe.SourceChannel comRecvChannel;
-    Pipe.SinkChannel comSendChannel;
+    public Rudder rudder;
     public boolean closed = false;
 
-    public CommandReceiver(GrandAgent agent, Pipe.SourceChannel comRecvChannel, Pipe.SinkChannel comSendChannel) {
+    public CommandReceiver(GrandAgent agent, Rudder rd) {
         this.agent = agent;
-        this.comRecvChannel = comRecvChannel;
-        this.comSendChannel = comSendChannel;
+        this.rudder = rd;
     }
 
     @Override
@@ -24,11 +28,60 @@ public class CommandReceiver {
         return "ComReceiver#" + agent.agentId;
     }
 
-    public void onPipeReadable() {
-        try {
-            int cmd = IOUtil.readInt32(comRecvChannel);
+    ////////////////////////////////////////////
+    // Implements Ship
+    ////////////////////////////////////////////
 
-            BayLog.debug("%s receive command %d pipe=%s", agent, cmd, comRecvChannel);
+    @Override
+    public NextSocketAction notifyHandshakeDone(String pcl) throws IOException {
+        throw new Sink();
+    }
+
+    @Override
+    public NextSocketAction notifyConnect() throws IOException {
+        throw new Sink();
+    }
+
+    @Override
+    public NextSocketAction notifyRead(ByteBuffer buf) throws IOException {
+        int cmd = GrandAgentMonitor.bufferToInt(buf);
+        onReadCommand(cmd);
+        return NextSocketAction.Continue;
+    }
+
+    @Override
+    public NextSocketAction notifyEof() {
+        return null;
+    }
+
+    @Override
+    public void notifyError(Throwable e) {
+        BayLog.error(e);
+    }
+
+    @Override
+    public boolean notifyProtocolError(ProtocolException e) throws IOException {
+        throw new Sink();
+    }
+
+    @Override
+    public void notifyClose() {
+
+    }
+
+    @Override
+    public boolean checkTimeout(int durationSec) {
+        return false;
+    }
+
+    ////////////////////////////////////////////
+    // Custom methods
+    ////////////////////////////////////////////
+
+    public void onReadCommand(int cmd) {
+        try {
+
+            BayLog.debug("%s receive command %d rd=%s", agent, cmd, rudder);
             switch (cmd) {
                 case GrandAgent.CMD_RELOAD_CERT:
                     agent.reloadCert();
@@ -39,15 +92,18 @@ public class CommandReceiver {
                 case GrandAgent.CMD_SHUTDOWN:
                     agent.shutdown();
                     break;
-                case GrandAgent.CMD_ABORT:
-                    IOUtil.writeInt32(comSendChannel, GrandAgent.CMD_OK);
+                case GrandAgent.CMD_ABORT: {
+                    ByteBuffer buf = GrandAgentMonitor.intToBuffer(GrandAgent.CMD_OK);
+                    GrandAgentMonitor.syncWrite(rudder, buf);
                     agent.abort();
                     return;
+                }
                 default:
                     BayLog.error("Unknown command: %d", cmd);
             }
 
-            IOUtil.writeInt32(comSendChannel, GrandAgent.CMD_OK);
+            ByteBuffer buf = GrandAgentMonitor.intToBuffer(GrandAgent.CMD_OK);
+            agent.netMultiplexer.reqWrite(rudder, buf, null, null, null);
         } catch (IOException e) {
             BayLog.error(e, "%s Command thread aborted(end)", agent);
             close();
@@ -59,7 +115,7 @@ public class CommandReceiver {
     public void end() {
         BayLog.debug("%s end", this);
         try {
-            IOUtil.writeInt32(comSendChannel, GrandAgent.CMD_CLOSE);
+            IOUtil.writeInt32(SocketChannelRudder.socketChannel(rudder), GrandAgent.CMD_CLOSE);
         } catch (IOException e) {
             BayLog.error(e);
         }
@@ -67,18 +123,16 @@ public class CommandReceiver {
     }
 
     public void close() {
+        if(closed)
+            return;
+
         try {
-            comRecvChannel.close();
+            rudder.close();
         }
         catch (IOException e) {
-            BayLog.fatal(e);
-        }
-        try {
-            comSendChannel.close();
-        }
-        catch (IOException e) {
-            BayLog.fatal(e);
+            BayLog.error(e);
         }
         closed = true;
     }
+
 }

@@ -8,7 +8,6 @@ import yokohama.baykit.bayserver.rudder.Rudder;
 
 import java.io.IOException;
 import java.nio.channels.AsynchronousCloseException;
-import java.nio.channels.Pipe;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -62,11 +61,6 @@ public abstract class MultiplexerBase implements Multiplexer {
 
     @Override
     public void reqClose(Rudder rd) {
-        throw new Sink();
-    }
-
-    @Override
-    public void runCommandReceiver(Pipe.SourceChannel readCh, Pipe.SinkChannel writeCh) {
         throw new Sink();
     }
 

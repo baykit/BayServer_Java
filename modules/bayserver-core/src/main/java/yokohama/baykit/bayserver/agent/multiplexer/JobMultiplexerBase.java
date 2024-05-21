@@ -2,7 +2,6 @@ package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
-import yokohama.baykit.bayserver.agent.CommandReceiver;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.TimerHandler;
 import yokohama.baykit.bayserver.common.Multiplexer;
@@ -19,7 +18,6 @@ public abstract class JobMultiplexerBase extends MultiplexerBase implements Time
     private final boolean anchorable;
 
     private Pipe pipe;
-    private CommandReceiver commandReceiver;
 
     ////////////////////////////////////////////
     // Constructor
@@ -45,18 +43,7 @@ public abstract class JobMultiplexerBase extends MultiplexerBase implements Time
     ////////////////////////////////////////////
 
     @Override
-    public final void runCommandReceiver(Pipe.SourceChannel readCh, Pipe.SinkChannel writeCh) {
-        commandReceiver = new CommandReceiver(agent, readCh, writeCh);
-        new Thread(() -> {
-            while (!commandReceiver.closed) {
-                commandReceiver.onPipeReadable();
-            }
-        }).start();
-    }
-
-    @Override
     public final void shutdown() {
-        commandReceiver.end();
         closeAll();
     }
 

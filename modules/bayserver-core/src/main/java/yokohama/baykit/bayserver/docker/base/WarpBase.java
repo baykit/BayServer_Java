@@ -193,7 +193,7 @@ public abstract class WarpBase extends ClubBase implements Warp {
             wsip.startWarpTour(tour);
 
             if(needConnect) {
-                agt.netMultiplexer.addRudderState(wsip.rudder, new RudderState(wsip.rudder, tp));
+                agt.netMultiplexer.addRudderState(wsip.rudder, new RudderState(wsip.rudder, tp, agt.timeoutSec));
                 agt.netMultiplexer.getTransporter(wsip.rudder).reqConnect(wsip.rudder, hostAddr);
             }
 
