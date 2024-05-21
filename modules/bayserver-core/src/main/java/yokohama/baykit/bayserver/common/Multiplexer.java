@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.Pipe;
 
 /**
  * Managements I/O Multiplexing
@@ -35,8 +34,6 @@ public interface Multiplexer {
 
     void reqClose(Rudder rd);
 
-    void runCommandReceiver(Pipe.SourceChannel readCh, Pipe.SinkChannel writeCh);
-
     void cancelRead(RudderState st);
 
     void cancelWrite(RudderState st);
@@ -47,6 +44,7 @@ public interface Multiplexer {
 
     void shutdown();
 
+    boolean isNonBlocking();
     boolean useAsyncAPI();
 
     boolean consumeOldestUnit(RudderState st);

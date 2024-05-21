@@ -11,7 +11,12 @@ public interface Harbor {
         Job,
         Taxi,
         Train,
-    };
+    }
+
+    enum RecipientType {
+        Spider,
+        Pipe
+    }
 
     /** Default charset */
     String charset();
@@ -67,6 +72,8 @@ public interface Harbor {
     /** Multiplexer of CGI input */
     MultiPlexerType cgiMultiplexer();
 
+    /** Recipient */
+    RecipientType recipient();
 
     /** PID file name */
     String pidFile();
@@ -95,6 +102,8 @@ public interface Harbor {
     }
 
     static MultiPlexerType getMultiplexerType(String type) {
+        if(type != null)
+            type = type.toLowerCase();
         switch (type) {
             case "sensor":
                 return MultiPlexerType.Sensor;
@@ -113,4 +122,29 @@ public interface Harbor {
         }
     }
 
+    static String getRecipientTypeName(RecipientType type) {
+        switch (type) {
+            case Spider:
+                return "spider";
+
+            case Pipe:
+                return "pipe";
+
+            default:
+                return null;
+        }
+    }
+
+    static RecipientType getRecipientType(String type) {
+        if(type != null)
+            type = type.toLowerCase();
+        switch (type) {
+            case "spider":
+                return RecipientType.Spider;
+            case "pipe":
+                return RecipientType.Pipe;
+            default:
+                throw new IllegalArgumentException();
+        }
+    }
 }

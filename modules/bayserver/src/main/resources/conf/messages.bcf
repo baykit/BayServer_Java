@@ -38,7 +38,7 @@ CFG_NET_MULTIPLEXER_NOT_SUPPORTED    Net multiplexer "%s" not supported on this 
 CFG_FILE_MULTIPLEXER_NOT_SUPPORTED   File multiplexer "%s" not supported on this platform. "%s" is used.
 CFG_LOG_MULTIPLEXER_NOT_SUPPORTED    Log multiplexer "%s" not supported on this platform. "%s" is used.
 CFG_CGI_MULTIPLEXER_NOT_SUPPORTED    CGI multiplexer "%s" not supported on this platform. "%s" is used.
-CFG_SPIN_MULTIPLEXER_NEEDS_SENSOR    For a spin-type multiplexer, a sensor-type multiplexer is necessary.
+CFG_NET_MULTIPLEXER_DOES_NOT_SUPPORT_THIS_RECIPIENT Net multiplexer"%s" does not support recipient "%s". "%s" is used.
 CFG_MULTIPLEXER_NEEDS_A_GRAND_AGENT  This multiplexer needs only one grand agent
 CFG_MAX_SHIPS_IS_TO_SMALL                maxShips is too small. Set it at %d
 CFG_TCP_NOT_SUPPORTED                TCP not supported

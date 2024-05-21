@@ -28,8 +28,9 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     public static final int DEFAULT_CONTROL_PORT = -1;
     public static final MultiPlexerType DEFAULT_NET_MULTIPLEXER = MultiPlexerType.Sensor;
     public static final MultiPlexerType DEFAULT_FILE_MULTIPLEXER = MultiPlexerType.Taxi;
-    public static final MultiPlexerType DEFAULT_LOG_MULTIPLEXER = Harbor.MultiPlexerType.Taxi;
-    public static final Harbor.MultiPlexerType DEFAULT_CGI_MULTIPLEXER = Harbor.MultiPlexerType.Taxi;
+    public static final MultiPlexerType DEFAULT_LOG_MULTIPLEXER = MultiPlexerType.Taxi;
+    public static final MultiPlexerType DEFAULT_CGI_MULTIPLEXER = MultiPlexerType.Taxi;
+    public static final RecipientType DEFAULT_RECIPIENT = RecipientType.Spider;
     public static final boolean DEFAULT_MULTI_CORE = true;
     public static final boolean DEFAULT_GZIP_COMP = false;
     public static final String DEFAULT_PID_FILE = "bayserver.pid";
@@ -90,6 +91,9 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
 
     /** Multiplexer type of CGI input */
     Harbor.MultiPlexerType cgiMultiplexer = DEFAULT_CGI_MULTIPLEXER;
+
+    /** Recipient type */
+    RecipientType recipient = DEFAULT_RECIPIENT;
 
     /** PID file name */
     String pidFile = DEFAULT_PID_FILE;
@@ -162,6 +166,19 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                     elm.fileName,
                     elm.lineNo));
             cgiMultiplexer = DEFAULT_CGI_MULTIPLEXER;
+        }
+
+        if (netMultiplexer == MultiPlexerType.Sensor &&
+            recipient != RecipientType.Spider) {
+            BayLog.warn(ConfigException.createMessage(
+                    BayMessage.get(
+                            Symbol.CFG_NET_MULTIPLEXER_DOES_NOT_SUPPORT_THIS_RECIPIENT,
+                            Harbor.getMultiplexerTypeName(netMultiplexer),
+                            Harbor.getRecipientTypeName(recipient),
+                            Harbor.getRecipientTypeName(RecipientType.Spider)),
+                    elm.fileName,
+                    elm.lineNo));
+            recipient = RecipientType.Spider;
         }
     }
 
@@ -301,6 +318,17 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                 break;
             }
 
+            case "recipient": {
+                try {
+                    recipient = Harbor.getRecipientType(kv.value.toLowerCase());
+                }
+                catch (IllegalArgumentException e) {
+                    BayLog.error(e);
+                    throw new ConfigException(kv.fileName, kv.lineNo, BayMessage.CFG_INVALID_PARAMETER_VALUE(kv.value));
+                }
+                break;
+            }
+
             case "pidfile":
                 pidFile = kv.value;
                 break;
@@ -401,6 +429,11 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     @Override
     public MultiPlexerType cgiMultiplexer() {
         return cgiMultiplexer;
+    }
+
+    @Override
+    public RecipientType recipient() {
+        return recipient;
     }
 
     @Override

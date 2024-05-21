@@ -276,6 +276,11 @@ public class JobMultiplexer extends JobMultiplexerBase {
     }
 
     @Override
+    public boolean isNonBlocking() {
+        return false;
+    }
+
+    @Override
     public boolean useAsyncAPI() {
         return false;
     }
