@@ -39,7 +39,7 @@ CFG_FILE_MULTIPLEXER_NOT_SUPPORTED   このプラットフォームのファイ�
 CFG_LOG_MULTIPLEXER_NOT_SUPPORTED    このプラットフォームのログ・マルチプレクサとして"%s"はサポートされません。"%s"を使用します。
 CFG_CGI_MULTIPLEXER_NOT_SUPPORTED    このプラットフォームのCGIマルチプレクサとして"%s"はサポートされません。"%s"を使用します。
 CFG_MULTIPLEXER_NEEDS_A_GRAND_AGENT  このマルチプレクサはシングル・エージェントで動作します
-CFG_SPIN_MULTIPLEXER_NEEDS_SENSOR    スピン・タイプのマルチプレクサは、センサータイプのネット・マルチプレクサを必要とします
+CFG_NET_MULTIPLEXER_DOES_NOT_SUPPORT_THIS_RECIPIENT ネット・マルチプレクサ"%s"は、レシピエント"%s"をサポートしません。"%s"を使用します。
 CFG_MAX_SHIPS_IS_TO_SMALL                maxShipsが小さすぎます。次の値に設定します: %d
 CFG_TCP_NOT_SUPPORTED                TCPはサポートされません
 CFG_UDP_NOT_SUPPORTED                UDPはサポートされません

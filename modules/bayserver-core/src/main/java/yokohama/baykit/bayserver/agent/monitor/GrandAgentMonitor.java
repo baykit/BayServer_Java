@@ -5,14 +5,22 @@ import yokohama.baykit.bayserver.BayMessage;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Symbol;
 import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.rudder.AsynchronousSocketChannelRudder;
+import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.rudder.SocketChannelRudder;
 import yokohama.baykit.bayserver.util.IOUtil;
 
 import java.io.IOException;
-import java.nio.channels.Pipe;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 public class GrandAgentMonitor extends Thread {
 
@@ -24,14 +32,12 @@ public class GrandAgentMonitor extends Thread {
 
     int agentId;
     boolean anchorable;
-    Pipe.SinkChannel comSendChannel;
-    public Pipe.SourceChannel comRecvChannel;
+    Rudder rudder;
 
-    GrandAgentMonitor(int agentId, boolean anchorable, Pipe.SinkChannel comSendChannel, Pipe.SourceChannel comRecvChannel) {
+    GrandAgentMonitor(int agentId, boolean anchorable, Rudder rd) {
         this.agentId = agentId;
         this.anchorable = anchorable;
-        this.comSendChannel = comSendChannel;
-        this.comRecvChannel= comRecvChannel;
+        this.rudder = rd;
     }
 
     @Override
@@ -48,7 +54,10 @@ public class GrandAgentMonitor extends Thread {
     public void run() {
         try {
             while(true) {
-                int res = IOUtil.readInt32(comRecvChannel);
+                ByteBuffer buf = ByteBuffer.allocate(4);
+                syncRead(rudder, buf);
+                buf.flip();
+                int res = bufferToInt(buf);
                 if (res == GrandAgent.CMD_CLOSE) {
                     BayLog.debug("%s read Close", this);
                     break;
@@ -105,15 +114,15 @@ public class GrandAgentMonitor extends Thread {
     /////////////////////////////////////////////////
 
     private void send(int cmd) throws IOException {
-        BayLog.debug("%s send command %s pipe=%s", this, cmd, comSendChannel);
-        IOUtil.writeInt32(comSendChannel, cmd);
+        BayLog.debug("%s send command %s rd=%s", this, cmd, rudder);
+        ByteBuffer buf = intToBuffer(cmd);
+        syncWrite(rudder, buf);
     }
 
     private void close()
     {
         try {
-            comSendChannel.close();
-            comRecvChannel.close();
+            rudder.close();
         }
         catch(IOException e) {
             BayLog.error(e);
@@ -147,17 +156,26 @@ public class GrandAgentMonitor extends Thread {
             System.exit(1);
         }
 
-        Pipe sendPipe = Pipe.open();
-        Pipe recvPipe = Pipe.open();
-
         GrandAgent agt = GrandAgent.add(agtId, anchorable);
-        agt.netMultiplexer.runCommandReceiver(sendPipe.source(), recvPipe.sink());
+
+        Rudder rd1, rd2;
+
+        if(agt.netMultiplexer.useAsyncAPI()) {
+            AsynchronousSocketChannel[] pair = IOUtil.asynchronousSocketChannelPair();
+            rd1 = new AsynchronousSocketChannelRudder(pair[0]);
+            rd2 = new AsynchronousSocketChannelRudder(pair[1]);
+        }
+        else {
+            SocketChannel[] pair = IOUtil.socketChannelPair();
+            rd1 = new SocketChannelRudder(pair[0]);
+            rd2 = new SocketChannelRudder(pair[1]);
+        }
+        agt.addCommandReceiver(rd1);
 
         GrandAgentMonitor mon = new GrandAgentMonitor(
                 agtId,
                 anchorable,
-                sendPipe.sink(),
-                recvPipe.source());
+                rd2);
 
         monitors.put(agtId, mon);
         mon.start();
@@ -250,5 +268,50 @@ public class GrandAgentMonitor extends Thread {
                 BayLog.error(e);
             }
         }
+    }
+
+    public static int bufferToInt(ByteBuffer buf) {
+        buf.order(ByteOrder.BIG_ENDIAN);
+        return buf.getInt();
+    }
+
+    public static ByteBuffer intToBuffer(int val) {
+        ByteBuffer buf = ByteBuffer.allocate(4);
+        buf.order(ByteOrder.BIG_ENDIAN);
+        buf.putInt(val);
+        buf.flip();
+        return buf;
+    }
+
+    public static int syncRead(Rudder rd, ByteBuffer buf) throws IOException {
+        if(rd instanceof AsynchronousSocketChannelRudder) {
+
+            Future<Integer> ft = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(rd).read(buf);
+            try {
+                return ft.get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new IOException(e);
+            }
+        }
+        else {
+            return SocketChannelRudder.socketChannel(rd).read(buf);
+        }
+
+    }
+
+    public static void syncWrite(Rudder rd, ByteBuffer buf) throws IOException {
+        if(rd instanceof AsynchronousSocketChannelRudder) {
+
+            Future<Integer> ft = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(rd).write(buf);
+            try {
+                ft.get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new IOException(e);
+            }
+        }
+        else {
+            SocketChannelRudder.socketChannel(rd).write(buf);
+        }
+
     }
 }

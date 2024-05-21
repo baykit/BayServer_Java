@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.Pipe;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
@@ -98,11 +97,6 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
     }
 
     @Override
-    public void runCommandReceiver(Pipe.SourceChannel readCh, Pipe.SinkChannel writeCh) {
-        throw new Sink();
-    }
-
-    @Override
     public void cancelRead(RudderState st) {
 
     }
@@ -130,6 +124,11 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
     @Override
     public void shutdown() {
         closeAll();
+    }
+
+    @Override
+    public boolean isNonBlocking() {
+        return false;
     }
 
     @Override

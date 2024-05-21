@@ -3,10 +3,10 @@ package yokohama.baykit.bayserver.agent.multiplexer;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.agent.CommandReceiver;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.TimerHandler;
 import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.common.Recipient;
 import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.rudder.DatagramChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
@@ -27,7 +27,7 @@ import static java.nio.channels.SelectionKey.*;
 /**
  * The purpose of SensingMultiplexer is to sense sockets, pipes, or files through the select/epoll/kqueue API.
  */
-public class SensingMultiplexer extends MultiplexerBase implements TimerHandler, Multiplexer {
+public class SensingMultiplexer extends MultiplexerBase implements TimerHandler, Multiplexer, Recipient {
 
     static class ChannelOperation {
         final Rudder rudder;
@@ -52,7 +52,6 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
     private final boolean anchorable;
 
     private Selector selector;
-    private CommandReceiver commandReceiver;
 
     final ArrayList<ChannelOperation> operations = new ArrayList<>();
 
@@ -168,13 +167,13 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
     }
 
     @Override
-    public void runCommandReceiver(Pipe.SourceChannel readCh, Pipe.SinkChannel writeCh) {
-        commandReceiver = new CommandReceiver(agent, readCh, writeCh);
+    public void shutdown() {
+        selector.wakeup();
     }
 
     @Override
-    public void shutdown() {
-        selector.wakeup();
+    public boolean isNonBlocking() {
+        return true;
     }
 
     @Override
@@ -252,15 +251,16 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
 
 
     ////////////////////////////////////////////
-    // Custom methods
+    // Implements Recipient
     ////////////////////////////////////////////
-    public int select(int timeoutSec) throws IOException{
+    @Override
+    public boolean receive(boolean wait) throws IOException{
         int count;
-        if (timeoutSec < 0) {
+        if (!wait) {
             count = selector.selectNow();
         }
         else {
-            count = selector.select(timeoutSec * 1000L);
+            count = selector.select(GrandAgent.SELECT_TIMEOUT_SEC * 1000L);
         }
 
         //BayLog.debug(this + " select count=" + count);
@@ -271,16 +271,13 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
         for(Iterator<SelectionKey> it = selKeys.iterator(); it.hasNext(); ) {
             SelectionKey key = it.next();
             it.remove();
-            //BayLog.debug(this + " selected key=" + key);
-            if(key.channel() == commandReceiver.comRecvChannel)
-                commandReceiver.onPipeReadable();
-            else
-                handleChannel(key);
+            handleChannel(key);
         }
 
-        return count;
+        return count > 0;
     }
 
+    @Override
     public void wakeup() {
         selector.wakeup();
     }
@@ -545,7 +542,6 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
     }
 
     private void doShutdown() {
-        commandReceiver.end();
         closeAll();
     }
 

@@ -182,6 +182,11 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
     }
 
     @Override
+    public boolean isNonBlocking() {
+        return false;
+    }
+
+    @Override
     public boolean useAsyncAPI() {
         return false;
     }
