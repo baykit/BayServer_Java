@@ -26,7 +26,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     public static final int DEFAULT_TOUR_BUFFER_SIZE = 1024 * 1024;  // 1M
     public static final String DEFAULT_CHARSET = "UTF-8";
     public static final int DEFAULT_CONTROL_PORT = -1;
-    public static final MultiPlexerType DEFAULT_NET_MULTIPLEXER = MultiPlexerType.Sensor;
+    public static final MultiPlexerType DEFAULT_NET_MULTIPLEXER = MultiPlexerType.Spider;
     public static final MultiPlexerType DEFAULT_FILE_MULTIPLEXER = MultiPlexerType.Taxi;
     public static final MultiPlexerType DEFAULT_LOG_MULTIPLEXER = MultiPlexerType.Taxi;
     public static final MultiPlexerType DEFAULT_CGI_MULTIPLEXER = MultiPlexerType.Taxi;
@@ -134,7 +134,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
             netMultiplexer = DEFAULT_NET_MULTIPLEXER;
         }
 
-        if ((fileMultiplexer == MultiPlexerType.Sensor && !SysUtil.supportSelectFile()) ||
+        if ((fileMultiplexer == MultiPlexerType.Spider && !SysUtil.supportSelectFile()) ||
                 (fileMultiplexer == MultiPlexerType.Spin && !SysUtil.supportNonblockFileRead()) ||
                 (fileMultiplexer == MultiPlexerType.Train)) {
             BayLog.warn(
@@ -145,7 +145,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
             fileMultiplexer = DEFAULT_FILE_MULTIPLEXER;
         }
 
-        if((logMultiplexer == Harbor.MultiPlexerType.Sensor && !SysUtil.supportSelectFile()) ||
+        if((logMultiplexer == Harbor.MultiPlexerType.Spider && !SysUtil.supportSelectFile()) ||
                 (logMultiplexer == Harbor.MultiPlexerType.Train)) {
             BayLog.warn(
                     BayMessage.get(
@@ -155,7 +155,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
             logMultiplexer = DEFAULT_LOG_MULTIPLEXER;
         }
 
-        if (cgiMultiplexer == Harbor.MultiPlexerType.Sensor ||
+        if (cgiMultiplexer == Harbor.MultiPlexerType.Spider ||
                 cgiMultiplexer == Harbor.MultiPlexerType.Spin ||
                 cgiMultiplexer == Harbor.MultiPlexerType.Pigeon) {
             BayLog.warn(ConfigException.createMessage(
@@ -168,7 +168,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
             cgiMultiplexer = DEFAULT_CGI_MULTIPLEXER;
         }
 
-        if (netMultiplexer == MultiPlexerType.Sensor &&
+        if (netMultiplexer == MultiPlexerType.Spider &&
             recipient != RecipientType.Spider) {
             BayLog.warn(ConfigException.createMessage(
                     BayMessage.get(
