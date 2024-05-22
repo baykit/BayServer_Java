@@ -65,7 +65,7 @@ public class GrandAgent extends Thread {
     public Multiplexer jobMultiplexer;
     public Multiplexer taxiMultiplexer;
     public SpinMultiplexer spinMultiplexer;
-    public Multiplexer sensingMultiplexer;
+    public Multiplexer spiderMultiplexer;
     public Multiplexer pegionMultiplexer;
     public Recipient recipient;
 
@@ -82,7 +82,7 @@ public class GrandAgent extends Thread {
         this.agentId = agentId;
 
         this.maxInboundShips = maxShips > 0 ? maxShips : 1;
-        this.sensingMultiplexer = new SensingMultiplexer(this, anchorable);
+        this.spiderMultiplexer = new SpiderMultiplexer(this, anchorable);
         this.jobMultiplexer = new JobMultiplexer(this, anchorable);
         this.taxiMultiplexer = new TaxiMultiplexer(this);
         this.spinMultiplexer = new SpinMultiplexer(this);
@@ -91,7 +91,7 @@ public class GrandAgent extends Thread {
 
         switch(BayServer.harbor.recipient()) {
             case Spider:
-                this.recipient = (Recipient)this.sensingMultiplexer;
+                this.recipient = (Recipient)this.spiderMultiplexer;
                 break;
 
             case Pipe:
@@ -100,8 +100,8 @@ public class GrandAgent extends Thread {
         }
 
         switch(BayServer.harbor.netMultiplexer()) {
-            case Sensor:
-                this.netMultiplexer = this.sensingMultiplexer;
+            case Spider:
+                this.netMultiplexer = this.spiderMultiplexer;
                 break;
 
             case Job:

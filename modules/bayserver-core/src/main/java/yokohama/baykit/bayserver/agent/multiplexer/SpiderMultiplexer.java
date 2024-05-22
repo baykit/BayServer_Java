@@ -25,9 +25,9 @@ import java.util.Set;
 import static java.nio.channels.SelectionKey.*;
 
 /**
- * The purpose of SensingMultiplexer is to sense sockets, pipes, or files through the select/epoll/kqueue API.
+ * The purpose of SpiderMultiplexer is to monitor sockets, pipes, or files through the select/epoll/kqueue API.
  */
-public class SensingMultiplexer extends MultiplexerBase implements TimerHandler, Multiplexer, Recipient {
+public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, Multiplexer, Recipient {
 
     static class ChannelOperation {
         final Rudder rudder;
@@ -55,7 +55,7 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
 
     final ArrayList<ChannelOperation> operations = new ArrayList<>();
 
-    public SensingMultiplexer(GrandAgent agent, boolean anchorable) {
+    public SpiderMultiplexer(GrandAgent agent, boolean anchorable) {
         super(agent);
 
         this.anchorable = anchorable;
@@ -71,7 +71,7 @@ public class SensingMultiplexer extends MultiplexerBase implements TimerHandler,
     }
 
     public String toString() {
-        return "SensorMpx[" + agent + "]";
+        return "SpiderMpx[" + agent + "]";
     }
 
     ////////////////////////////////////////////
