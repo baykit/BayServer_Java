@@ -5,7 +5,7 @@ import java.util.Locale;
 public interface Harbor {
 
     enum MultiPlexerType {
-        Sensor,
+        Spider,
         Spin,
         Pigeon,
         Job,
@@ -84,8 +84,8 @@ public interface Harbor {
 
     static String getMultiplexerTypeName(MultiPlexerType type) {
         switch (type) {
-            case Sensor:
-                return "sensor";
+            case Spider:
+                return "spider";
             case Spin:
                 return "spin";
             case Pigeon:
@@ -105,8 +105,8 @@ public interface Harbor {
         if(type != null)
             type = type.toLowerCase();
         switch (type) {
-            case "sensor":
-                return MultiPlexerType.Sensor;
+            case "spider":
+                return MultiPlexerType.Spider;
             case "spin":
                 return MultiPlexerType.Spin;
             case "pigeon":
