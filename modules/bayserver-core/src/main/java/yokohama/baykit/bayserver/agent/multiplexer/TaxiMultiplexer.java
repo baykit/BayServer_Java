@@ -150,7 +150,7 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
     // Custom methods
     ////////////////////////////////////////////
 
-
+    /*
     protected void onTimer(Rudder rd) {
         RudderState st = getRudderState(rd);
         st.access();
@@ -159,6 +159,7 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
         if (st.transporter.checkTimeout(st.rudder, durationSec))
             closeRudder(st);
     }
+    */
 
     ////////////////////////////////////////////
     // Private methods
@@ -179,7 +180,8 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
 
             @Override
             protected void onTimer() {
-                st.transporter.checkTimeout(st.rudder, -1);
+                if(st.transporter != null)
+                    st.transporter.checkTimeout(st.rudder, -1);
             }
         });
     }

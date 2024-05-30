@@ -124,7 +124,7 @@ public class Tour implements Reusable {
                 city.enter(this);
             }
             catch(HttpException e) {
-                changeState(tourId, Tour.TourState.ABORTED);
+                //changeState(tourId, Tour.TourState.ABORTED);
                 throw e;
             }
         }
