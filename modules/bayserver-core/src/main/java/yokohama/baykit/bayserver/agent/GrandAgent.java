@@ -135,8 +135,6 @@ public class GrandAgent extends Thread {
             if(netMultiplexer.isNonBlocking())
                 commandReceiver.rudder.setNonBlocking();
 
-            Transporter comTransporter = new PlainTransporter(netMultiplexer, commandReceiver, true, 8, false);
-            netMultiplexer.addRudderState(commandReceiver.rudder, new RudderState(commandReceiver.rudder, comTransporter));
             netMultiplexer.reqRead(commandReceiver.rudder);
 
             if(anchorable) {
@@ -297,7 +295,10 @@ public class GrandAgent extends Thread {
     }
 
     public void addCommandReceiver(Rudder rd) {
-        commandReceiver = new CommandReceiver(this, rd);
+        commandReceiver = new CommandReceiver();
+        Transporter comTransporter = new PlainTransporter(netMultiplexer, commandReceiver, true, 8, false);
+        commandReceiver.init(agentId, rd, comTransporter);
+        netMultiplexer.addRudderState(commandReceiver.rudder, new RudderState(commandReceiver.rudder, comTransporter));
     }
 
     public void sendAcceptedLetter(RudderState st, Rudder clientRd, Throwable e, boolean wakeup) {

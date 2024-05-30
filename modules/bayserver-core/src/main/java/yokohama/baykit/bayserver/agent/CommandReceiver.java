@@ -4,6 +4,7 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.MemUsage;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.monitor.GrandAgentMonitor;
+import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.rudder.SocketChannelRudder;
@@ -14,18 +15,15 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class CommandReceiver extends Ship {
-    GrandAgent agent;
-    public Rudder rudder;
     public boolean closed = false;
 
-    public CommandReceiver(GrandAgent agent, Rudder rd) {
-        this.agent = agent;
-        this.rudder = rd;
+    public void init(int agtId, Rudder rd, Transporter tp) {
+        super.init(agtId, rd, tp);
     }
 
     @Override
     public String toString() {
-        return "ComReceiver#" + agent.agentId;
+        return "ComReceiver#" + agentId;
     }
 
     ////////////////////////////////////////////
@@ -79,6 +77,7 @@ public class CommandReceiver extends Ship {
     ////////////////////////////////////////////
 
     public void onReadCommand(int cmd) {
+        GrandAgent agent = GrandAgent.get(agentId);
         try {
 
             BayLog.debug("%s receive command %d rd=%s", agent, cmd, rudder);
