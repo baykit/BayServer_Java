@@ -1,30 +1,22 @@
 package yokohama.baykit.bayserver.docker.cgi;
 
-import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
-import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
+import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.BayServer;
+import yokohama.baykit.bayserver.ConfigException;
+import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.bcf.ParseException;
-import yokohama.baykit.bayserver.common.EOFChecker;
-import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.base.ClubBase;
-import yokohama.baykit.bayserver.rudder.ChannelRudder;
-import yokohama.baykit.bayserver.rudder.ReadableByteChannelRudder;
 import yokohama.baykit.bayserver.tour.Tour;
-import yokohama.baykit.bayserver.train.TrainRunner;
 import yokohama.baykit.bayserver.util.CGIUtil;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.StringUtil;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 public class CgiDocker extends ClubBase {
 
@@ -34,7 +26,10 @@ public class CgiDocker extends ClubBase {
     public String scriptBase;
     public String docRoot;
     public int timeoutSec = DEFAULT_TIMEOUT_SEC;
+    public int maxProcesses = -1;
 
+    private int processCount;
+    private int waitCount;
 
     ///////////////////////////////////////////////////////////////////////
     // Implements Docker
@@ -43,8 +38,6 @@ public class CgiDocker extends ClubBase {
     @Override
     public void init(BcfElement elm, Docker parent) throws ConfigException {
         super.init(elm, parent);
-
-
     }
     
 
@@ -72,6 +65,10 @@ public class CgiDocker extends ClubBase {
 
             case "timeout":
                 timeoutSec = Integer.parseInt(kv.value);
+                break;
+
+            case "maxprocesses":
+                maxProcesses = Integer.parseInt(kv.value);
                 break;
         }
         return true;
@@ -113,94 +110,40 @@ public class CgiDocker extends ClubBase {
             throw new HttpException(HttpStatus.NOT_FOUND, fileName);
         }
 
-        int bufsize = tur.ship.protocolHandler.maxResPacketDataSize();
-        CgiReqContentHandler handler = new CgiReqContentHandler(this, tur);
+        CgiReqContentHandler handler = new CgiReqContentHandler(this, tur, env);
         tur.req.setReqContentHandler(handler);
-        handler.startTour(env);
-
-        ReadableByteChannel outCh = Channels.newChannel(handler.process.getInputStream());
-        ReadableByteChannel errCh = Channels.newChannel(handler.process.getErrorStream());
-        ChannelRudder outRd = new ReadableByteChannelRudder(outCh);
-        ChannelRudder errRd = new ReadableByteChannelRudder(errCh);
-
-        GrandAgent agt = GrandAgent.get(tur.ship.agentId);
-
-        Multiplexer mpx = null;
-
-        switch(BayServer.harbor.cgiMultiplexer()) {
-            case Spin: {
-                EOFChecker eofChecker = () -> {
-                    try {
-                        return handler.process.waitFor(0, TimeUnit.MILLISECONDS);
-                    } catch (InterruptedException e) {
-                        BayLog.error(e);
-                        return true;
-                    }
-                };
-                mpx = agt.spinMultiplexer;
-                break;
-            }
-
-            case Job: {
-                mpx = agt.jobMultiplexer;
-                break;
-            }
-
-            case Taxi: {
-                mpx = agt.taxiMultiplexer;
-                break;
-            }
-
-            case Train:
-                CgiTrain tran = new CgiTrain(tur, this, handler);
-                if(!TrainRunner.post(tur.ship.agentId, tran)) {
-                    throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "Train is busy");
-                }
-                break;
-
-            default:
-                throw new Sink();
-        }
-
-        if (mpx != null) {
-            CgiStdOutShip outShip = new CgiStdOutShip();
-            PlainTransporter outTp = new PlainTransporter(agt.netMultiplexer, outShip, false, bufsize, false);
-            outTp.init();
-
-            outShip.init(outRd, tur.ship.agentId, tur, outTp, handler);
-
-            mpx.addRudderState(
-                    outRd,
-                    new RudderState(
-                            outRd,
-                            outTp));
-
-            int sipId = tur.ship.shipId;
-            tur.res.setConsumeListener((len, resume) -> {
-                if(resume) {
-                    outShip.resumeRead(sipId);
-                }
-            });
-
-            CgiStdErrShip errShip = new CgiStdErrShip();
-            PlainTransporter errTp = new PlainTransporter(agt.netMultiplexer, errShip, false, bufsize, false);
-            errTp.init();
-            errShip.init(errRd, tur.ship.agentId, handler);
-            mpx.addRudderState(
-                    errRd,
-                    new RudderState(
-                            errRd,
-                            errTp));
-
-            mpx.reqRead(outRd);
-            mpx.reqRead(errRd);
-        }
+        handler.reqStartTour();
     }
 
 
     ///////////////////////////////////////////////////////////////////////
     // Other methods
     ///////////////////////////////////////////////////////////////////////
+
+    int getWaitCount() {
+        return waitCount;
+    }
+
+    synchronized boolean addProcessCount() {
+        if(maxProcesses <= 0 || processCount < maxProcesses) {
+            processCount ++;
+            BayLog.debug("%s Process count: %d", this, processCount);
+            return true;
+        }
+
+        waitCount++;
+        return false;
+    }
+
+    synchronized void subProcessCount() {
+        processCount--;
+    }
+
+    synchronized void subWaitCount() {
+        waitCount --;
+    }
+
+
 
     protected Process createProcess(Map<String, String> env)  throws IOException {
         ProcessBuilder pb;
@@ -224,4 +167,6 @@ public class CgiDocker extends ClubBase {
             BayLog.error(e);
         }
     }
+
+
 }
