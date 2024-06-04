@@ -50,6 +50,7 @@ public class GrandAgent extends Thread {
     public static final int CMD_MEM_USAGE = 3;
     public static final int CMD_SHUTDOWN = 4;
     public static final int CMD_ABORT = 5;
+    public static final int CMD_CATCHUP = 6;
 
     public static final int SELECT_TIMEOUT_SEC = 10;
 
@@ -59,7 +60,7 @@ public class GrandAgent extends Thread {
     public static Map<Integer, GrandAgent> agents = new HashMap<>();
     public static List<LifecycleListener> listeners = new ArrayList<>();
 
-    public int timeoutSec = SELECT_TIMEOUT_SEC;
+    public int selectTimeoutSec = SELECT_TIMEOUT_SEC;
     public final int agentId;
     public Multiplexer netMultiplexer;
     public Multiplexer jobMultiplexer;
@@ -74,6 +75,9 @@ public class GrandAgent extends Thread {
     private boolean anchorable;
     private ArrayList<TimerHandler> timerHandlers = new ArrayList<>();
     CommandReceiver commandReceiver;
+    private ArrayList<Runnable> postponeQueue = new ArrayList<>();
+    private long lastTimeoutCheck;
+
 
     public GrandAgent(
             int agentId,
@@ -190,7 +194,9 @@ public class GrandAgent extends Thread {
 
                 if(spinMultiplexer.isEmpty() && letterQueue.isEmpty()) {
                     // timed out
-                    ring();
+                    // check per 10 seconds
+                    if((lastTimeoutCheck - System.currentTimeMillis() % 1000) >= 10)
+                        ring();
                 }
 
                 //spinMultiplexer.processData();
@@ -242,43 +248,6 @@ public class GrandAgent extends Thread {
     // Custom methods                         //
     ////////////////////////////////////////////
 
-    public void shutdown() {
-        BayLog.debug("%s shutdown aborted=%b", this, aborted);
-        if(aborted)
-            return;
-
-        aborted = true;
-
-        BayLog.debug("%s shutdown netMultiplexer", this);
-        netMultiplexer.shutdown();
-
-        BayLog.debug("%s remove listeners", this);
-        listeners.forEach(lis -> lis.remove(agentId));
-        commandReceiver.end();
-        agents.remove(this);
-    }
-
-    public void abort() {
-        BayLog.fatal("%s abort", this);
-    }
-
-    public void reloadCert() {
-        for(Port port : BayServer.anchorablePortMap.values()) {
-            if(port.secure()) {
-                PortBase pbase = (PortBase)port;
-                try {
-                    pbase.secureDocker.reloadCert();
-                } catch (Exception e) {
-                    BayLog.error(e);
-                }
-            }
-        }
-    }
-
-    public void printUsage() {
-        // print memory usage
-    }
-
     public void addTimerHandler(TimerHandler th) {
         timerHandlers.add(th);
     }
@@ -288,10 +257,11 @@ public class GrandAgent extends Thread {
     }
 
     // The timer goes off
-    public void ring() {
+    private void ring() {
         for(TimerHandler th: timerHandlers) {
             th.onTimer();
         }
+        lastTimeoutCheck = System.currentTimeMillis();
     }
 
     public void addCommandReceiver(Rudder rd) {
@@ -329,6 +299,75 @@ public class GrandAgent extends Thread {
         if(st == null)
             throw new NullPointerException();
         sendLetter(new Letter(LetterType.CloseReq, st, null, -1, null), wakeup);
+    }
+
+    public void shutdown() {
+        BayLog.debug("%s shutdown aborted=%b", this, aborted);
+        if(aborted)
+            return;
+
+        aborted = true;
+
+        BayLog.debug("%s shutdown netMultiplexer", this);
+        netMultiplexer.shutdown();
+
+        BayLog.debug("%s remove listeners", this);
+        listeners.forEach(lis -> lis.remove(agentId));
+        commandReceiver.end();
+        agents.remove(this);
+    }
+
+    void abort() {
+        BayLog.fatal("%s abort", this);
+    }
+
+    void reloadCert() {
+        for(Port port : BayServer.anchorablePortMap.values()) {
+            if(port.secure()) {
+                PortBase pbase = (PortBase)port;
+                try {
+                    pbase.secureDocker.reloadCert();
+                } catch (Exception e) {
+                    BayLog.error(e);
+                }
+            }
+        }
+    }
+
+    public void printUsage() {
+        // print memory usage
+    }
+
+    public synchronized void addPostpone(Runnable p) {
+        postponeQueue.add(p);
+    }
+
+    public int countPostpone() {
+        return postponeQueue.size();
+    }
+
+    public void reqCatchUp() {
+        BayLog.debug("%s Req catchUp", this);
+        if(countPostpone() > 0) {
+            catchUp();
+        }
+        else {
+            try {
+                commandReceiver.sendCommandToMonitor(this, CMD_CATCHUP, false);
+            }
+            catch (IOException e) {
+                BayLog.error(e);
+                abort();
+            }
+        }
+    }
+
+    synchronized void catchUp() {
+        BayLog.debug("%s catchUp", this);
+        if(!postponeQueue.isEmpty()) {
+            Runnable r = postponeQueue.remove(0);
+            r.run();
+        }
     }
 
     ////////////////////////////////////////////
@@ -445,6 +484,7 @@ public class GrandAgent extends Thread {
         try {
 
             if(let.err != null) {
+                BayLog.debug("%s error on OS write %s", this, let.err);
                 throw let.err;
             }
 
@@ -489,6 +529,7 @@ public class GrandAgent extends Thread {
             }
         }
         catch(IOException e) {
+            BayLog.debug("%s error on wrote");
             st.transporter.onError(st.rudder, e);
             nextAction(st, NextSocketAction.Close, false);
         }

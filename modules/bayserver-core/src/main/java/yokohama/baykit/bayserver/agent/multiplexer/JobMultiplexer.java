@@ -231,7 +231,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
             int n;
             try {
                 st.readBuf.clear();
-                BayLog.debug("%s Try to Read (rd=%s) (buf=%s) timeout=%d", agent, st.rudder, st.readBuf, agent.timeoutSec);
+                BayLog.debug("%s Try to Read (rd=%s) (buf=%s)", agent, st.rudder, st.readBuf);
                 n = st.rudder.read(st.readBuf);
                 if(n > 0)
                     st.readBuf.flip();

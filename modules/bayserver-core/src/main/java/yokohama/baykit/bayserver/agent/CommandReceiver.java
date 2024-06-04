@@ -92,22 +92,35 @@ public class CommandReceiver extends Ship {
                     agent.shutdown();
                     break;
                 case GrandAgent.CMD_ABORT: {
-                    ByteBuffer buf = GrandAgentMonitor.intToBuffer(GrandAgent.CMD_OK);
-                    GrandAgentMonitor.syncWrite(rudder, buf);
+                    sendCommandToMonitor(agent, GrandAgent.CMD_OK, true);
                     agent.abort();
+                    return;
+                }
+                case GrandAgent.CMD_CATCHUP: {
+                    agent.catchUp();
                     return;
                 }
                 default:
                     BayLog.error("Unknown command: %d", cmd);
             }
 
-            ByteBuffer buf = GrandAgentMonitor.intToBuffer(GrandAgent.CMD_OK);
-            agent.netMultiplexer.reqWrite(rudder, buf, null, null, null);
+            sendCommandToMonitor(agent, GrandAgent.CMD_OK, false);
         } catch (IOException e) {
             BayLog.error(e, "%s Command thread aborted(end)", agent);
             close();
         } finally {
             BayLog.debug("%s Command ended", this);
+        }
+    }
+
+    public void sendCommandToMonitor(GrandAgent agt, int cmd, boolean sync) throws IOException {
+
+        ByteBuffer buf = GrandAgentMonitor.intToBuffer(cmd);
+        if(sync) {
+            GrandAgentMonitor.syncWrite(rudder, buf);
+        }
+        else {
+            agt.netMultiplexer.reqWrite(rudder, buf, null, null, null);
         }
     }
 

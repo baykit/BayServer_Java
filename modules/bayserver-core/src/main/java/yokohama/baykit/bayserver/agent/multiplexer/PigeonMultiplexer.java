@@ -286,7 +286,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
 
     private void nextNetworkRead(RudderState state) {
         AsynchronousSocketChannel ch = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(state.rudder);
-        BayLog.debug("%s Try to Read (rd=%s) (buf=%s) timeout=%d", agent, state.rudder, state.readBuf, agent.timeoutSec);
+        BayLog.debug("%s Try to Read (rd=%s) (buf=%s) timeout=%d", agent, state.rudder, state.readBuf, state.timeoutSec);
         state.readBuf.clear();
         if(state.timeoutSec > 0) {
             ch.read(
@@ -306,14 +306,14 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
 
     private void nextNetworkWrite(RudderState st) {
         WriteUnit unit = st.writeQueue.get(0);
-        BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b rd=%s timeout=%d", this, unit.tag, unit.buf.limit(), st.closed, st.rudder, agent.timeoutSec);
+        BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b rd=%s timeout=%d", this, unit.tag, unit.buf.limit(), st.closed, st.rudder, st.timeoutSec);
        // BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
 
         if(!st.closed && unit.buf.limit() > 0) {
             AsynchronousSocketChannel ch = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(st.rudder);
             ch.write(
                     unit.buf,
-                    agent.timeoutSec,
+                    st.timeoutSec,
                     TimeUnit.SECONDS,
                     st.rudder,
                     new WriteCompletionHandler(st));
