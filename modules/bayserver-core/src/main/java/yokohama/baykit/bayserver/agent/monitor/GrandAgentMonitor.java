@@ -53,17 +53,24 @@ public class GrandAgentMonitor extends Thread {
     @Override
     public void run() {
         try {
+            loop:
             while(true) {
                 ByteBuffer buf = ByteBuffer.allocate(4);
                 syncRead(rudder, buf);
                 buf.flip();
                 int res = bufferToInt(buf);
-                if (res == GrandAgent.CMD_CLOSE) {
-                    BayLog.debug("%s read Close", this);
-                    break;
-                }
-                else {
-                    BayLog.debug("%s read OK: %d", this, res);
+                switch(res) {
+                    case GrandAgent.CMD_CLOSE:
+                        BayLog.debug("%s read Close", this);
+                        break loop;
+
+                    case GrandAgent.CMD_CATCHUP:
+                        onReadCatchUp();
+                        break;
+
+                    default:
+                        BayLog.debug("%s read OK: %d", this, res);
+                        break;
                 }
             }
         }
@@ -72,7 +79,6 @@ public class GrandAgentMonitor extends Thread {
         }
         GrandAgentMonitor.agentAborted(agentId, anchorable);
     }
-
 
     /////////////////////////////////////////////////
     // Custom methods                              //
@@ -127,6 +133,18 @@ public class GrandAgentMonitor extends Thread {
         catch(IOException e) {
             BayLog.error(e);
         }
+    }
+
+    private void onReadCatchUp() throws IOException {
+        for(Integer agtId: monitors.keySet()) {
+            if(agtId != agentId) {
+                monitors.get(agtId).reqCatchUp();
+            }
+        }
+    }
+
+    private void reqCatchUp() throws IOException {
+        send(GrandAgent.CMD_CATCHUP);
     }
 
 

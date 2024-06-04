@@ -95,7 +95,13 @@ public class CgiStdOutShip extends ReadOnlyShip {
                 //  finish header reading.
                 if (StringUtil.empty(line)) {
                     headerReading = false;
-                    tour.res.sendHeaders(tourId);
+                    try {
+                        tour.res.sendHeaders(tourId);
+                    }
+                    catch(IOException e) {
+                        notifyError(e);
+                        return NextSocketAction.Close;
+                    }
                     break;
                 } else {
                     if(BayServer.harbor.traceHeader()) {
