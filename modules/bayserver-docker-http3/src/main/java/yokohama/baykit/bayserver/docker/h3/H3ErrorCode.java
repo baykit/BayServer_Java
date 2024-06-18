@@ -1,6 +1,5 @@
 package yokohama.baykit.bayserver.docker.h3;
 
-import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.bcf.ParseException;
 import yokohama.baykit.bayserver.util.Message;
 
@@ -18,7 +17,7 @@ public class H3ErrorCode extends Message {
     }
 
     static {
-        String prefix = BayServer.bservHome + "/lib/conf/h3_messages";
+        String prefix = "/conf/h3_messages";
         msg = new H3ErrorCode();
         try {
             msg.init(prefix, Locale.getDefault());

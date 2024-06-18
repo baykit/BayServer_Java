@@ -468,14 +468,18 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         st.readBuf.clear();
 
         int c = 0;
+        InetSocketAddress sender = null;
         try {
-            InetSocketAddress sender = null;
             if(st.rudder instanceof DatagramChannelRudder) {
                 // UDP
                 sender = (InetSocketAddress) DatagramChannelRudder.getDataGramChannel(st.rudder).receive(st.readBuf);
                 if (sender == null) {
                     BayLog.trace("%s Empty packet data (Maybe another agent received data)", this);
                     return;
+                }
+                else {
+                    st.readBuf.flip();
+                    c = st.readBuf.limit();
                 }
             }
             else {
@@ -489,11 +493,11 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
             }
         }
         catch(IOException e) {
-            agent.sendReadLetter(st, -1, e, false);
+            agent.sendReadLetter(st, -1, null, e, false);
             return;
 
         }
-        agent.sendReadLetter(st, c, null, false);
+        agent.sendReadLetter(st, c, sender, null, false);
     }
 
     private void onWritable(RudderState st) {
