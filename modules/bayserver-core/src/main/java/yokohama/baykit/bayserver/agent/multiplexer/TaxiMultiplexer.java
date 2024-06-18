@@ -198,10 +198,10 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
             else {
                 st.readBuf.flip();
             }
-            agent.sendReadLetter(st, len, null, true);
+            agent.sendReadLetter(st, len, null, null, true);
         }
         catch(Throwable e) {
-            agent.sendReadLetter(st, -1, e, true);
+            agent.sendReadLetter(st, -1, null, e, true);
         }
     }
 

@@ -11,6 +11,7 @@ import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,14 +31,16 @@ public class GrandAgent extends Thread {
         LetterType type;
         RudderState state;
         int nBytes;
+        InetSocketAddress address;
         Throwable err;
         Rudder clientRudder;
 
-        public Letter(LetterType type, RudderState st, Rudder clientRd, int n, Throwable err) {
+        public Letter(LetterType type, RudderState st, Rudder clientRd, int n, InetSocketAddress adr, Throwable err) {
             this.type = type;
             this.state = st;
             this.clientRudder = clientRd;
             this.nBytes = n;
+            this.address = adr;
             this.err = err;
         }
     }
@@ -274,31 +277,31 @@ public class GrandAgent extends Thread {
     public void sendAcceptedLetter(RudderState st, Rudder clientRd, Throwable e, boolean wakeup) {
         if(st == null)
             throw new NullPointerException();
-        sendLetter(new Letter(LetterType.Accepted, st, clientRd, -1, e), wakeup);
+        sendLetter(new Letter(LetterType.Accepted, st, clientRd,-1, null, e), wakeup);
     }
 
     public void sendConnectedLetter(RudderState st, Throwable e, boolean wakeup) {
         if(st == null)
             throw new NullPointerException();
-        sendLetter(new Letter(LetterType.Connected, st, null, -1, e), wakeup);
+        sendLetter(new Letter(LetterType.Connected, st, null, -1, null, e), wakeup);
     }
 
-    public void sendReadLetter(RudderState st, int n, Throwable e, boolean wakeup) {
+    public void sendReadLetter(RudderState st, int n, InetSocketAddress adr, Throwable e, boolean wakeup) {
         if(st == null)
             throw new NullPointerException();
-        sendLetter(new Letter(LetterType.Read, st, null, n, e), wakeup);
+        sendLetter(new Letter(LetterType.Read, st, null, n, adr, e), wakeup);
     }
 
     public void sendWroteLetter(RudderState st, int n, Throwable e, boolean wakeup) {
         if(st == null)
             throw new NullPointerException();
-        sendLetter(new Letter(LetterType.Wrote, st, null, n, e), wakeup);
+        sendLetter(new Letter(LetterType.Wrote, st, null, n, null, e), wakeup);
     }
 
     public void sendCloseReqLetter(RudderState st, boolean wakeup) {
         if(st == null)
             throw new NullPointerException();
-        sendLetter(new Letter(LetterType.CloseReq, st, null, -1, null), wakeup);
+        sendLetter(new Letter(LetterType.CloseReq, st, null, -1, null, null), wakeup);
     }
 
     public void shutdown() {
@@ -456,13 +459,13 @@ public class GrandAgent extends Thread {
 
             if (let.nBytes <= 0) {
                 st.readBuf.limit(0);
-                nextAct = st.transporter.onRead(st.rudder, st.readBuf, null);
+                nextAct = st.transporter.onRead(st.rudder, st.readBuf, let.address);
             }
             else {
-                nextAct = st.transporter.onRead(st.rudder, st.readBuf, null);
-                BayLog.debug("%s return read before buf=%s", this, st.readBuf);
+                nextAct = st.transporter.onRead(st.rudder, st.readBuf, let.address);
+                //BayLog.debug("%s return read before buf=%s", this, st.readBuf);
                 st.readBuf.compact();
-                BayLog.debug("%s return read buf=%s", this, st.readBuf);
+                //BayLog.debug("%s return read buf=%s", this, st.readBuf);
             }
 
         }
