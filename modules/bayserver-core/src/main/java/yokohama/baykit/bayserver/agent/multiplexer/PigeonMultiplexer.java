@@ -225,12 +225,12 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
         public void completed(Integer n, Rudder rd) {
             BayLog.debug("%s read completed: rd=%s buf=%s", PigeonMultiplexer.this, rd, state.readBuf);
             state.readBuf.flip();
-            agent.sendReadLetter(state, n, null, true);
+            agent.sendReadLetter(state, n, null, null, true);
         }
 
         @Override
         public void failed(Throwable e, Rudder rd) {
-            agent.sendReadLetter(state, -1, e, true);
+            agent.sendReadLetter(state, -1, null, e, true);
         }
 
     }

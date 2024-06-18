@@ -121,10 +121,7 @@ public final class QicTransporter implements Transporter {
         // cleanup closed connections
         cleanupConnections();
 
-        if(posted)
-            return NextSocketAction.Write;
-        else
-            return NextSocketAction.Continue;
+        return NextSocketAction.Continue;
     }
 
     @Override
@@ -169,7 +166,7 @@ public final class QicTransporter implements Transporter {
 
     @Override
     public int getReadBufferSize() {
-        throw new Sink();
+        return QicPacket.MAX_DATAGRAM_SIZE;
     }
 
     @Override
@@ -230,7 +227,9 @@ public final class QicTransporter implements Transporter {
         BayLog.info("%s New connection scid=%s odcid=%s ref=%d", this, Utils.asHex(srcConId), Utils.asHex(odcid), con.getPointer());
 
         GrandAgent agt = GrandAgent.get(agentId);
-        QicProtocolHandler hnd = new QicProtocolHandler(con, adr, h3Config, agt.netMultiplexer);
+        QicInboundHandler ibHandler = new QicInboundHandler();
+        QicProtocolHandler hnd = new QicProtocolHandler(ibHandler, con, adr, h3Config, agt.netMultiplexer);
+        ibHandler.init(hnd);
         InboundShip sip = new InboundShip();
         sip.initInbound(rudder, agentId, this, portDkr, hnd);
         hnd.setShip(sip);

@@ -5,24 +5,24 @@ import yokohama.baykit.bayserver.protocol.Command;
 
 import java.io.IOException;
 
-public class QicCommand extends Command<QicCommand, QicPacket, QicType, QicCommandHandler> {
+public abstract class QicCommand extends Command<QicCommand, QicCommandPacket, QicCommandType, QicInboundHandler> {
 
-    public QicCommand(QicType type) {
+    public QicCommand(QicCommandType type) {
         super(type);
     }
 
     @Override
-    public void unpack(QicPacket packet) throws IOException {
+    public void unpack(QicCommandPacket packet) throws IOException {
 
     }
 
     @Override
-    public void pack(QicPacket packet) throws IOException {
+    public void pack(QicCommandPacket packet) throws IOException {
 
     }
 
     @Override
-    public NextSocketAction handle(QicCommandHandler handler) throws IOException {
+    public NextSocketAction handle(QicInboundHandler handler) throws IOException {
         return null;
     }
 }

@@ -239,11 +239,11 @@ public class JobMultiplexer extends JobMultiplexerBase {
                 BayLog.debug("%s Closed by another thread: %s (%s)", this, st.rudder, e);
                 return; // Do not do next action
             } catch (IOException e) {
-                agent.sendReadLetter(st, -1, e, true);
+                agent.sendReadLetter(st, -1, null, e, true);
                 return;
             }
 
-            agent.sendReadLetter(st, n, null, true);
+            agent.sendReadLetter(st, n, null, null, true);
         }).start();
     }
 
