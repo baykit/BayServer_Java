@@ -161,7 +161,8 @@ public abstract class MultiplexerBase implements Multiplexer {
     protected final void closeAll() {
         // Use copied ArrayList to avoid ConcurrentModificationException
         for (RudderState st : new ArrayList<>(rudders.values())) {
-            closeRudder(st);
+            if(st.rudder != agent.commandReceiver.rudder)
+                closeRudder(st);
         }
     }
 

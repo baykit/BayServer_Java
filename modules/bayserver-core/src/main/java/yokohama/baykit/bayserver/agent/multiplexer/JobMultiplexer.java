@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.agent.multiplexer;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.rudder.ChannelRudder;
+import yokohama.baykit.bayserver.rudder.DatagramChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.rudder.SocketChannelRudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
@@ -35,7 +36,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
 
     @Override
     public void reqAccept(Rudder rd) {
-        BayLog.debug("%s AcceptHandler:reqAccept isShutdown=%b", agent, agent.aborted);
+        BayLog.debug("%s reqAccept isShutdown=%b", agent, agent.aborted);
         if (agent.aborted) {
             return;
         }
@@ -229,12 +230,27 @@ public class JobMultiplexer extends JobMultiplexerBase {
             }
 
             int n;
+            InetSocketAddress sender = null;
             try {
-                st.readBuf.clear();
-                BayLog.debug("%s Try to Read (rd=%s) (buf=%s)", agent, st.rudder, st.readBuf);
-                n = st.rudder.read(st.readBuf);
-                if(n > 0)
-                    st.readBuf.flip();
+                if(st.rudder instanceof DatagramChannelRudder) {
+                    // UDP
+                    sender = (InetSocketAddress) DatagramChannelRudder.getDataGramChannel(st.rudder).receive(st.readBuf);
+                    if (sender == null) {
+                        BayLog.trace("%s Empty packet data (Maybe another agent received data)", this);
+                        return;
+                    }
+                    else {
+                        st.readBuf.flip();
+                        n = st.readBuf.limit();
+                    }
+                }
+                else {
+                    st.readBuf.clear();
+                    BayLog.debug("%s Try to Read (rd=%s) (buf=%s)", agent, st.rudder, st.readBuf);
+                    n = st.rudder.read(st.readBuf);
+                    if (n > 0)
+                        st.readBuf.flip();
+                }
             } catch (AsynchronousCloseException e) {
                 BayLog.debug("%s Closed by another thread: %s (%s)", this, st.rudder, e);
                 return; // Do not do next action
@@ -243,7 +259,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
                 return;
             }
 
-            agent.sendReadLetter(st, n, null, null, true);
+            agent.sendReadLetter(st, n, sender, null, true);
         }).start();
     }
 
@@ -263,7 +279,12 @@ public class JobMultiplexer extends JobMultiplexerBase {
             int n = 0;
             try {
                 if(!st.closed && u.buf.limit() > 0) {
-                    n = st.rudder.write(u.buf);
+                    if (st.rudder instanceof DatagramChannelRudder) {
+                        n = DatagramChannelRudder.getDataGramChannel(st.rudder).send(u.buf, u.adr);
+                    }
+                    else {
+                        n = st.rudder.write(u.buf);
+                    }
                 }
             } catch (IOException e) {
                 agent.sendWroteLetter(st, -1, e, true);

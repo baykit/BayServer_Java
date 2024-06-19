@@ -22,6 +22,9 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
 
     public PigeonMultiplexer(GrandAgent agent, boolean anchorable) {
         super(agent, anchorable);
+        if(!anchorable) {
+            BayLog.debug("Unanchorable mode is not supported");
+        }
     }
 
     public String toString() {

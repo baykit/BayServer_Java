@@ -249,7 +249,7 @@ public class BayServer {
                     if(f.exists())
                         f.delete();
                     if (harbor.netMultiplexer() == Harbor.MultiPlexerType.Pigeon) {
-                        ach = SysUtil.openUnixDomainAsynchronousServerSocketChannel();
+                        throw new IOException("Asynchronous mode not supported for UNIX domain socket");
                     }
                     else {
                         ch = SysUtil.openUnixDomainServerSocketChannel();
@@ -273,7 +273,6 @@ public class BayServer {
             else {
                 BayLog.info(BayMessage.get(Symbol.MSG_OPENING_UDP_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), portDkr.protocol()));
                 DatagramChannel ch = DatagramChannel.open();
-                ch.configureBlocking(false);
                 try {
                     ch.bind(adr);
                 } catch (SocketException e) {

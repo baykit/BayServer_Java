@@ -165,7 +165,7 @@ public abstract class WarpBase extends ClubBase implements Warp {
                     if(hostAddr instanceof InetSocketAddress)
                         ch = AsynchronousSocketChannel.open();
                     else
-                        ch = SysUtil.openUnixDomainAsynchronousSocketChannel();
+                        throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Asynchronous mode not supported for UNIX domain socket");
                     rd = new AsynchronousSocketChannelRudder(ch);
                 }
                 else {
