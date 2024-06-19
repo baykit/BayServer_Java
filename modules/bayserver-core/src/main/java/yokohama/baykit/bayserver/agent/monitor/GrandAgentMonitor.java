@@ -10,6 +10,7 @@ import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.rudder.SocketChannelRudder;
 import yokohama.baykit.bayserver.util.IOUtil;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -56,7 +57,12 @@ public class GrandAgentMonitor extends Thread {
             loop:
             while(true) {
                 ByteBuffer buf = ByteBuffer.allocate(4);
-                syncRead(rudder, buf);
+                int n = syncRead(rudder, buf);
+                if (n == -1)
+                    throw new EOFException();
+                if(n < 4) {
+                    throw new IOException("Cannot read int: nbytes=" + n);
+                }
                 buf.flip();
                 int res = bufferToInt(buf);
                 switch(res) {
@@ -317,18 +323,18 @@ public class GrandAgentMonitor extends Thread {
 
     }
 
-    public static void syncWrite(Rudder rd, ByteBuffer buf) throws IOException {
+    public static int syncWrite(Rudder rd, ByteBuffer buf) throws IOException {
         if(rd instanceof AsynchronousSocketChannelRudder) {
 
             Future<Integer> ft = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(rd).write(buf);
             try {
-                ft.get();
+                return ft.get();
             } catch (InterruptedException | ExecutionException e) {
                 throw new IOException(e);
             }
         }
         else {
-            SocketChannelRudder.socketChannel(rd).write(buf);
+            return SocketChannelRudder.socketChannel(rd).write(buf);
         }
 
     }

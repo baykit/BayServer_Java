@@ -3,14 +3,12 @@ package yokohama.baykit.bayserver.docker.h3;
 import io.quiche4j.Config;
 import io.quiche4j.ConfigBuilder;
 import io.quiche4j.Quiche;
-import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.BayMessage;
-import yokohama.baykit.bayserver.ConfigException;
-import yokohama.baykit.bayserver.Symbol;
+import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.docker.Docker;
+import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.base.PortBase;
 import yokohama.baykit.bayserver.docker.builtin.BuiltInSecureDocker;
 import yokohama.baykit.bayserver.rudder.Rudder;
@@ -36,6 +34,10 @@ public class H3PortDocker extends PortBase implements H3Docker {
     @Override
     public void init(BcfElement elm, Docker parent) throws ConfigException {
         super.init(elm, parent);
+
+        if (BayServer.harbor.netMultiplexer() == Harbor.MultiPlexerType.Pigeon) {
+            throw new ConfigException(elm.fileName, elm.lineNo, "H3 port is not supported for Pigeon");
+        }
 
         File cert = ((BuiltInSecureDocker)secureDocker).certFile;
         if(cert == null)

@@ -7,9 +7,7 @@ import yokohama.baykit.bayserver.agent.monitor.GrandAgentMonitor;
 import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.rudder.Rudder;
-import yokohama.baykit.bayserver.rudder.SocketChannelRudder;
 import yokohama.baykit.bayserver.ship.Ship;
-import yokohama.baykit.bayserver.util.IOUtil;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -117,7 +115,10 @@ public class CommandReceiver extends Ship {
 
         ByteBuffer buf = GrandAgentMonitor.intToBuffer(cmd);
         if(sync) {
-            GrandAgentMonitor.syncWrite(rudder, buf);
+            int n = GrandAgentMonitor.syncWrite(rudder, buf);
+            if(n < 4) {
+                throw new IOException("Cannot write enough bytes: n=" + n);
+            }
         }
         else {
             agt.netMultiplexer.reqWrite(rudder, buf, null, null, null);
@@ -127,7 +128,7 @@ public class CommandReceiver extends Ship {
     public void end() {
         BayLog.debug("%s end", this);
         try {
-            IOUtil.writeInt32(SocketChannelRudder.socketChannel(rudder), GrandAgent.CMD_CLOSE);
+            sendCommandToMonitor(null, GrandAgent.CMD_CLOSE, true);
         } catch (IOException e) {
             BayLog.error(e);
         }
@@ -142,7 +143,7 @@ public class CommandReceiver extends Ship {
             rudder.close();
         }
         catch (IOException e) {
-            BayLog.error(e);
+            BayLog.debug(e);
         }
         closed = true;
     }
