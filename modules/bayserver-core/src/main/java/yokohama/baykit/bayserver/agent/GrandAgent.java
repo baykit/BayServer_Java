@@ -77,7 +77,7 @@ public class GrandAgent extends Thread {
     public boolean aborted;
     private boolean anchorable;
     private ArrayList<TimerHandler> timerHandlers = new ArrayList<>();
-    CommandReceiver commandReceiver;
+    public CommandReceiver commandReceiver;
     private ArrayList<Runnable> postponeQueue = new ArrayList<>();
     private long lastTimeoutCheck;
 
@@ -160,7 +160,15 @@ public class GrandAgent extends Thread {
             }
             else {
                 // Adds server socket  up unanchorable ports
-                for (Rudder rd : BayServer.unanchorablePortMap.keySet()) {
+                for (NetworkChannelRudder rd : BayServer.unanchorablePortMap.keySet()) {
+                    if(netMultiplexer.isNonBlocking()) {
+                        try {
+                            rd.setNonBlocking();
+                        }
+                        catch(IOException e) {
+                            BayLog.fatal(e);
+                        }
+                    }
                     Port p = BayServer.unanchorablePortMap.get(rd);
                     p.onConnected(agentId, rd);
                 }
@@ -609,7 +617,7 @@ public class GrandAgent extends Thread {
     public static GrandAgent add(int agtId, boolean anchorable) {
         if(agtId == -1)
             agtId = ++maxAgentId;
-        BayLog.debug("Add agent: id=%d", agtId);
+        BayLog.debug("Add agent: id=%d anchorable=%s", agtId, anchorable);
 
         if(agtId > maxAgentId)
             maxAgentId = agtId;
