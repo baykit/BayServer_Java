@@ -35,11 +35,12 @@ public class CmdData extends AjpCommand {
 
     @Override
     public String toString() {
-        String s = "Data(s=" + start + " l=" + length + " d=";
+        /*String s = "Data(s=" + start + " l=" + length + " d=";
         for(byte b : data) {
             s += "0x" + Integer.toHexString(b & 0xff);
         }
-        return s;
+        return s;*/
+        return "Data";
     }
 
     @Override
