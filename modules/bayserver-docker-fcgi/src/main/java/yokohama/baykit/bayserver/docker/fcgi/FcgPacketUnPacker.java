@@ -5,6 +5,7 @@ import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.PacketUnpacker;
+import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.SimpleBuffer;
 
 import java.io.IOException;
@@ -19,6 +20,7 @@ public class FcgPacketUnPacker extends PacketUnpacker<FcgPacket> {
     SimpleBuffer dataBuf = new SimpleBuffer();
 
     int version;
+    int typeNo;
     FcgType type;
     int reqId;
     int length;
@@ -81,6 +83,9 @@ public class FcgPacketUnPacker extends PacketUnpacker<FcgPacket> {
                         headerBuf.put(buf, len);
                         if (headerBuf.length() == FcgPacket.PREAMBLE_SIZE) {
                             headerReadDone();
+                            if (type == null) {
+                                throw new ProtocolException("Invalid FCGI Type: " + typeNo);
+                            }
                             if (length == 0) {
                                 if (padding == 0)
                                     changeState(State.End);
@@ -182,7 +187,8 @@ public class FcgPacketUnPacker extends PacketUnpacker<FcgPacket> {
     private void headerReadDone() {
         byte[] pre = headerBuf.bytes();
         version = byteToInt(pre[0]);
-        type = FcgType.getType(byteToInt(pre[1]));
+        typeNo = byteToInt(pre[1]);
+        type = FcgType.getType(typeNo);
         reqId = bytesToInt(pre[2], pre[3]);
         length = bytesToInt(pre[4], pre[5]);
         padding = byteToInt(pre[6]);
