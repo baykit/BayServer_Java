@@ -141,6 +141,7 @@ public class CmdSendHeaders extends AjpCommand {
             return values.get(0);
     }
     public void addHeader(String name, String value) {
+        name = name.toLowerCase();
         ArrayList<String> values = headers.get(name);
         if(values == null) {
             values = new ArrayList<>();
