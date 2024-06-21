@@ -271,10 +271,11 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
 
             if (reqContLen <= 0) {
                 endReqContent(curTourId, tur);
+                return NextSocketAction.Suspend;  // end reading
             } else {
                 changeState(ReadContent);
+                return NextSocketAction.Continue;
             }
-            return NextSocketAction.Continue;
 
         } catch (HttpException e) {
             BayLog.debug(this + " Http error occurred: " + e);
