@@ -39,7 +39,7 @@ package yokohama.baykit.bayserver.docker.fcgi;
 
     public static FcgType getType(int no) {
         if(no <= 0 || no > types.length)
-            throw new ArrayIndexOutOfBoundsException("Invalid FCGI type: " + no);
+            return null;
         return types[no - 1];
     }
 }
