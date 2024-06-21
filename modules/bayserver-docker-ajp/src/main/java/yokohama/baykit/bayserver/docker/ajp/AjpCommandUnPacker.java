@@ -2,10 +2,9 @@ package yokohama.baykit.bayserver.docker.ajp;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.protocol.CommandUnPacker;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.ajp.command.*;
-import yokohama.baykit.bayserver.docker.ajp.command.*;
+import yokohama.baykit.bayserver.protocol.CommandUnPacker;
 
 import java.io.IOException;
 
