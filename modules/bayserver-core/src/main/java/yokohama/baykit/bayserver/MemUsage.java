@@ -41,7 +41,6 @@ public class MemUsage {
 
     public void printUsage(int indent) {
         BayLog.info("Agent#%d MemUsage", agentId);
-        GrandAgent.get(agentId).printUsage();
         InboundShipStore.getStore(agentId).printUsage(indent+1);
         ProtocolHandlerStore.getStores(agentId).forEach(store -> store.printUsage(indent+1));
         PacketStore.getStores(agentId).forEach(store -> store.printUsage(indent+1));
