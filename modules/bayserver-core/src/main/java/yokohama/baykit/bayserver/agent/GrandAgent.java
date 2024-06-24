@@ -345,10 +345,6 @@ public class GrandAgent extends Thread {
         }
     }
 
-    public void printUsage() {
-        // print memory usage
-    }
-
     public synchronized void addPostpone(Runnable p) {
         postponeQueue.add(p);
     }
