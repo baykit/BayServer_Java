@@ -113,12 +113,12 @@ public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
 
     @Override
     public void nextRead(RudderState st) {
-        nextRead(st.rudder);
+        nextRun(st);
     }
 
     @Override
     public void nextWrite(RudderState st) {
-        nextWrite(st.rudder);
+        nextRun(st);
     }
 
     @Override
