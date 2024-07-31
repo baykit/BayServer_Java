@@ -8,6 +8,6 @@ public interface Warp extends Club {
     int port();
     String warpBase();
     int timeoutSec();
-    void onEndTour(Ship warpShip);
+    void keep(Ship warpShip);
     void onEndShip(Ship warpShip);
 }

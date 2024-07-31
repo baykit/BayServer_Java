@@ -135,7 +135,7 @@ public class BuiltInPermissionDocker extends DockerBase implements Permission {
 
     @Override
     public void tourAdmitted(Tour tour) throws HttpException {
-        // Check remote host
+        // Check URI
         boolean isOk = true;
         for(CheckItem chk : checkList) {
             if(chk.admit) {

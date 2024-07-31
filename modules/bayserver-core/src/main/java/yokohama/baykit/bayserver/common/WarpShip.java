@@ -147,7 +147,7 @@ public final class WarpShip extends Ship {
     @Override
     public boolean checkTimeout(int durationSec) {
 
-        if(isTimeout(durationSec)) {
+        if(isTimedOut(durationSec)) {
             notifyErrorToOwnerTour(HttpStatus.GATEWAY_TIMEOUT, this + " server timeout");
             return true;
         }
@@ -194,12 +194,14 @@ public final class WarpShip extends Ship {
         }
     }
 
-    public void endWarpTour(Tour tur) throws IOException {
+    public void endWarpTour(Tour tur, boolean keep) {
         WarpData wdat = WarpData.get(tur);
-        BayLog.debug("%s end: started=%b ended=%b", tur, wdat.started, wdat.ended);
+        BayLog.debug("%s end: started=%b ended=%b keep=%b", tur, wdat.started, wdat.ended, keep);
         tourMap.remove(wdat.warpId);
-        BayLog.debug("%s keep warp ship", this);
-        docker.onEndTour(this);
+        if(keep) {
+            BayLog.debug("%s keep warp ship", this);
+            docker.keep(this);
+        }
     }
 
     public void notifyServiceUnavailable(String msg) throws IOException {
@@ -256,7 +258,7 @@ public final class WarpShip extends Ship {
         transporter.reqClose(rudder);
     }
 
-    public final boolean isTimeout(long duration) {
+    public final boolean isTimedOut(long duration) {
         boolean timeout;
         if(keeping) {
             // warp connection never timeout in keeping

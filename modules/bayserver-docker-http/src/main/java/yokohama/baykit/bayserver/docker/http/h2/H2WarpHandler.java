@@ -274,7 +274,7 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
 
     private void endResContent(Tour tur) throws IOException {
         tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
-        ship.endWarpTour(tur);
+        ship.endWarpTour(tur, true);
     }
 
 }
