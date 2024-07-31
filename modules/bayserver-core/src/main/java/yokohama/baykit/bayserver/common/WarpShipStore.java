@@ -35,7 +35,7 @@ public class WarpShipStore extends ObjectStore<WarpShip> {
             wsip = keepList.remove(keepList.size() - 1);
         }
         if(wsip == null)
-            throw new Sink("BUG! ship is null");
+            throw new Sink("BUG! warp ship is null");
         busyList.add(wsip);
 
         if(BayLog.isTraceMode())
@@ -62,10 +62,10 @@ public class WarpShipStore extends ObjectStore<WarpShip> {
      */
     public synchronized void Return(WarpShip wsip) {
         BayLog.trace("Return: before freeList=%s busyList=%s", keepList, busyList);
-        boolean removedFromFree = keepList.remove(wsip);
+        boolean removedFromKeep = keepList.remove(wsip);
         boolean removedFromBusy = busyList.remove(wsip);
-        if(!removedFromFree && !removedFromBusy)
-            BayLog.error("BUG:" + wsip + " not in both free list and busy list");
+        if(!removedFromKeep && !removedFromBusy)
+            BayLog.error("BUG:" + wsip + " not in both keep and busy list");
 
         super.Return(wsip);
         BayLog.trace("Return: after freeList=%s busyList=%s", keepList, busyList);

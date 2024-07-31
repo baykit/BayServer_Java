@@ -78,20 +78,9 @@ public class AjpWarpHandler implements WarpHandler, AjpHandler {
         contReadLen = 0;
     }
 
-
     /////////////////////////////////////
-    // Implements WarpHandler
+    // Implements TourHandler
     /////////////////////////////////////
-    @Override
-    public int nextWarpId() {
-        return 1;
-    }
-
-    @Override
-    public WarpData newWarpData(int warpId) {
-        return new WarpData(ship(), warpId);
-    }
-
     @Override
     public void sendHeaders(Tour tur) throws IOException {
         sendForwardRequest(tur);
@@ -105,6 +94,26 @@ public class AjpWarpHandler implements WarpHandler, AjpHandler {
     @Override
     public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
         ship().post(null, lis);
+    }
+
+    @Override
+    public boolean onProtocolError(ProtocolException e) throws IOException {
+        throw new Sink();
+    }
+
+
+
+    /////////////////////////////////////
+    // Implements WarpHandler
+    /////////////////////////////////////
+    @Override
+    public int nextWarpId() {
+        return 1;
+    }
+
+    @Override
+    public WarpData newWarpData(int warpId) {
+        return new WarpData(ship(), warpId);
     }
 
     @Override
@@ -130,7 +139,7 @@ public class AjpWarpHandler implements WarpHandler, AjpHandler {
         if (state == CommandState.ReadHeader)
             endResHeader(tur);
 
-        endResContent(tur);
+        endResContent(tur, cmd.reuse);
         if(cmd.reuse)
             return NextSocketAction.Continue;
         else
@@ -210,15 +219,6 @@ public class AjpWarpHandler implements WarpHandler, AjpHandler {
     }
 
     /////////////////////////////////////
-    // Implements ProtocolHandler
-    /////////////////////////////////////
-    @Override
-    public boolean onProtocolError(ProtocolException e) throws IOException {
-        throw new Sink();
-    }
-
-
-    /////////////////////////////////////
     // Custom methods
     /////////////////////////////////////
 
@@ -229,8 +229,8 @@ public class AjpWarpHandler implements WarpHandler, AjpHandler {
         changeState(CommandState.ReadContent);
     }
 
-    void endResContent(Tour tur) throws IOException {
-        ship().endWarpTour(tur);
+    void endResContent(Tour tur, boolean keep) throws IOException {
+        ship().endWarpTour(tur, keep);
         tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
         resetState();
     }

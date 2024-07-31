@@ -261,7 +261,7 @@ public class H1WarpHandler implements WarpHandler, H1Handler {
     }
 
     private void endResContent(Tour tur) throws IOException {
-        ship().endWarpTour(tur);
+        ship().endWarpTour(tur, true);
         tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
         resetState();
         ship().keeping = true;
