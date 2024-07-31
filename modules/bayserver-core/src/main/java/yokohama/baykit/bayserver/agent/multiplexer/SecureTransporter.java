@@ -112,7 +112,7 @@ public class SecureTransporter extends PlainTransporter {
                 switch (res.getStatus()) {
                     case CLOSED:
                         // Handles as EOF
-                        BayLog.error("%s SSL connection closed by peer", this);
+                        BayLog.debug("%s SSL connection closed by peer", this);
                         appIn.buffer.limit(0);
                         break;
 
