@@ -263,11 +263,13 @@ public class InboundShip extends Ship {
         ArrayList<Tour> returnList = new ArrayList<>();
 
         // Abort tours
-        for(Tour tur: activeTours) {
-            if(tur.isValid()) {
-                BayLog.debug("%s is valid, abort it: stat=%s", tur, tur.state);
-                if(tur.req.abort()) {
-                    returnList.add(tur);
+        synchronized (tourStore) {
+            for (Tour tur : activeTours) {
+                if (tur.isValid()) {
+                    BayLog.debug("%s is valid, abort it: stat=%s", tur, tur.state);
+                    if (tur.req.abort()) {
+                        returnList.add(tur);
+                    }
                 }
             }
         }

@@ -229,10 +229,9 @@ public abstract class WarpBase extends ClubBase implements Warp {
     }
 
     @Override
-    public void onEndTour(Ship warpShip) {
+    public void keep(Ship warpShip) {
         BayLog.debug("%s keep warp ship: %s", this, warpShip);
         getShipStore(warpShip.agentId).keep((WarpShip) warpShip);
-
     }
 
     @Override

@@ -101,6 +101,9 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         if(tur.req.headers.getConnection() != Headers.ConnectionType.KeepAlive)
             // If client doesn't support "Keep-Alive", set "Close"
             resCon = "Close";
+        else if (tur.res.headers.status() != HttpStatus.OK) {
+            resCon = "Close";
+        }
         else {
             resCon = "Keep-Alive";
             // Client supports "Keep-Alive"

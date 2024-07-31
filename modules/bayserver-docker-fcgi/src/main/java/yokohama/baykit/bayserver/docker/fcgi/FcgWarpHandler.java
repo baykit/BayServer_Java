@@ -283,7 +283,7 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
     }
 
     private void endReqContent(Tour tur) throws IOException {
-        ship().endWarpTour(tur);
+        ship().endWarpTour(tur, true);
         tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
         resetState();
     }
