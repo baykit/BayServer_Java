@@ -110,7 +110,7 @@ public class BuiltInSecureDocker extends DockerBase implements Secure {
                     certs = getFilePath(kv.value);
                     break;
 
-                case "certsPass":
+                case "certspass":
                     certsPass = kv.value;
                     break;
 
