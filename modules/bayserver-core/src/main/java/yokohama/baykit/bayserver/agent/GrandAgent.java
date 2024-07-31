@@ -399,6 +399,10 @@ public class GrandAgent extends Thread {
 
             p.onConnected(agentId, let.clientRudder);
         }
+        catch (IOException e) {
+            let.state.transporter.onError(let.state.rudder, e);
+            nextAction(let.state, NextSocketAction.Close, false);
+        }
         catch (HttpException e) {
             BayLog.error(e);
             try {
