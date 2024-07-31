@@ -237,7 +237,7 @@ public class CmdForwardRequest extends AjpCommand {
         }
     }
 
-    private void writeRequestHeaders(AjpPacket.AjpAccessor acc) throws IOException {
+    private void writeRequestHeaders(AjpPacket.AjpAccessor acc) {
         ArrayList<String[]> hlist = new ArrayList<>();
         for(String name : headers.headerNames()) {
             for(String value : headers.headerValues(name)) {
@@ -258,7 +258,7 @@ public class CmdForwardRequest extends AjpCommand {
         }
     }
 
-    private void writeAttributes(AjpPacket.AjpAccessor acc) throws IOException {
+    private void writeAttributes(AjpPacket.AjpAccessor acc) {
         for(String name : attributes.keySet()) {
             String value = attributes.get(name);
             int code = getAttributeCode(name);
