@@ -206,7 +206,7 @@ public class GrandAgent extends Thread {
                 if(spinMultiplexer.isEmpty() && letterQueue.isEmpty()) {
                     // timed out
                     // check per 10 seconds
-                    if((lastTimeoutCheck - System.currentTimeMillis() % 1000) >= 10)
+                    if((System.currentTimeMillis() - lastTimeoutCheck) % 1000 >= 10)
                         ring();
                 }
 
