@@ -4,7 +4,6 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.http.h2.*;
 import yokohama.baykit.bayserver.protocol.PacketPartAccessor;
-import yokohama.baykit.bayserver.docker.http.h2.*;
 
 import java.io.IOException;
 
@@ -28,7 +27,7 @@ public class CmdWindowUpdate extends H2Command {
     }
 
     @Override
-    public void unpack(H2Packet pkt) throws IOException {
+    public void unpack(H2Packet pkt) {
         super.unpack(pkt);
         PacketPartAccessor acc = pkt.newDataAccessor();
         int val = acc.getInt();
@@ -36,7 +35,7 @@ public class CmdWindowUpdate extends H2Command {
     }
 
     @Override
-    public void pack(H2Packet pkt) throws IOException {
+    public void pack(H2Packet pkt) {
 
         PacketPartAccessor acc = pkt.newDataAccessor();
         acc.putInt(H2Packet.consolidateFlagAndInt32(0, windowSizeIncrement));
