@@ -3,65 +3,57 @@ package yokohama.baykit.bayserver.util;
 import yokohama.baykit.bayserver.BayMessage;
 import yokohama.baykit.bayserver.Symbol;
 
+import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.StringTokenizer;
 
 public class IpMatcher {
 
     boolean matchAll;
-    byte[] netAdr = new byte[4];
-    byte[] maskAdr;
+    BigInteger ipMaskInt;
+    BigInteger mask;
 
     public IpMatcher(String ipDesc) throws UnknownHostException {
         if (ipDesc.equals("*"))
             matchAll = true;
         else
-            parseIp(ipDesc);
+            parseCidr(ipDesc);
     }
 
     public boolean match(InetAddress adr) {
         if (matchAll)
             return true;
 
-        byte[] remoteAdr = adr.getAddress();
-        if (remoteAdr.length != maskAdr.length)
-            return false;  // IPv4 and IPv6 don't match each other
+        BigInteger adrInt = new BigInteger(1, adr.getAddress());
 
-        for (int i = 0; i < remoteAdr.length; i++) {
-            if ((byte) (remoteAdr[i] & maskAdr[i]) != netAdr[i])
-                return false;
-        }
-        return true;
+        return adrInt.and(mask).equals(ipMaskInt);
     }
 
-    private void parseIp(String ipDesc) throws UnknownHostException {
-        StringTokenizer st = new StringTokenizer(ipDesc, "/");
-        String ip, mask;
-        if (!st.hasMoreTokens())
+    private void parseCidr(String cidr) throws UnknownHostException {
+        String[] parts = cidr.split("/");
+        if (parts.length != 2)
             throw new IllegalArgumentException(
-                    BayMessage.get(Symbol.CFG_INVALID_IP_DESC, ipDesc));
+                    BayMessage.get(Symbol.CFG_INVALID_IP_DESC, cidr));
 
-        ip = st.nextToken();
-        if (!st.hasMoreTokens())
-            mask = "255.255.255.255";
-        else
-            mask = st.nextToken();
-
-        byte[] ipAdr = getIpAddr(ip);
-        maskAdr = getIpAddr(mask);
-        if (ipAdr.length != maskAdr.length) {
+        InetAddress ip = InetAddress.getByName(parts[0]);
+        int prefixLength;
+        try {
+            prefixLength = Integer.parseInt(parts[1]);
+        }
+        catch(NumberFormatException e) {
             throw new IllegalArgumentException(
-                    BayMessage.get(Symbol.CFG_IPV4_AND_IPV6_ARE_MIXED, ipDesc));
+                    BayMessage.get(Symbol.CFG_INVALID_IP_DESC, cidr));
         }
-        netAdr = new byte[maskAdr.length];
-        for (int i = 0; i < maskAdr.length; i++) {
-            netAdr[i] = (byte) (ipAdr[i] & maskAdr[i]);
-        }
+
+        mask = getMask(ip, prefixLength);
+        ipMaskInt = new BigInteger(1, ip.getAddress()).and(mask);
     }
 
-    private byte[] getIpAddr(String ip) throws UnknownHostException {
-        byte[] ipAdr = InetAddress.getByName(ip).getAddress();
-        return ipAdr;
+    private static BigInteger getMask(InetAddress inetAddress, int prefixLength) {
+        if (inetAddress.getAddress().length == 4) { // IPv4
+            return BigInteger.valueOf(-1).shiftLeft(32 - prefixLength);
+        } else { // IPv6
+            return BigInteger.valueOf(-1).shiftLeft(128 - prefixLength);
+        }
     }
 }
