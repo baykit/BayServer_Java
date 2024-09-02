@@ -167,6 +167,16 @@ public class H1WarpHandler implements WarpHandler, H1Handler {
     }
 
     @Override
+    public void verifyProtocol(String protocol) throws IOException {
+        if(protocol != null && protocol.equalsIgnoreCase("h2")) {
+        }
+    }
+
+    /////////////////////////////////////
+    // Implements TourHandler
+    /////////////////////////////////////
+
+    @Override
     public void sendHeaders(Tour tur) throws IOException {
         Town town = tur.town;
 
@@ -233,11 +243,6 @@ public class H1WarpHandler implements WarpHandler, H1Handler {
         ship().post(cmd, lis);
     }
 
-    @Override
-    public void verifyProtocol(String protocol) throws IOException {
-        if(protocol != null && protocol.equalsIgnoreCase("h2")) {
-        }
-    }
 
     /////////////////////////////////////
     // Implements ProtocolHandler
