@@ -101,6 +101,10 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
         return new WarpData(ship(), warpId);
     }
 
+    /////////////////////////////////////
+    // Implements TourHandler
+    /////////////////////////////////////
+
     @Override
     public void sendHeaders(Tour tur) throws IOException {
         sendBeginReq(tur);
