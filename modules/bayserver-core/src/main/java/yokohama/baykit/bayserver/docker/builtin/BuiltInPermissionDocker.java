@@ -225,6 +225,7 @@ public class BuiltInPermissionDocker extends DockerBase implements Permission {
             throw e;
         }
         catch(Exception e) {
+            BayLog.error(e);
             throw new ConfigException(kv.fileName, kv.lineNo, BayMessage.CFG_INVALID_PERMISSION_DESCRIPTION(kv.value), e);
         }
     }
