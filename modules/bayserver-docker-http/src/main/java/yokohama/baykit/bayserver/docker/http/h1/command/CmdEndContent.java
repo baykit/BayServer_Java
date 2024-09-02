@@ -22,7 +22,7 @@ public class CmdEndContent extends H1Command {
     }
 
     @Override
-    public void pack(H1Packet pkt) throws IOException {
+    public void pack(H1Packet pkt) {
     }
 
     @Override

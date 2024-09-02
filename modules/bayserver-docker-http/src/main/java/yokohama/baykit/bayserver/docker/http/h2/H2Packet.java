@@ -1,10 +1,8 @@
 package yokohama.baykit.bayserver.docker.http.h2;
 
+import yokohama.baykit.bayserver.docker.http.h2.huffman.HTree;
 import yokohama.baykit.bayserver.protocol.Packet;
 import yokohama.baykit.bayserver.protocol.PacketPartAccessor;
-import yokohama.baykit.bayserver.docker.http.h2.huffman.HTree;
-
-import java.io.IOException;
 
 /**
  * Http2 spec
@@ -30,7 +28,7 @@ public class H2Packet extends Packet<H2Type> {
             super(pkt, start, maxLen);
         }
 
-        public void putInt24(int len) throws IOException {
+        public void putInt24(int len) {
             byte b1 = (byte)((len >> 16) & 0xFF);
             byte b2 = (byte)((len >> 8) & 0xFF);
             byte b3 = (byte)(len & 0xFF);
@@ -44,7 +42,7 @@ public class H2Packet extends Packet<H2Type> {
             super(pkt, start, maxLen);
         }
 
-        public int getHPackInt(int prefix, int[] head) throws IOException {
+        public int getHPackInt(int prefix, int[] head) {
             int maxVal = 0xFF >> (8 - prefix);
 
             int firstByte = getByte();
@@ -58,7 +56,7 @@ public class H2Packet extends Packet<H2Type> {
             }
         }
 
-        public int getHPackIntRest() throws IOException {
+        public int getHPackIntRest() {
             int rest = 0;
             for(int i = 0; ; i++) {
                 int data = getByte();
@@ -71,7 +69,7 @@ public class H2Packet extends Packet<H2Type> {
             return rest;
         }
 
-        public String getHPackString() throws IOException {
+        public String getHPackString() {
             int isHuffman[] = new int[1];
             int len = getHPackInt(7, isHuffman);
             byte[] data = new byte[len];
@@ -93,7 +91,7 @@ public class H2Packet extends Packet<H2Type> {
         }
 
 
-        public void putHPackInt(int val, int prefix, int head) throws IOException {
+        public void putHPackInt(int val, int prefix, int head) {
             int maxVal = 0xFF >> (8 - prefix);
             int headVal = (head  << prefix) & 0xFF;
             if(val < maxVal) {
@@ -105,7 +103,7 @@ public class H2Packet extends Packet<H2Type> {
             }
         }
 
-        private void putHPackIntRest(int val) throws IOException {
+        private void putHPackIntRest(int val) {
             while(true) {
                 int data = val & 0x7F;
                 int nextVal = val >> 7;
@@ -122,7 +120,7 @@ public class H2Packet extends Packet<H2Type> {
             }
         }
 
-        public void putHPackString(String value, boolean haffman) throws IOException {
+        public void putHPackString(String value, boolean haffman) {
             if(haffman) {
                 throw new IllegalArgumentException();
             }
@@ -172,7 +170,7 @@ public class H2Packet extends Packet<H2Type> {
         return "H2Packet(" + type.name() + ") hlen=" + headerLen + " dlen=" + dataLen() + " stm=" + streamId + " flg=" + flags;
     }
 
-    public void packHeader() throws IOException {
+    public void packHeader() {
         H2HeaderAccessor acc = newH2HeaderAccessor();
         acc.putInt24(dataLen());
         acc.putByte(type.no);

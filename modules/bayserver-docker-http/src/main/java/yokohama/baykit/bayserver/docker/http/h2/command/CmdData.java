@@ -3,7 +3,6 @@ package yokohama.baykit.bayserver.docker.http.h2.command;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.http.h2.*;
 import yokohama.baykit.bayserver.protocol.PacketPartAccessor;
-import yokohama.baykit.bayserver.docker.http.h2.*;
 
 import java.io.IOException;
 
@@ -39,7 +38,7 @@ public class CmdData extends H2Command {
     }
 
     @Override
-    public void unpack(H2Packet pkt) throws IOException {
+    public void unpack(H2Packet pkt) {
         super.unpack(pkt);
         this.data = pkt.buf;
         this.start = pkt.headerLen;
@@ -47,7 +46,7 @@ public class CmdData extends H2Command {
     }
 
     @Override
-    public void pack(H2Packet pkt) throws IOException {
+    public void pack(H2Packet pkt) {
         PacketPartAccessor acc = pkt.newDataAccessor();
         if(flags.padded())
             throw new IllegalStateException("Padding not supported");
