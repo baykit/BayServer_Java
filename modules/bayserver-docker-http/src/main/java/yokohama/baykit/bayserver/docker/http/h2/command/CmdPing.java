@@ -3,7 +3,6 @@ package yokohama.baykit.bayserver.docker.http.h2.command;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.http.h2.*;
 import yokohama.baykit.bayserver.protocol.PacketPartAccessor;
-import yokohama.baykit.bayserver.docker.http.h2.*;
 
 import java.io.IOException;
 
@@ -23,14 +22,14 @@ public class CmdPing extends H2Command {
     }
 
     @Override
-    public void unpack(H2Packet pkt) throws IOException {
+    public void unpack(H2Packet pkt) {
         super.unpack(pkt);
         PacketPartAccessor acc = pkt.newDataAccessor();
         acc.getBytes(opaqueData, 0, 8);
     }
 
     @Override
-    public void pack(H2Packet pkt) throws IOException {
+    public void pack(H2Packet pkt) {
         PacketPartAccessor acc = pkt.newDataAccessor();
         acc.putBytes(opaqueData);
         super.pack(pkt);

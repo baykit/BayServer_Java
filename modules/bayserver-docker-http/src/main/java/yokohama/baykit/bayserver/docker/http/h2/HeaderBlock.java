@@ -1,7 +1,5 @@
 package yokohama.baykit.bayserver.docker.http.h2;
 
-import java.io.IOException;
-
 /**
  * HPack
  *   https://datatracker.ietf.org/doc/html/rfc7541
@@ -29,7 +27,7 @@ public class HeaderBlock {
         return op + " index=" + index + " name=" + name + " value=" + value + " size=" + size;
     }
     
-    public static void pack(HeaderBlock blk, H2Packet.H2DataAccessor acc) throws IOException {
+    public static void pack(HeaderBlock blk, H2Packet.H2DataAccessor acc) {
         switch(blk.op) {
             case Index: {
                 acc.putHPackInt(blk.index, 7, 1);
@@ -59,7 +57,7 @@ public class HeaderBlock {
         }
     }
 
-    public static HeaderBlock unpack(H2Packet.H2DataAccessor acc) throws IOException {
+    public static HeaderBlock unpack(H2Packet.H2DataAccessor acc) {
         HeaderBlock blk = new HeaderBlock();
         int index = acc.getByte();
         //BayServer.debug("index: " + index);

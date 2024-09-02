@@ -43,7 +43,7 @@ public class CmdHeaders extends H2Command {
 
 
     @Override
-    public void unpack(H2Packet pkt) throws IOException {
+    public void unpack(H2Packet pkt) {
         super.unpack(pkt);
 
         H2Packet.H2DataAccessor acc = pkt.newH2DataAccessor();
@@ -62,7 +62,7 @@ public class CmdHeaders extends H2Command {
 
 
     @Override
-    public void pack(H2Packet pkt) throws IOException {
+    public void pack(H2Packet pkt) {
         H2Packet.H2DataAccessor acc = pkt.newH2DataAccessor();
 
         if(flags.padded()) {
@@ -81,7 +81,7 @@ public class CmdHeaders extends H2Command {
         return handler.handleHeaders(this);
     }
 
-    private void readHeaderBlock(H2Packet.H2DataAccessor acc, int len) throws IOException {
+    private void readHeaderBlock(H2Packet.H2DataAccessor acc, int len) {
         while(acc.pos < len) {
             HeaderBlock blk = HeaderBlock.unpack(acc);
             if(BayLog.isTraceMode())
@@ -90,7 +90,7 @@ public class CmdHeaders extends H2Command {
         }
     }
 
-    private void writeHeaderBlock(H2Packet.H2DataAccessor acc) throws IOException {
+    private void writeHeaderBlock(H2Packet.H2DataAccessor acc) {
         for(HeaderBlock blk : headerBlocks) {
             HeaderBlock.pack(blk, acc);
         }
