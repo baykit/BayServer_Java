@@ -1,11 +1,8 @@
 package yokohama.baykit.bayserver.docker.http.h2;
 
-import yokohama.baykit.bayserver.BayServer;
-import yokohama.baykit.bayserver.bcf.*;
-import yokohama.baykit.bayserver.util.Message;
 import yokohama.baykit.bayserver.bcf.ParseException;
+import yokohama.baykit.bayserver.util.Message;
 
-import java.util.HashMap;
 import java.util.Locale;
 
 public class H2ErrorCode extends Message {
@@ -24,7 +21,6 @@ public class H2ErrorCode extends Message {
     public static int INADEQUATE_SECURITY = 0xc;
     public static int HTTP_1_1_REQUIRED = 0xd;
 
-    static HashMap<Integer, String> desc = new HashMap<>();
     public static Message msg;
 
     private H2ErrorCode() {
