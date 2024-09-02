@@ -12,12 +12,12 @@ public abstract class QicCommand extends Command<QicCommand, QicCommandPacket, Q
     }
 
     @Override
-    public void unpack(QicCommandPacket packet) throws IOException {
+    public void unpack(QicCommandPacket packet) {
 
     }
 
     @Override
-    public void pack(QicCommandPacket packet) throws IOException {
+    public void pack(QicCommandPacket packet) {
 
     }
 
