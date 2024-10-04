@@ -349,7 +349,7 @@ public class GrandAgent extends Thread {
         postponeQueue.add(p);
     }
 
-    public int countPostpone() {
+    private int countPostpone() {
         return postponeQueue.size();
     }
 
