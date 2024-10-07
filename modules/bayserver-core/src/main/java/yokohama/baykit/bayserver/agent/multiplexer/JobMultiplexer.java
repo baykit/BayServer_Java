@@ -245,7 +245,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
                     }
                 }
                 else {
-                    st.readBuf.clear();
+                    //st.readBuf.clear();
                     BayLog.debug("%s Try to Read (rd=%s) (buf=%s)", agent, st.rudder, st.readBuf);
                     n = st.rudder.read(st.readBuf);
                     if (n > 0)

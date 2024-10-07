@@ -465,7 +465,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
 
     private void onReadable(RudderState st) {
         // read data
-        st.readBuf.clear();
+        //st.readBuf.clear();
 
         int c = 0;
         InetSocketAddress sender = null;

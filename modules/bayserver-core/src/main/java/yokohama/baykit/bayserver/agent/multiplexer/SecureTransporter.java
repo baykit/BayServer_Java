@@ -117,11 +117,13 @@ public class SecureTransporter extends PlainTransporter {
                         break;
 
                     case BUFFER_OVERFLOW:
+                        BayLog.debug("Buffer overflow! appIn=%s", appIn.buffer);
                     case OK:
                         appIn.buffer.flip();
                         break;
 
                     case BUFFER_UNDERFLOW:
+                        BayLog.debug("Buffer underflow! appIn=%s", appIn.buffer);
                         break loop;
 
                     default:
