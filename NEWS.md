@@ -1,5 +1,10 @@
 # BayServer for Java
 
+# 3.0.1
+
+- [Core] Fixes potential issues that may occur when the AJP server closes the connection after sends contents. 
+- [Core] Fixes problem that occurs when big data is posted.
+
 # 3.0.0
 
 - [Core] Performes a significant overall refactoring.
