@@ -56,7 +56,7 @@ public class PlainTransporter implements Transporter, Reusable {
     }
 
     ////////////////////////////////////////////
-    // implements SelectListener
+    // implements Transporter
     ////////////////////////////////////////////
 
     @Override
@@ -134,11 +134,6 @@ public class PlainTransporter implements Transporter, Reusable {
 
         BayLog.trace("%s reqWrite: %s", buf);
         multiplexer.reqWrite(rd, buf, adr, tag, listener);
-    }
-
-    @Override
-    public void reqEnd(Rudder rd) {
-        multiplexer.reqEnd(rd);
     }
 
     @Override

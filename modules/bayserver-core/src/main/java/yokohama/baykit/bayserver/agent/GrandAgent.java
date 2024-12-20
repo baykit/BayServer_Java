@@ -391,12 +391,12 @@ public class GrandAgent extends Thread {
     }
 
     private void onAccept(Letter let) throws Throwable {
-        Port p = BayServer.anchorablePortMap.get(let.state.rudder);
 
         try {
             if(let.err != null)
                 throw let.err;
 
+            Port p = BayServer.anchorablePortMap.get(let.state.rudder);
             p.onConnected(agentId, let.clientRudder);
         }
         catch (IOException e) {
@@ -540,13 +540,13 @@ public class GrandAgent extends Thread {
             }
         }
         catch(IOException e) {
-            BayLog.debug("%s error on wrote");
+            BayLog.debug("%s error on wrote", this);
             st.transporter.onError(st.rudder, e);
             nextAction(st, NextSocketAction.Close, false);
         }
     }
 
-    protected final void onCloseReq(Letter let) {
+    private void onCloseReq(Letter let) {
         RudderState st = let.state;
         BayLog.debug("%s reqClose rd=%s", this, st.rudder);
         if (st.closed) {
@@ -587,6 +587,9 @@ public class GrandAgent extends Thread {
                 if(reading)
                     cancel = true;
                 break;
+
+            default:
+                throw new IllegalArgumentException("NextAction=" + act);
         }
 
         if(cancel) {

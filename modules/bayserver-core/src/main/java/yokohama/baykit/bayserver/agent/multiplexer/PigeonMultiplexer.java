@@ -15,9 +15,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.concurrent.TimeUnit;
 
-/**
- * The purpose of JobMultiplexer is handling sockets, pipes, or files by thread/fiber/goroutine.
- */
 public class PigeonMultiplexer extends JobMultiplexerBase {
 
     public PigeonMultiplexer(GrandAgent agent, boolean anchorable) {

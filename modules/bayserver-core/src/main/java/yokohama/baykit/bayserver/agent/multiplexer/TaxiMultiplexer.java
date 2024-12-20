@@ -3,7 +3,6 @@ package yokohama.baykit.bayserver.agent.multiplexer;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.rudder.ReadableByteChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
@@ -18,7 +17,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
-public class TaxiMultiplexer extends MultiplexerBase implements Multiplexer {
+public class TaxiMultiplexer extends MultiplexerBase {
 
     public TaxiMultiplexer(GrandAgent agt) {
         super(agt);
