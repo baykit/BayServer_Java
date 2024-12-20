@@ -243,11 +243,6 @@ public class H1WarpHandler implements WarpHandler, H1Handler {
         ship().post(cmd, lis);
     }
 
-
-    /////////////////////////////////////
-    // Implements ProtocolHandler
-    /////////////////////////////////////
-
     @Override
     public boolean onProtocolError(ProtocolException e) throws IOException {
         throw new Sink();

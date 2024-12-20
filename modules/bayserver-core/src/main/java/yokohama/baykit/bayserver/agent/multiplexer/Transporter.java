@@ -28,8 +28,6 @@ public interface Transporter extends Reusable {
 
     void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) throws IOException;
 
-    void reqEnd(Rudder rd);
-
     void reqClose(Rudder rd);
 
     boolean checkTimeout(Rudder rd, int durationSec);

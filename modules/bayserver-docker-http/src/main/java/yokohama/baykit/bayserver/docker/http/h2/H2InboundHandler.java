@@ -280,7 +280,6 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
                                         upd.windowSizeIncrement = len;
                                         CmdWindowUpdate upd2 = new CmdWindowUpdate(0);
                                         upd2.windowSizeIncrement = len;
-                                        CommandPacker cmdPacker = protocolHandler.commandPacker;
                                         try {
                                             protocolHandler.post(upd);
                                             protocolHandler.post(upd2);
