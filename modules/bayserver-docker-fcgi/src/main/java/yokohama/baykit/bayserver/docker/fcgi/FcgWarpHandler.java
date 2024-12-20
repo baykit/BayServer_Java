@@ -125,6 +125,11 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
     public void verifyProtocol(String protocol) throws IOException {
     }
 
+    @Override
+    public boolean onProtocolError(ProtocolException e) throws IOException {
+        throw new Sink();
+    }
+
     /////////////////////////////////////
     // Implement FcgCommandHandler
     /////////////////////////////////////
@@ -187,13 +192,6 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
         return NextSocketAction.Continue;
     }
 
-    /////////////////////////////////////
-    // Implements ProtocolHandler
-    /////////////////////////////////////
-    @Override
-    public boolean onProtocolError(ProtocolException e) throws IOException {
-        throw new Sink();
-    }
 
     /////////////////////////////////////
     // Custom methods

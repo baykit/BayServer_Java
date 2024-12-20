@@ -150,11 +150,6 @@ public final class QicTransporter implements Transporter {
     }
 
     @Override
-    public void reqEnd(Rudder rd) {
-        multiplexer.reqEnd(rd);
-    }
-
-    @Override
     public void reqClose(Rudder rd) {
         multiplexer.reqClose(rd);
     }
