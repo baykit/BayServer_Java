@@ -49,12 +49,12 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
                         @Override
                         public void completed(AsynchronousSocketChannel clientCh, Rudder serverRd) {
                             BayLog.debug("%s Accepted: cli=%s", PigeonMultiplexer.this, clientCh);
-                            agent.sendAcceptedLetter(st, new AsynchronousSocketChannelRudder(clientCh), null, true);
+                            agent.sendAcceptedLetter(st, new AsynchronousSocketChannelRudder(clientCh), true);
                         }
 
                         @Override
                         public void failed(Throwable e, Rudder serverRd) {
-                            agent.sendAcceptedLetter(st, null, e, true);
+                            agent.sendErrorLetter(st, e, true);
                         }
                     });
         }
@@ -71,12 +71,12 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
 
             @Override
             public void completed(Void result, Void attachment) {
-                agent.sendConnectedLetter(st, null, true);
+                agent.sendConnectedLetter(st, true);
             }
 
             @Override
             public void failed(Throwable e, Void attachment) {
-                agent.sendConnectedLetter(st, e, true);
+                agent.sendErrorLetter(st, e, true);
             }
         });
     }
@@ -160,7 +160,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
             return;
         }
         else {
-            agent.sendCloseReqLetter(st, true);
+            agent.sendClosedLetter(st, true);
         }
     }
 
@@ -225,12 +225,12 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
         public void completed(Integer n, Rudder rd) {
             BayLog.debug("%s read completed: rd=%s buf=%s", PigeonMultiplexer.this, rd, state.readBuf);
             state.readBuf.flip();
-            agent.sendReadLetter(state, n, null, null, true);
+            agent.sendReadLetter(state, n, null, true);
         }
 
         @Override
         public void failed(Throwable e, Rudder rd) {
-            agent.sendReadLetter(state, -1, null, e, true);
+            agent.sendErrorLetter(state, e, true);
         }
 
     }
@@ -244,12 +244,12 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
 
         @Override
         public void completed(Integer n, Rudder rd) {
-            agent.sendWroteLetter(state, n, null, true);
+            agent.sendWroteLetter(state, n, true);
         }
 
         @Override
         public void failed(Throwable e, Rudder rd) {
-            agent.sendWroteLetter(state, -1, e, true);
+            agent.sendErrorLetter(state, e, true);
         }
     }
 

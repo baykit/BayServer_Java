@@ -54,7 +54,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
                 try {
                     ch = sch.accept();
                 } catch (IOException e) {
-                    agent.sendAcceptedLetter(st, null, e, true);
+                    agent.sendErrorLetter(st, e, true);
                     return;
                 }
 
@@ -68,7 +68,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
                     }
                 }
                 else {
-                    agent.sendAcceptedLetter(st, new SocketChannelRudder(ch), null, true);
+                    agent.sendAcceptedLetter(st, new SocketChannelRudder(ch), true);
                 }
 
             } catch(Throwable e) {
@@ -96,11 +96,11 @@ public class JobMultiplexer extends JobMultiplexerBase {
                 SocketChannel ch = (SocketChannel)ChannelRudder.getChannel(rd);
                 ch.connect(addr);
             } catch (IOException e) {
-                agent.sendConnectedLetter(st, e, true);
+                agent.sendErrorLetter(st, e, true);
                 return;
             }
 
-            agent.sendConnectedLetter(st, null, true);
+            agent.sendConnectedLetter(st, true);
 
         }).start();
 
@@ -194,7 +194,8 @@ public class JobMultiplexer extends JobMultiplexerBase {
                     return;
                 }
 
-                closeRudder(st);
+                closeRudder(rd);
+                agent.sendClosedLetter(st, true);
             } catch(Throwable e) {
                 BayLog.fatal(e);
                 agent.shutdown();
@@ -255,11 +256,11 @@ public class JobMultiplexer extends JobMultiplexerBase {
                 BayLog.debug("%s Closed by another thread: %s (%s)", this, st.rudder, e);
                 return; // Do not do next action
             } catch (IOException e) {
-                agent.sendReadLetter(st, -1, null, e, true);
+                agent.sendErrorLetter(st, e, true);
                 return;
             }
 
-            agent.sendReadLetter(st, n, sender, null, true);
+            agent.sendReadLetter(st, n, sender, true);
         }).start();
     }
 
@@ -287,10 +288,10 @@ public class JobMultiplexer extends JobMultiplexerBase {
                     }
                 }
             } catch (IOException e) {
-                agent.sendWroteLetter(st, -1, e, true);
+                agent.sendErrorLetter(st, e, true);
                 return;
             }
-            agent.sendWroteLetter(st, n, null, true);
+            agent.sendWroteLetter(st, n, true);
 
         }).start();
 

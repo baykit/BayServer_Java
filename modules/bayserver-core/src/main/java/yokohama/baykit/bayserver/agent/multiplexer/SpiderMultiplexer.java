@@ -435,11 +435,11 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
                 else {
                     SocketChannelRudder clientRd = new SocketChannelRudder(ch);
                     clientRd.setNonBlocking();
-                    agent.sendAcceptedLetter(st, clientRd, null, false);
+                    agent.sendAcceptedLetter(st, clientRd, false);
                 }
 
             } catch (IOException e) {
-                agent.sendAcceptedLetter(st, null, e, false);
+                agent.sendErrorLetter(st, e, false);
                 if(ch != null) {
                     try { ch.close(); } catch (IOException ee) {}
                 }
@@ -456,11 +456,11 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         }
         catch(IOException e) {
             BayLog.error("%s Connect failed: %s", this, e);
-            agent.sendConnectedLetter(st, e, false);
+            agent.sendErrorLetter(st, e, false);
             return;
         }
 
-        agent.sendConnectedLetter(st, null, false);
+        agent.sendConnectedLetter(st,false);
     }
 
     private void onReadable(RudderState st) {
@@ -493,11 +493,11 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
             }
         }
         catch(IOException e) {
-            agent.sendReadLetter(st, -1, null, e, false);
+            agent.sendErrorLetter(st, e, false);
             return;
 
         }
-        agent.sendReadLetter(st, c, sender, null, false);
+        agent.sendReadLetter(st, c, sender, false);
     }
 
     private void onWritable(RudderState st) {
@@ -519,16 +519,17 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
                 n = st.rudder.write(wUnit.buf);
             }
 
-            agent.sendWroteLetter(st, n, null, false);
+            agent.sendWroteLetter(st, n, false);
         }
         catch(IOException e) {
-            agent.sendWroteLetter(st, 0, e, false);
+            agent.sendErrorLetter(st, e, false);
         }
     }
 
     private void onCloseReq(RudderState st) {
         BayLog.debug("%s onCloseReq: rd=%s", this, st.rudder);
-        agent.sendCloseReqLetter(st, false);
+        st.multiplexer.closeRudder(st.rudder);
+        agent.sendClosedLetter(st, false);
     }
 
 
