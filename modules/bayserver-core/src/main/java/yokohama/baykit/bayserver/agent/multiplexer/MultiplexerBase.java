@@ -45,6 +45,16 @@ public abstract class MultiplexerBase implements Multiplexer {
     }
 
     @Override
+    public void removeRudderState(Rudder rd) {
+        BayLog.trace("%s remove rd=%s", agent, rd);
+        synchronized (rudders) {
+            RudderState cm = rudders.remove(rd.key());
+            //BayServer.debug(cm.tpt.ship() + " removed");
+        }
+        channelCount--;
+    }
+
+    @Override
     public final RudderState getRudderState(Rudder rd) {
         return findRudderStateByKey(rd.key());
     }
@@ -77,20 +87,12 @@ public abstract class MultiplexerBase implements Multiplexer {
     }
 
     @Override
-    public final void closeRudder(RudderState chState) {
-        BayLog.debug("%s closeRd %s state=%s closed=%b", agent, chState.rudder, chState, chState.closed);
-
-        synchronized (this) {
-            if(chState.closed)
-                return;
-            chState.closed = true;
-        }
-
-        removeRudderState(chState.rudder);
+    public final void closeRudder(Rudder rd) {
+        BayLog.debug("%s closeRd %s", agent, rd);
 
         try {
             BayLog.trace("%s OS Close", agent);
-            chState.rudder.close();
+            rd.close();
         }
         catch(AsynchronousCloseException e) {
             BayLog.debug("Close error: %s", e);
@@ -100,13 +102,6 @@ public abstract class MultiplexerBase implements Multiplexer {
         }
 
         BayLog.trace("%s Flush buffer", agent);
-
-        while(consumeOldestUnit(chState)) {
-        }
-
-        BayLog.trace("%s Call transporter", agent);
-        if (chState.transporter != null)
-            chState.transporter.onClosed(chState.rudder);
     }
 
     @Override
@@ -122,15 +117,6 @@ public abstract class MultiplexerBase implements Multiplexer {
         synchronized (rudders) {
             return rudders.get(rdKey);
         }
-    }
-
-    protected void removeRudderState(Rudder rd) {
-        BayLog.trace("%s remove rd=%s", agent, rd);
-        synchronized (rudders) {
-            RudderState cm = rudders.remove(rd.key());
-            //BayServer.debug(cm.tpt.ship() + " removed");
-        }
-        channelCount--;
     }
 
     protected final void closeTimeoutSockets() {
@@ -155,14 +141,14 @@ public abstract class MultiplexerBase implements Multiplexer {
         }
 
         for (RudderState c : closeList) {
-            closeRudder(c);
+            reqClose(c.rudder);
         }
     }
     protected final void closeAll() {
         // Use copied ArrayList to avoid ConcurrentModificationException
         for (RudderState st : new ArrayList<>(rudders.values())) {
             if(st.rudder != agent.commandReceiver.rudder)
-                closeRudder(st);
+                closeRudder(st.rudder);
         }
     }
 

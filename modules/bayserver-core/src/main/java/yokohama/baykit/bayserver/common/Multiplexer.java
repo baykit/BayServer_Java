@@ -18,6 +18,8 @@ public interface Multiplexer {
 
     void addRudderState(Rudder rd, RudderState st);
 
+    void removeRudderState(Rudder rd);
+
     RudderState getRudderState(Rudder rd);
 
     Transporter getTransporter(Rudder rd);
@@ -48,7 +50,7 @@ public interface Multiplexer {
     boolean useAsyncAPI();
 
     boolean consumeOldestUnit(RudderState st);
-    void closeRudder(RudderState st);
+    void closeRudder(Rudder rd);
 
     boolean isBusy();
     void onBusy();

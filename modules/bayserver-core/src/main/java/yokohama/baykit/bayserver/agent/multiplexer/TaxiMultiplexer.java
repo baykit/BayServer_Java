@@ -91,8 +91,9 @@ public class TaxiMultiplexer extends MultiplexerBase {
     @Override
     public void reqClose(Rudder rd) {
         BayLog.debug("%s TaxiMpx reqClose rd=%s", this, rd);
+        closeRudder(rd);
         RudderState st = getRudderState(rd);
-        closeRudder(st);
+        agent.sendClosedLetter(st, true);
     }
 
     @Override
@@ -197,10 +198,10 @@ public class TaxiMultiplexer extends MultiplexerBase {
             else {
                 st.readBuf.flip();
             }
-            agent.sendReadLetter(st, len, null, null, true);
+            agent.sendReadLetter(st, len, null, true);
         }
         catch(Throwable e) {
-            agent.sendReadLetter(st, -1, null, e, true);
+            agent.sendErrorLetter(st, e, true);
         }
     }
 
@@ -219,10 +220,10 @@ public class TaxiMultiplexer extends MultiplexerBase {
             else {
                 len = ((WritableByteChannel) ChannelRudder.getChannel(rd)).write(u.buf);
             }
-            agent.sendWroteLetter(st, len, null, true);
+            agent.sendWroteLetter(st, len,true);
         }
         catch(Throwable e) {
-            agent.sendWroteLetter(st, -1, e, true);
+            agent.sendErrorLetter(st, e, true);
         }
     }
 }

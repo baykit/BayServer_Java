@@ -3,7 +3,6 @@ package yokohama.baykit.bayserver.agent.multiplexer;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.TimerHandler;
 import yokohama.baykit.bayserver.rudder.AsynchronousFileChannelRudder;
 import yokohama.baykit.bayserver.rudder.InputStreamRudder;
@@ -23,7 +22,9 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
     abstract class Lapper {
         RudderState state;
         long lastAccess;
-        abstract NextSocketAction lap(boolean spun[]);
+
+        // Return if spun (method do nothing)
+        abstract boolean lap();
         abstract void next();
 
         Lapper(RudderState state) {
@@ -118,6 +119,8 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
     public void reqClose(Rudder rd) {
         RudderState st = getRudderState(rd);
         st.closing = true;
+        closeRudder(rd);
+        agent.sendClosedLetter(st, false);
     }
 
     @Override
@@ -225,22 +228,10 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
         for (int i = runningList.size() - 1; i >= 0; i--) {
             Lapper lpr = runningList.get(i);
             RudderState st = lpr.state;
-            boolean spun[] = new boolean[1];
-            NextSocketAction act = lpr.lap(spun);
+            boolean spun = lpr.lap();
 
             st.access();
-            allSpun = allSpun & spun[0];
-
-            switch (act) {
-                case Suspend:
-                case Close:
-                    removeList.add(i);
-                    break;
-                case Continue:
-                    break;
-                default:
-                    throw new Sink();
-            }
+            allSpun = allSpun & spun;
         }
 
         if (allSpun) {
@@ -279,7 +270,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
             for (Object key: rudders.keySet()) {
                 RudderState st = rudders.get(key);
                 if (st.transporter != null && st.transporter.checkTimeout(st.rudder, (int) (now - st.lastAccessTime) / 1000)) {
-                    closeRudder(st);
+                    closeRudder(st.rudder);
                     removeList.add(key);
                 }
             }
@@ -301,38 +292,29 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
         }
 
         @Override
-        NextSocketAction lap(boolean[] spun) {
-            spun[0] = false;
-
+        boolean lap() {
             if (!curFuture.isDone()) {
-                return NextSocketAction.Continue;
+                return true;
             }
 
-            spun[0] = true;
             try {
                 int len = curFuture.get();
                 BayLog.debug("%s Spin read: %d bytes", SpinMultiplexer.this, len);
 
                 if (len == -1) {
-                    spun[0] = true;
+                    len = 0;
                     BayLog.debug("%s Spin read: EOF\\(^o^)/", SpinMultiplexer.this);
                     state.readBuf.limit(0);
-                    return state.transporter.onRead(state.rudder, state.readBuf, null);
-                } else {
-                    state.readBuf.flip();
-                    NextSocketAction act = state.transporter.onRead(state.rudder, state.readBuf, null);
-                    if(act == NextSocketAction.Continue || act == NextSocketAction.Read)
-                        next();
-                    else
-                        cancelRead(state);
-                    return act;
                 }
 
+                state.readBuf.flip();
+                agent.sendReadLetter(state, len, null, false);
+
             } catch (Exception e) {
-                BayLog.error(e, "%s Error", SpinMultiplexer.this);
-                closeRudder(state);
-                return NextSocketAction.Close;
+                agent.sendErrorLetter(state, e, false);
             }
+
+            return false;
         }
 
         @Override
@@ -352,52 +334,21 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
         }
 
         @Override
-        public NextSocketAction lap(boolean[] spun) {
-            spun[0] = false;
-
+        public boolean lap() {
             if(!curFuture.isDone()) {
-                return NextSocketAction.Continue;
+                return true;
             }
 
             try {
                 int len = curFuture.get();
                 BayLog.debug("%s wrote %d bytes", SpinMultiplexer.this, len);
-
-                WriteUnit unit;
-                synchronized (state.writeQueue) {
-                    unit = state.writeQueue.remove(0);
-                }
-
-                if (len != unit.buf.limit()) {
-                    throw new IOException("Could not write enough data");
-                }
-                spun[0] = true;
-
-                state.bytesWrote += len;
-
-                unit.done();
-
-                boolean writeMore = true;
-                synchronized (state.writing) {
-                    if (state.writeQueue.isEmpty()) {
-                        writeMore = false;
-                        state.writing[0] = false;
-                    }
-                }
-
-                if(writeMore) {
-                    next();
-                    return NextSocketAction.Continue;
-                }
-                else
-                    return NextSocketAction.Suspend;
+                agent.sendWroteLetter(state, len, false);
             }
             catch (Exception e) {
-                BayLog.error(e, "%s Error", SpinMultiplexer.this);
-                closeRudder(state);
-                return NextSocketAction.Close;
+                agent.sendErrorLetter(state, e, false);
             }
 
+            return false;
         }
 
         @Override
@@ -416,9 +367,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
         }
 
         @Override
-        public NextSocketAction lap(boolean[] spun) {
-            spun[0] = false;
-
+        public boolean lap() {
             try {
                 boolean eof = false;
                 InputStream in = InputStreamRudder.getInputStream(state.rudder);
@@ -429,14 +378,14 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
 
                     if (!eof) {
                         BayLog.debug("%s Spin read: No data", this);
-                        spun[0] = true;
-                        return NextSocketAction.Continue;
+                        return true;
                     } else {
                         BayLog.debug("%s Spin read: EOF\\(^o^)/", this);
                     }
                 }
 
                 if (eof) {
+                    len = 0;
                     state.readBuf.clear();
                 }
                 else {
@@ -450,13 +399,13 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
                     }
                 }
 
-                return state.transporter.onRead(state.rudder, state.readBuf, null);
+                agent.sendReadLetter(state, len, null, false);
 
             } catch (Exception e) {
-                BayLog.error(e, "%s Error", this);
-                closeRudder(state);
-                return NextSocketAction.Close;
+                agent.sendErrorLetter(state, e, false);
             }
+
+            return false;
         }
 
         @Override
