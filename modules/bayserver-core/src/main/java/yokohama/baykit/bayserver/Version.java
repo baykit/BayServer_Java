@@ -1,5 +1,5 @@
 package yokohama.baykit.bayserver;
 
 public class Version {
-    public static String VERSION="3.0.1";
+    public static String VERSION="3.0.2";
 }
