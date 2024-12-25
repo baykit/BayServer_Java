@@ -82,17 +82,17 @@ public class AjpWarpHandler implements WarpHandler, AjpHandler {
     // Implements TourHandler
     /////////////////////////////////////
     @Override
-    public void sendHeaders(Tour tur) throws IOException {
+    public void sendReqHeaders(Tour tur) throws IOException {
         sendForwardRequest(tur);
     }
 
     @Override
-    public void sendContent(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
+    public void sendReqContent(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
         sendData(tur, buf, start, len, lis);
     }
 
     @Override
-    public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+    public void sendEndReq(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
         ship().post(null, lis);
     }
 

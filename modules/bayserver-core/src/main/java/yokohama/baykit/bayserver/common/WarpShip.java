@@ -186,7 +186,7 @@ public final class WarpShip extends Ship {
             throw new Sink("warpId exists");
 
         tourMap.put(warpId, new Pair<>(tur.id(), tur));
-        wHnd.sendHeaders(tur);
+        wHnd.sendReqHeaders(tur);
 
         if(connected) {
             BayLog.debug("%s is already connected. Start warp tour:%s", wdat, tur);

@@ -51,7 +51,7 @@ public class WarpData implements ReqContentHandler {
                 // The buffer will become corrupted due to reuse.
                 buf = buf.clone();
 
-            warpShip.warpHandler().sendContent(
+            warpShip.warpHandler().sendReqContent(
                     tur,
                     buf,
                     start + pos,
@@ -64,7 +64,7 @@ public class WarpData implements ReqContentHandler {
     public synchronized final void onEndReqContent(Tour tur) throws IOException {
         BayLog.debug("%s endReqContent tur=%s", warpShip, tur);
         warpShip.checkShipId(warpShipId);
-        warpShip.warpHandler().sendEnd(tur, false, () -> {
+        warpShip.warpHandler().sendEndReq(tur, false, () -> {
             GrandAgent agt = GrandAgent.get(warpShip.agentId);
             agt.netMultiplexer.reqRead(warpShip.rudder);
         });

@@ -177,7 +177,7 @@ public class H1WarpHandler implements WarpHandler, H1Handler {
     /////////////////////////////////////
 
     @Override
-    public void sendHeaders(Tour tur) throws IOException {
+    public void sendReqHeaders(Tour tur) throws IOException {
         Town town = tur.town;
 
         //BayServer.debug(this + " construct header");
@@ -232,13 +232,13 @@ public class H1WarpHandler implements WarpHandler, H1Handler {
     }
 
     @Override
-    public void sendContent(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
+    public void sendReqContent(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
         CmdContent cmd = new CmdContent(buf, start, len);
        ship().post(cmd, lis);
     }
 
     @Override
-    public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+    public void sendEndReq(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
         CmdEndContent cmd = new CmdEndContent();
         ship().post(cmd, lis);
     }
