@@ -185,17 +185,17 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
     }
 
     @Override
-    public void sendHeaders(Tour tur) throws IOException {
-        sendReqHeaders(tur);
+    public void sendReqHeaders(Tour tur) throws IOException {
+        sendReqHeaderCommand(tur);
     }
 
     @Override
-    public void sendContent(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
-        sendReqContents(tur, buf, start, len, lis);
+    public void sendReqContent(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
+        sendReqDataCommand(tur, buf, start, len, lis);
     }
 
     @Override
-    public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+    public void sendEndReq(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
 
     }
 
@@ -221,7 +221,7 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
         return null;
     }
 
-    void sendReqHeaders(Tour tur) throws IOException {
+    void sendReqHeaderCommand(Tour tur) throws IOException {
         Town town = tur.town;
 
         //BayServer.debug(this + " construct header");
@@ -259,7 +259,7 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
     }
 
 
-    void sendReqContents(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
+    void sendReqDataCommand(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
 
         CmdData cmd =
                 new CmdData(
