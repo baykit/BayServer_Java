@@ -129,7 +129,9 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         RudderState st = getRudderState(rd);
         BayLog.debug("%s reqWrite chState=%s tag=%s len=%d", agent, st, tag, buf.remaining());
         if(st == null || st.closed) {
-            throw new IOException("Invalid channel");
+            BayLog.warn("%s Channel is closed: %s", agent, rd);
+            listener.dataConsumed();
+            return;
         }
 
         WriteUnit unt = new WriteUnit(buf, adr, tag, listener);
