@@ -15,9 +15,7 @@ import yokohama.baykit.bayserver.util.RoughTime;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class GrandAgent extends Thread {
 
@@ -36,7 +34,7 @@ public class GrandAgent extends Thread {
     static int agentCount;
     static int maxShips;
     static int maxAgentId;
-    public static Map<Integer, GrandAgent> agents = new HashMap<>();
+    private static final ArrayList<GrandAgent> agents = new ArrayList<>();
     public static List<LifecycleListener> listeners = new ArrayList<>();
 
     public int selectTimeoutSec = SELECT_TIMEOUT_SEC;
@@ -304,7 +302,7 @@ public class GrandAgent extends Thread {
         BayLog.debug("%s remove listeners", this);
         listeners.forEach(lis -> lis.remove(agentId));
         commandReceiver.end();
-        agents.remove(this);
+        agents.set(agentId, null);
     }
 
     void abort() {
@@ -581,7 +579,7 @@ public class GrandAgent extends Thread {
     }
 
     public static GrandAgent get(int id) {
-        return agents.get(id);
+        return agents.get(id-1);
     }
 
     public static GrandAgent add(int agtId, boolean anchorable) {
@@ -593,7 +591,10 @@ public class GrandAgent extends Thread {
             maxAgentId = agtId;
 
         GrandAgent agt = new GrandAgent(agtId, maxShips, anchorable);
-        agents.put(agtId, agt);
+        while(agents.size() < agtId) {
+            agents.add(null);
+        }
+        agents.set(agtId-1, agt);
 
         listeners.forEach(lis -> lis.add(agt.agentId));
         return agt;

@@ -3,11 +3,10 @@ package yokohama.baykit.bayserver.common;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
-import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.ObjectStore;
+import yokohama.baykit.bayserver.util.StringUtil;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
 
 public class InboundShipStore extends ObjectStore<InboundShip> {
 
@@ -15,17 +14,20 @@ public class InboundShipStore extends ObjectStore<InboundShip> {
 
         @Override
         public void add(int agentId) {
-            stores.put(agentId, new InboundShipStore());
+            while(stores.size() < agentId) {
+                stores.add(null);
+            }
+            stores.set(agentId-1, new InboundShipStore());
         }
 
         @Override
         public void remove(int agentId) {
-            stores.remove(agentId);
+            stores.set(agentId-1, null);
         }
     }
 
-    /** Agent id => InboundShipStore */
-    static Map<Integer, InboundShipStore> stores = new HashMap<>();
+    /** stores[agent_id - 1] => InboundShipStore */
+    static ArrayList<InboundShipStore> stores = new ArrayList<>();
 
     InboundShipStore() {
         factory = (() -> new InboundShip());
@@ -44,6 +46,6 @@ public class InboundShipStore extends ObjectStore<InboundShip> {
     }
 
     public static InboundShipStore getStore(int agentId) {
-        return stores.get(agentId);
+        return stores.get(agentId-1);
     }
 }
