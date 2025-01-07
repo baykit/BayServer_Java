@@ -6,10 +6,11 @@ import yokohama.baykit.bayserver.ConfigException;
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
-import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
 import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
+import yokohama.baykit.bayserver.common.RudderState;
+import yokohama.baykit.bayserver.common.RudderStateStore;
 import yokohama.baykit.bayserver.common.WarpShip;
 import yokohama.baykit.bayserver.common.WarpShipStore;
 import yokohama.baykit.bayserver.docker.Docker;
@@ -193,7 +194,9 @@ public abstract class WarpBase extends ClubBase implements Warp {
             wsip.startWarpTour(tour);
 
             if(needConnect) {
-                agt.netMultiplexer.addRudderState(wsip.rudder, new RudderState(wsip.rudder, tp));
+                RudderState st = RudderStateStore.getStore(agt.agentId).rent();
+                st.init(wsip.rudder, tp);
+                agt.netMultiplexer.addRudderState(wsip.rudder, st);
                 agt.netMultiplexer.getTransporter(wsip.rudder).reqConnect(wsip.rudder, hostAddr);
             }
 

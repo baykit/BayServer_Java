@@ -1,6 +1,6 @@
 package yokohama.baykit.bayserver.agent.letter;
 
-import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
+import yokohama.baykit.bayserver.common.RudderState;
 
 import java.net.InetSocketAddress;
 

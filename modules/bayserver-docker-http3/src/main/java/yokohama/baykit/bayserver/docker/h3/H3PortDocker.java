@@ -5,8 +5,9 @@ import io.quiche4j.ConfigBuilder;
 import io.quiche4j.Quiche;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
-import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
+import yokohama.baykit.bayserver.common.RudderState;
 import yokohama.baykit.bayserver.bcf.BcfElement;
+import yokohama.baykit.bayserver.common.RudderStateStore;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.base.PortBase;
@@ -110,7 +111,9 @@ public class H3PortDocker extends PortBase implements H3Docker {
     @Override
     public void onConnected(int agentId, Rudder rd) {
         QicTransporter tp = new QicTransporter();
-        RudderState st = new RudderState(rd, tp);
+
+        RudderState st = RudderStateStore.getStore(agentId).rent();
+        st.init(rd, tp);
 
         GrandAgent agt = GrandAgent.get(agentId);
         tp.initUdp(agentId, rd, agt.netMultiplexer, this);

@@ -6,9 +6,10 @@ import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
-import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
+import yokohama.baykit.bayserver.common.RudderState;
 import yokohama.baykit.bayserver.common.EOFChecker;
 import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.common.RudderStateStore;
 import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.rudder.ReadableByteChannelRudder;
 import yokohama.baykit.bayserver.tour.ContentConsumeListener;
@@ -196,11 +197,9 @@ public class CgiReqContentHandler implements ReqContentHandler, Runnable {
 
             outShip.init(outRd, tour.ship.agentId, tour, outTp, this);
 
-            mpx.addRudderState(
-                    outRd,
-                    new RudderState(
-                            outRd,
-                            outTp));
+            RudderState outRst = RudderStateStore.getStore(agt.agentId).rent();
+            outRst.init(outRd, outTp);
+            mpx.addRudderState(outRd, outRst);
 
             int sipId = outShip.shipId;
             tour.res.setConsumeListener((len, resume) -> {
@@ -213,11 +212,9 @@ public class CgiReqContentHandler implements ReqContentHandler, Runnable {
             PlainTransporter errTp = new PlainTransporter(agt.netMultiplexer, errShip, false, bufsize, false);
             errTp.init();
             errShip.init(errRd, tour.ship.agentId, this);
-            mpx.addRudderState(
-                    errRd,
-                    new RudderState(
-                            errRd,
-                            errTp));
+            RudderState errRst = RudderStateStore.getStore(agt.agentId).rent();
+            errRst.init(errRd, errTp);
+            mpx.addRudderState(errRd, errRst);
 
             mpx.reqRead(outRd);
             mpx.reqRead(errRd);

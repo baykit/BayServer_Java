@@ -3,13 +3,10 @@ package yokohama.baykit.bayserver.docker.base;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
-import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
+import yokohama.baykit.bayserver.common.*;
 import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
-import yokohama.baykit.bayserver.common.Cities;
-import yokohama.baykit.bayserver.common.InboundShip;
-import yokohama.baykit.bayserver.common.InboundShipStore;
 import yokohama.baykit.bayserver.docker.*;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
@@ -251,7 +248,8 @@ public abstract class PortBase extends DockerBase implements Port {
         ProtocolHandler protoHnd = getProtocolHandlerStore(protocol(), agentId).rent();
         sip.initInbound(rd, agentId, tp, this, protoHnd);
 
-        RudderState st = new RudderState(rd, tp);
+        RudderState st = RudderStateStore.getStore(agentId).rent();
+        st.init(rd, tp);
         agt.netMultiplexer.addRudderState(rd, st);
         agt.netMultiplexer.reqRead(rd);
     }
