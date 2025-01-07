@@ -35,6 +35,7 @@ public abstract class PortBase extends DockerBase implements Port {
     boolean anchored = true;
     ArrayList<String[]> additionalHeaders = new ArrayList<>();
     private Cities cities = new Cities();
+    private int socketBufferSize = -1;
 
     ///////////////////////////////////////////////////////////////////////
     // abstract methods
@@ -229,19 +230,20 @@ public abstract class PortBase extends DockerBase implements Port {
             tp = secureDocker.newTransporter(agentId, sip);
         }
         else {
-            int size;
-            try {
-                size = ((NetworkChannelRudder)rd).getSocketReceiveBufferSize();
-            }
-            catch(IOException e) {
-                size = 8192;
+            if(socketBufferSize < 0) {
+                try {
+                    socketBufferSize = ((NetworkChannelRudder)rd).getSocketReceiveBufferSize();
+                }
+                catch(IOException e) {
+                    socketBufferSize = 8192;
+                }
             }
 
             tp = new PlainTransporter(
                     agt.netMultiplexer,
                     sip,
                     true,
-                    size,
+                    socketBufferSize,
                     false);
             tp.init();
         }
