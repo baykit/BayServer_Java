@@ -7,7 +7,6 @@ import yokohama.baykit.bayserver.agent.LifecycleListener;
 import yokohama.baykit.bayserver.util.StringUtil;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -21,12 +20,15 @@ public class TourStore {
 
         @Override
         public void add(int agentId) {
-            stores.put(agentId, new TourStore());
+            while(stores.size() < agentId) {
+                stores.add(null);
+            }
+            stores.set(agentId-1, new TourStore());
         }
 
         @Override
         public void remove(int agentId) {
-            stores.remove(agentId);
+            stores.set(agentId-1, null);
         }
     }
 
@@ -36,8 +38,8 @@ public class TourStore {
     Map<Long, Tour> activeTourMap = new ConcurrentHashMap<>();
     public static int maxCount;
 
-    /** Agent ID => TourStore */
-    static Map<Integer, TourStore> stores = new HashMap<>();
+    /** stores[agent_id - 1] => TourStore */
+    static ArrayList<TourStore> stores = new ArrayList<>();
 
     public synchronized Tour get(long key) {
         return activeTourMap.get(key);
@@ -94,6 +96,6 @@ public class TourStore {
     }
 
     public static TourStore getStore(int agentId) {
-        return stores.get(agentId);
+        return stores.get(agentId-1);
     }
 }
