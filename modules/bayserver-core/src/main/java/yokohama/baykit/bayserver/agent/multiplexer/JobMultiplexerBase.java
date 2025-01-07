@@ -5,7 +5,9 @@ import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.TimerHandler;
 import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.util.Pair;
 
 import java.io.IOException;
 import java.nio.channels.Pipe;
@@ -53,8 +55,8 @@ public abstract class JobMultiplexerBase extends MultiplexerBase implements Time
             return;
 
         if(anchorable) {
-            for (Rudder rd : BayServer.anchorablePortMap.keySet()) {
-                reqAccept(rd);
+            for (Pair<Rudder, Port> pair : BayServer.anchorablePorts) {
+                reqAccept(pair.a);
             }
         }
     }
