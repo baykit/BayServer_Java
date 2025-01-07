@@ -7,11 +7,13 @@ import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.TimerHandler;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.common.Recipient;
+import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.rudder.DatagramChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.rudder.SocketChannelRudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
+import yokohama.baykit.bayserver.util.Pair;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -219,8 +221,8 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
     @Override
     public synchronized void onBusy() {
         BayLog.debug("%s onBusy", agent);
-        for(Rudder rd: BayServer.anchorablePortMap.keySet()) {
-            SelectionKey key = ((ServerSocketChannel)ChannelRudder.getChannel(rd)).keyFor(selector);
+        for(Pair<Rudder, Port> pair: BayServer.anchorablePorts) {
+            SelectionKey key = ((ServerSocketChannel)ChannelRudder.getChannel(pair.a)).keyFor(selector);
             if(key != null)
                 key.cancel();
         }
@@ -232,9 +234,9 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         if(agent.aborted)
             return;
 
-        for(Rudder rd: BayServer.anchorablePortMap.keySet()) {
+        for(Pair<Rudder, Port> pair: BayServer.anchorablePorts) {
             try {
-                ((ServerSocketChannel)ChannelRudder.getChannel(rd)).register(selector, SelectionKey.OP_ACCEPT);
+                ((ServerSocketChannel)ChannelRudder.getChannel(pair.a)).register(selector, SelectionKey.OP_ACCEPT);
             }
             catch(ClosedChannelException e) {
                 BayLog.error(e);

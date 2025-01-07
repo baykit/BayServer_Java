@@ -162,7 +162,7 @@ public class GrandAgentMonitor extends Thread {
     {
         GrandAgentMonitor.numAgents = numAgents;
 
-        if(!BayServer.unanchorablePortMap.isEmpty()) {
+        if(!BayServer.unanchorablePorts.isEmpty()) {
             add(false);
             GrandAgentMonitor.numAgents++;
         }
