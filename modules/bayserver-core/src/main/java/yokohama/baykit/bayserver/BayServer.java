@@ -70,9 +70,9 @@ public class BayServer {
     /** BayAgent */
     public static SignalAgent signalAgent;
 
-    public static final Map<NetworkChannelRudder, Port> anchorablePortMap = new HashMap<>();
+    public static final ArrayList<Pair<Rudder, Port>> anchorablePorts = new ArrayList<>();
 
-    public static final Map<NetworkChannelRudder, Port> unanchorablePortMap = new HashMap<>();
+    public static final ArrayList<Pair<Rudder, Port>> unanchorablePorts = new ArrayList<>();
 
     /**
      * Date format for debug
@@ -260,11 +260,11 @@ public class BayServer {
                 try {
                     if(ch != null) {
                         ch.bind(adr);
-                        anchorablePortMap.put(new ServerSocketChannelRudder(ch), portDkr);
+                        anchorablePorts.add(new Pair<>(new ServerSocketChannelRudder(ch), portDkr));
                     }
                     else {
                         ach.bind(adr);
-                        anchorablePortMap.put(new AsynchronousServerSocketChannelRudder(ach), portDkr);
+                        anchorablePorts.add(new Pair<>(new AsynchronousServerSocketChannelRudder(ach), portDkr));
                     }
                 } catch (SocketException e) {
                     BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
@@ -280,7 +280,7 @@ public class BayServer {
                     BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
                     return;
                 }
-                unanchorablePortMap.put(new DatagramChannelRudder(ch), portDkr);
+                unanchorablePorts.add(new Pair<>(new DatagramChannelRudder(ch), portDkr));
             }
         }
 
@@ -321,6 +321,18 @@ public class BayServer {
             return bservHome + File.separator + location;
         else
             return location;
+    }
+
+    /**
+     * Finds port docker from server socket rudder
+     */
+    public static Port findAnchorablePort(Rudder rd) {
+        for(Pair<Rudder, Port> pair: anchorablePorts) {
+            if(pair.a == rd) {
+                return pair.b;
+            }
+        }
+        return null;
     }
 
 
