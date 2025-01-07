@@ -24,8 +24,13 @@ public class HttpStatus {
 
     static boolean initialized = false;
     static HashMap<Integer, String> status = new HashMap<>();
+    static String descOk;
 
     public static String description(int statusCode) {
+
+        if(statusCode == OK)
+            return descOk; // For performance reasons, hash table lookups will be avoided.
+
         String desc = status.get(statusCode);
         if (desc == null) {
             BayLog.error("Status " + statusCode + " is invalid.");
@@ -48,6 +53,7 @@ public class HttpStatus {
                 status.put(Integer.parseInt(kv.key), kv.value);
             }
         }
+        descOk = status.get(OK);
         initialized = true;
     }
 }
