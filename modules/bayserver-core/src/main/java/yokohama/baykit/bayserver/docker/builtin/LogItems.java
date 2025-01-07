@@ -4,7 +4,6 @@ import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.RoughTime;
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
 
 abstract class LogItems {
 
