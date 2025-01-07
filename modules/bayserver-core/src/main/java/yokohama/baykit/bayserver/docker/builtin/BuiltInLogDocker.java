@@ -47,6 +47,16 @@ public class BuiltInLogDocker extends DockerBase implements Log {
                         mpx = agt.taxiMultiplexer;
                         break;
                     }
+                    case Pigeon: {
+                        AsynchronousFileChannel ch =
+                                AsynchronousFileChannel.open(
+                                        Paths.get(fileName),
+                                        StandardOpenOption.CREATE,
+                                        StandardOpenOption.WRITE);
+                        rd = new AsynchronousFileChannelRudder(ch);
+                        mpx = agt.pegionMultiplexer;
+                        break;
+                    }
                     case Spin: {
                         AsynchronousFileChannel ch =
                                 AsynchronousFileChannel.open(
