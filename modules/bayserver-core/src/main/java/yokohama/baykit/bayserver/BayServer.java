@@ -204,6 +204,7 @@ public class BayServer {
 
             /** Init stores, memory usage managers */
             PacketStore.init();
+            RudderStateStore.init();
             InboundShipStore.init();
             ProtocolHandlerStore.init();
             TourStore.init(TourStore.MAX_TOURS);

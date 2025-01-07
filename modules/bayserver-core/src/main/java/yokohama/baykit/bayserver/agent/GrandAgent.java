@@ -5,6 +5,8 @@ import yokohama.baykit.bayserver.agent.letter.*;
 import yokohama.baykit.bayserver.agent.multiplexer.*;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.common.Recipient;
+import yokohama.baykit.bayserver.common.RudderState;
+import yokohama.baykit.bayserver.common.RudderStateStore;
 import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.docker.base.PortBase;
@@ -129,7 +131,9 @@ public class GrandAgent extends Thread {
                             BayLog.fatal(e);
                         }
                     }
-                    netMultiplexer.addRudderState(pair.a, new RudderState(pair.a));
+                    RudderState st = RudderStateStore.getStore(agentId).rent();
+                    st.init(pair.a);
+                    netMultiplexer.addRudderState(pair.a, st);
                 }
             }
             else {
@@ -249,7 +253,9 @@ public class GrandAgent extends Thread {
         commandReceiver = new CommandReceiver();
         Transporter comTransporter = new PlainTransporter(netMultiplexer, commandReceiver, true, 8, false);
         commandReceiver.init(agentId, rd, comTransporter);
-        netMultiplexer.addRudderState(commandReceiver.rudder, new RudderState(commandReceiver.rudder, comTransporter));
+        RudderState st = RudderStateStore.getStore(agentId).rent();
+        st.init(commandReceiver.rudder, comTransporter);
+        netMultiplexer.addRudderState(commandReceiver.rudder, st);
     }
 
     public void sendAcceptedLetter(RudderState st, Rudder clientRd, boolean wakeup) {
@@ -505,6 +511,8 @@ public class GrandAgent extends Thread {
 
         if (st.transporter != null)
             st.transporter.onClosed(st.rudder);
+
+        RudderStateStore.getStore(agentId).Return(st);
 
         st.closed = true;
         st.access();

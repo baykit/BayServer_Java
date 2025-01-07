@@ -3,10 +3,11 @@ package yokohama.baykit.bayserver.docker.builtin;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
-import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.common.RudderState;
+import yokohama.baykit.bayserver.common.RudderStateStore;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Log;
 import yokohama.baykit.bayserver.docker.base.DockerBase;
@@ -30,19 +31,28 @@ import java.util.HashMap;
 
 public class BuiltInLogDocker extends DockerBase implements Log {
 
+    class LoggerInfo {
+        String fileName;
+        long fileSize;
+        Rudder rudder;
+        Multiplexer multiplexer;
+        RudderState rudderState;
+    }
+
     class AgentListener implements LifecycleListener {
 
         @Override
         public void add(int agentId) {
-            String fileName = filePrefix + "_" + agentId + "." + fileExt;
-            int size = (int)new File(fileName).length();
+            LoggerInfo info = new LoggerInfo();
+            info.fileName = filePrefix + "_" + agentId + "." + fileExt;
+            info.fileSize = new File(info.fileName).length();
             try {
                 GrandAgent agt = GrandAgent.get(agentId);
                 Multiplexer mpx;
                 Rudder rd;
                 switch(BayServer.harbor.logMultiplexer()) {
                     case Taxi: {
-                        WritableByteChannel output = new FileOutputStream(fileName).getChannel();
+                        WritableByteChannel output = new FileOutputStream(info.fileName).getChannel();
                         rd = new WritableByteChannelRudder(output);
                         mpx = agt.taxiMultiplexer;
                         break;
@@ -50,7 +60,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
                     case Pigeon: {
                         AsynchronousFileChannel ch =
                                 AsynchronousFileChannel.open(
-                                        Paths.get(fileName),
+                                        Paths.get(info.fileName),
                                         StandardOpenOption.CREATE,
                                         StandardOpenOption.WRITE);
                         rd = new AsynchronousFileChannelRudder(ch);
@@ -60,7 +70,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
                     case Spin: {
                         AsynchronousFileChannel ch =
                                 AsynchronousFileChannel.open(
-                                        Paths.get(fileName),
+                                        Paths.get(info.fileName),
                                         StandardOpenOption.CREATE,
                                         StandardOpenOption.WRITE);
                         rd = new AsynchronousFileChannelRudder(ch);
@@ -71,24 +81,26 @@ public class BuiltInLogDocker extends DockerBase implements Log {
                         throw new Sink("Not supported");
                 }
 
-                RudderState st = new RudderState(rd);
-                st.bytesWrote = size;
-                mpx.addRudderState(rd, st);
-                multiplexers.add(mpx);
-                rudders.add(rd);
+                info.multiplexer = mpx;
+                info.rudder = rd;
+
+                while(loggers.size() < agentId) {
+                    loggers.add(null);
+                }
+                loggers.set(agentId-1, info);
             }
             catch(IOException e) {
-                BayLog.fatal(BayMessage.get(Symbol.INT_CANNOT_OPEN_LOG_FILE, fileName));
+                BayLog.fatal(BayMessage.get(Symbol.INT_CANNOT_OPEN_LOG_FILE, info.fileName));
                 BayLog.fatal(e);
             }
         }
 
         @Override
         public void remove(int agentId) {
-            Rudder rd = rudders.get(agentId - 1);
-            multiplexers.get(agentId - 1).reqClose(rd);
-            multiplexers.set(agentId - 1, null);
-            rudders.set(agentId - 1, null);
+            LoggerInfo info = loggers.get(agentId-1);
+            Rudder rd = info.rudder;
+            info.multiplexer.reqClose(rd);
+            loggers.set(agentId - 1, null);
         }
     }
 
@@ -106,10 +118,9 @@ public class BuiltInLogDocker extends DockerBase implements Log {
     /** Log items */
     LogItem[] logItems;
 
-    ArrayList<Rudder> rudders = new ArrayList<>();
-
     /** Multiplexer to write to file */
-    ArrayList<Multiplexer> multiplexers = new ArrayList<>();
+    ArrayList<LoggerInfo> loggers = new ArrayList<>();
+
 
     static {
         // Create mapping table
@@ -213,10 +224,16 @@ public class BuiltInLogDocker extends DockerBase implements Log {
 
         // If threre are message to write, write it
         if (sb.length() > 0) {
+            LoggerInfo info = loggers.get(tour.ship.agentId-1);
+            if(info.rudderState == null) {
+                info.rudderState = RudderStateStore.getStore(tour.ship.agentId).rent();
+                info.rudderState.init(info.rudder);
+                info.rudderState.bytesWrote = (int)info.fileSize;
+                info.multiplexer.addRudderState(info.rudder, info.rudderState);
+            }
             byte[] bytes = StringUtil.toBytes(sb.toString() + CharUtil.LF);
             ByteBuffer buf = ByteBuffer.wrap(bytes, 0, bytes.length);
-            multiplexers.get(tour.ship.agentId - 1).reqWrite(
-                    rudders.get(tour.ship.agentId - 1), buf, null, "log", null);
+            info.multiplexer.reqWrite(info.rudder, buf, null, "log", null);
         }
     }
 
