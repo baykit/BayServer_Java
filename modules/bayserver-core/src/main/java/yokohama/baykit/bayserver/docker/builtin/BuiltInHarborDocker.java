@@ -27,8 +27,8 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     public static final String DEFAULT_CHARSET = "UTF-8";
     public static final int DEFAULT_CONTROL_PORT = -1;
     public static final MultiPlexerType DEFAULT_NET_MULTIPLEXER = MultiPlexerType.Spider;
-    public static final MultiPlexerType DEFAULT_FILE_MULTIPLEXER = MultiPlexerType.Taxi;
-    public static final MultiPlexerType DEFAULT_LOG_MULTIPLEXER = MultiPlexerType.Taxi;
+    public static final MultiPlexerType DEFAULT_FILE_MULTIPLEXER = MultiPlexerType.Pigeon;
+    public static final MultiPlexerType DEFAULT_LOG_MULTIPLEXER = MultiPlexerType.Pigeon;
     public static final MultiPlexerType DEFAULT_CGI_MULTIPLEXER = MultiPlexerType.Taxi;
     public static final RecipientType DEFAULT_RECIPIENT = RecipientType.Spider;
     public static final boolean DEFAULT_MULTI_CORE = true;
