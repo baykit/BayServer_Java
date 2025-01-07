@@ -8,8 +8,8 @@ import yokohama.baykit.bayserver.common.Recipient;
 import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.docker.base.PortBase;
-import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.util.Pair;
 import yokohama.baykit.bayserver.util.RoughTime;
 
 import java.io.IOException;
@@ -120,31 +120,30 @@ public class GrandAgent extends Thread {
 
             if(anchorable) {
                 // Adds server socket channel of anchorable ports
-                for(NetworkChannelRudder rd: BayServer.anchorablePortMap.keySet()) {
+                for(Pair<Rudder, Port> pair: BayServer.anchorablePorts) {
                     if(netMultiplexer.isNonBlocking()) {
                         try {
-                            rd.setNonBlocking();
+                            pair.a.setNonBlocking();
                         }
                         catch(IOException e) {
                             BayLog.fatal(e);
                         }
                     }
-                    netMultiplexer.addRudderState(rd, new RudderState(rd));
+                    netMultiplexer.addRudderState(pair.a, new RudderState(pair.a));
                 }
             }
             else {
                 // Adds server socket  up unanchorable ports
-                for (NetworkChannelRudder rd : BayServer.unanchorablePortMap.keySet()) {
+                for(Pair<Rudder, Port> pair: BayServer.unanchorablePorts) {
                     if(netMultiplexer.isNonBlocking()) {
                         try {
-                            rd.setNonBlocking();
+                            pair.a.setNonBlocking();
                         }
                         catch(IOException e) {
                             BayLog.fatal(e);
                         }
                     }
-                    Port p = BayServer.unanchorablePortMap.get(rd);
-                    p.onConnected(agentId, rd);
+                    pair.b.onConnected(agentId, pair.a);
                 }
             }
 
@@ -310,9 +309,9 @@ public class GrandAgent extends Thread {
     }
 
     void reloadCert() {
-        for(Port port : BayServer.anchorablePortMap.values()) {
-            if(port.secure()) {
-                PortBase pbase = (PortBase)port;
+        for(Pair<Rudder, Port> pair : BayServer.anchorablePorts) {
+            if(pair.b.secure()) {
+                PortBase pbase = (PortBase)pair.b;
                 try {
                     pbase.secureDocker.reloadCert();
                 } catch (Exception e) {
@@ -371,7 +370,7 @@ public class GrandAgent extends Thread {
 
         RudderState st = let.state;
         try {
-            Port p = BayServer.anchorablePortMap.get(st.rudder);
+            Port p = BayServer.findAnchorablePort(st.rudder);
             p.onConnected(agentId, let.clientRudder);
         }
         catch (HttpException e) {
