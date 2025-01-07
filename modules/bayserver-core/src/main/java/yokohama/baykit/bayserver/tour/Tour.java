@@ -74,7 +74,7 @@ public class Tour implements Reusable {
         res.init();
 
         changeState(Tour.TOUR_ID_NOCHECK, TourState.PREPARING);
-        BayLog.debug(this + " initialized");
+        BayLog.debug("%s initialized", this);
     }
 
     public void reset() {
