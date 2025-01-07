@@ -168,6 +168,7 @@ public class BayServer {
      */
     public static void start() {
         try {
+            RoughTime.init();
             BayMessage.init("/conf/messages", Locale.getDefault());
             BayDockers.init("/conf/dockers.bcf");
             Mimes.init("/conf/mimes.bcf");

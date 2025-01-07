@@ -2,6 +2,7 @@ package yokohama.baykit.bayserver.docker.servlet;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.docker.servlet.duck.HttpSessionDuck;
+import yokohama.baykit.bayserver.util.RoughTime;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -26,7 +27,7 @@ public class SessionStore {
             if (sid != null) {
                 HttpSessionDuck ses = sessions.get(sid);
                 if (ses != null && ses.isValid()) {
-                    long cur = System.currentTimeMillis();
+                    long cur = RoughTime.currentTimeMillis();
                     if (cur > ses.getLastAccessedTime() + sessionLifeTime * 1000) {
                         ses.invalidate();
                     } else {
