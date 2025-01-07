@@ -143,9 +143,6 @@ public class AjpWarpHandler implements WarpHandler, AjpHandler {
         if(cmd.reuse)
             return NextSocketAction.Continue;
         else {
-            // Ensure the callback is not invoked when the connection is disconnected, and this instance becomes invalid.
-            tur.res.detachConsumeListener();
-
             return NextSocketAction.Close;
         }
     }
