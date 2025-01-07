@@ -172,10 +172,6 @@ public class TourRes implements Reusable {
         this.available = true;
     }
 
-    public void detachConsumeListener() {
-        this.resConsumeListener = null;
-    }
-
     /**
      * This method sends a part of the response content to the client.
      * Whether this process is synchronous or asynchronous is uncertain
@@ -448,6 +444,8 @@ public class TourRes implements Reusable {
      */
     private synchronized void consumed(int checkId, int length) {
         tour.checkTourId(checkId);
+        if(resConsumeListener == null)
+            throw new Sink("Consume listener is null");
 
         bytesConsumed += length;
         BayLog.debug("%s resConsumed: len=%d posted=%d consumed=%d limit=%d",
@@ -462,11 +460,8 @@ public class TourRes implements Reusable {
             resume = true;
         }
 
-        if(!tour.isZombie()) {
-            if(resConsumeListener == null)
-                BayLog.debug("Consume listener is null, so can not invoke callback");
-            else
-                resConsumeListener.contentConsumed(length, resume);
+        if(tour.isRunning()) {
+            resConsumeListener.contentConsumed(length, resume);
         }
     }
 
