@@ -8,6 +8,7 @@ import yokohama.baykit.bayserver.rudder.AsynchronousFileChannelRudder;
 import yokohama.baykit.bayserver.rudder.InputStreamRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
+import yokohama.baykit.bayserver.util.RoughTime;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,7 +34,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
         }
 
         void access() {
-            lastAccess = System.currentTimeMillis();
+            lastAccess = RoughTime.currentTimeMillis();
         }
     }
 
@@ -266,7 +267,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
 
         ArrayList<Object> removeList = new ArrayList<>();;
         synchronized (rudders) {
-            long now = System.currentTimeMillis();
+            long now = RoughTime.currentTimeMillis();
             for (Object key: rudders.keySet()) {
                 RudderState st = rudders.get(key);
                 if (st.transporter != null && st.transporter.checkTimeout(st.rudder, (int) (now - st.lastAccessTime) / 1000)) {

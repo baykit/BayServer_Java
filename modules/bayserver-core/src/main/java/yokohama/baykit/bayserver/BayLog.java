@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver;
 
-import java.util.Date;
+import yokohama.baykit.bayserver.util.RoughTime;
+
 import java.util.IllegalFormatException;
 
 public class BayLog {
@@ -94,7 +95,7 @@ public class BayLog {
         if(lvl >= logLevel) {
             synchronized (BayServer.class) {
                 StackTraceElement caller = Thread.currentThread().getStackTrace()[stackIdx];
-                System.err.print("[" + new Date() + "] ");
+                System.err.print("[" + RoughTime.currentDate() + "] ");
                 System.err.print(LOG_LEVEL_NAME[lvl]);
                 System.err.print(". ");
                 String msg = "";
