@@ -25,7 +25,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
     }
 
     public String toString() {
-        return "PigeonMpx[" + agent + "]";
+        return "PgnMpx[" + agent + "]";
     }
 
     ////////////////////////////////////////////
@@ -87,7 +87,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
             throw new NullPointerException();
 
         RudderState state = getRudderState(rd);
-        BayLog.debug("%s reqRead rd=%s state=%s", agent, rd, state);
+        BayLog.debug("%s reqRead rd=%s state=%s", this, rd, state);
         if(state == null)
             return;
 
@@ -115,7 +115,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
             throw new NullPointerException();
 
         RudderState state = getRudderState(rd);
-        BayLog.debug("%s reqWrite tag=%s state=%s len=%d", agent, tag, state, buf.remaining());
+        BayLog.debug("%s reqWrite tag=%s state=%s len=%d", this, tag, state, buf.remaining());
         if(state == null || state.closed) {
             throw new IOException("Invalid rudder");
         }
@@ -286,7 +286,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
 
     private void nextNetworkRead(RudderState state) {
         AsynchronousSocketChannel ch = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(state.rudder);
-        BayLog.debug("%s Try to Read (rd=%s) (buf=%s) timeout=%d", agent, state.rudder, state.readBuf, state.timeoutSec);
+        BayLog.debug("%s Try to Read (rd=%s) (buf=%s) timeout=%d", this, state.rudder, state.readBuf, state.timeoutSec);
         state.readBuf.clear();
         if(state.timeoutSec > 0) {
             ch.read(
