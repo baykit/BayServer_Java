@@ -509,21 +509,29 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
             if(st.writeQueue.isEmpty())
                 throw new IOException(agent + " No data to write");
 
-            WriteUnit wUnit = st.writeQueue.get(0);
+            int i;
+            for(i = 0; i < st.writeQueue.size(); i++) {
+                WriteUnit wUnit = st.writeQueue.get(i);
 
-            BayLog.debug("%s Try to write: pkt=%s pos=%d len=%d closed=%b adr=%s", this, wUnit.tag, wUnit.buf.position(), wUnit.buf.limit(), st.closed, wUnit.adr);
-            //BayLog.debug(this + " " + new String(wUnit.buf.array(), 0, wUnit.buf.limit()));
+                BayLog.debug("%s Try to write: pkt=%s pos=%d len=%d closed=%b adr=%s",
+                        this, wUnit.tag, wUnit.buf.position(), wUnit.buf.remaining(), st.closed, wUnit.adr);
+                //BayLog.debug(this + " " + new String(wUnit.buf.array(), 0, wUnit.buf.limit()));
 
-            int pos = wUnit.buf.position();
-            int n;
-            if (st.rudder instanceof DatagramChannelRudder) {
-                n = DatagramChannelRudder.getDataGramChannel(st.rudder).send(wUnit.buf, wUnit.adr);
+                int remain = wUnit.buf.remaining();
+                int n;
+                if (st.rudder instanceof DatagramChannelRudder) {
+                    n = DatagramChannelRudder.getDataGramChannel(st.rudder).send(wUnit.buf, wUnit.adr);
+                }
+                else {
+                    n = st.rudder.write(wUnit.buf);
+                }
+
+                agent.sendWroteLetter(st, n, false);
+                if(n < remain) {
+                    BayLog.debug("%s Wrote %d bytes (Data remains)", this, n);
+                    break;
+                }
             }
-            else {
-                n = st.rudder.write(wUnit.buf);
-            }
-
-            agent.sendWroteLetter(st, n, false);
         }
         catch(IOException e) {
             agent.sendErrorLetter(st, e, false);
