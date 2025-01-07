@@ -101,8 +101,6 @@ public abstract class MultiplexerBase implements Multiplexer {
         catch(IOException e) {
             BayLog.error(e);
         }
-
-        BayLog.trace("%s Flush buffer", agent);
     }
 
     @Override
