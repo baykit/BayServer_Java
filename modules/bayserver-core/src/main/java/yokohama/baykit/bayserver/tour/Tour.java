@@ -120,13 +120,7 @@ public class Tour implements Reusable {
             throw new HttpException(HttpStatus.NOT_FOUND, req.uri);
         }
         else {
-            try {
-                city.enter(this);
-            }
-            catch(HttpException e) {
-                //changeState(tourId, Tour.TourState.ABORTED);
-                throw e;
-            }
+            city.enter(this);
         }
     }
 
