@@ -14,8 +14,8 @@
 [port 2020]
      docker http
 #     [permission]
-#          admit ip 127.0.0.1/255.0.0.0
-#          admit ip ::1/::ffff:ffff
+#          admit ip 127.0.0.1/32
+#          admit ip ::1/128
 #          refuse ip *
 
 [port 2024]
@@ -27,8 +27,8 @@
 [port 2025]
     docker ajp
     [permission]
-          admit ip 127.0.0.1/255.0.0.0
-          admit ip ::1/::ffff:ffff
+          admit ip 127.0.0.1/32
+          admit ip ::1/128
           refuse ip *
 
 [port 2029]
@@ -50,7 +50,7 @@
            # jasperVersion 10
             docker servlet
         #[permission]
-           #refuse ip 127.0.0.1/255.0.0.0 192.168.10.0/255.255.255.0
+           #refuse ip 127.0.0.1/32 192.168.10.0/24
            #admit host *
            #group rocker
 
@@ -76,8 +76,7 @@
         format %{Referer}i -> %U
 
 
-   # [permission]
-    #       admit ip 127.0.0.1/255.255.255.255
-           #refuse ip 127.0.0.0/255.0.0.0
+  # [permission]
+  #       admit ip 127.0.0.1/32
 
  
