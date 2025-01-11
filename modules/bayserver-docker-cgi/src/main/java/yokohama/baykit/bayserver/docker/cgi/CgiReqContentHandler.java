@@ -201,7 +201,7 @@ public class CgiReqContentHandler implements ReqContentHandler, Runnable {
                             outRd,
                             outTp));
 
-            int sipId = tour.ship.shipId;
+            int sipId = outShip.shipId;
             tour.res.setConsumeListener((len, resume) -> {
                 if(resume) {
                     outShip.resumeRead(sipId);
