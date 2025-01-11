@@ -1,5 +1,11 @@
 # BayServer for Java
 
+# 3.0.3
+
+- [Core] Modifies the default configuration file.
+- [CGI] Fixes a potential bug.
+
+
 # 3.0.2
 
 - [Core] Refactors some core classes.
