@@ -5,6 +5,7 @@ import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.util.RoughTime;
 
 import java.io.IOException;
 import java.nio.channels.AsynchronousCloseException;
@@ -129,7 +130,7 @@ public abstract class MultiplexerBase implements Multiplexer {
             copied = new HashSet<>(this.rudders.values());
         }
 
-        long now = System.currentTimeMillis();
+        long now = RoughTime.currentTimeMillis();
 
         for (RudderState st : copied) {
             if(st.transporter != null) {

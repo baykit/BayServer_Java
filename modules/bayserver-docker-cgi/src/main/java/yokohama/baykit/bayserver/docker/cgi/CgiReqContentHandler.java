@@ -17,6 +17,7 @@ import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.train.TrainRunner;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.Pair;
+import yokohama.baykit.bayserver.util.RoughTime;
 
 import java.io.IOException;
 import java.nio.channels.Channels;
@@ -247,14 +248,14 @@ public class CgiReqContentHandler implements ReqContentHandler, Runnable {
     }
 
     public void access() {
-        lastAccess = System.currentTimeMillis();
+        lastAccess = RoughTime.currentTimeMillis();
     }
 
     public boolean timedOut() {
         if(cgiDocker.timeoutSec <= 0)
             return false;
 
-        long durationSec = (System.currentTimeMillis() - lastAccess) / 1000;
+        long durationSec = (RoughTime.currentTimeMillis() - lastAccess) / 1000;
         BayLog.debug("%s Check CGI timeout: dur=%d, timeout=%d", tour, durationSec, cgiDocker.timeoutSec);
         return durationSec > cgiDocker.timeoutSec;
     }
