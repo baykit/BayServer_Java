@@ -155,7 +155,7 @@ public class TaxiMultiplexer extends MultiplexerBase {
         RudderState st = getRudderState(rd);
         st.access();
 
-        int durationSec = (int)(System.currentTimeMillis() - st.lastAccessTime) / 1000;
+        int durationSec = (int)(RoughTime.currentTimeMillis() - st.lastAccessTime) / 1000;
         if (st.transporter.checkTimeout(st.rudder, durationSec))
             closeRudder(st);
     }
