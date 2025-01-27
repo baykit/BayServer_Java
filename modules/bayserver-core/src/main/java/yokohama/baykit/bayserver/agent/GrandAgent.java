@@ -10,6 +10,7 @@ import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.docker.base.PortBase;
 import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.util.RoughTime;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -181,7 +182,7 @@ public class GrandAgent extends Thread {
                 if(spinMultiplexer.isEmpty() && letterQueue.isEmpty()) {
                     // timed out
                     // check per 10 seconds
-                    if((System.currentTimeMillis() - lastTimeoutCheck) % 1000 >= 10)
+                    if((RoughTime.currentTimeMillis() - lastTimeoutCheck) % 1000 >= 10)
                         ring();
                 }
 
@@ -244,7 +245,7 @@ public class GrandAgent extends Thread {
         for(TimerHandler th: timerHandlers) {
             th.onTimer();
         }
-        lastTimeoutCheck = System.currentTimeMillis();
+        lastTimeoutCheck = RoughTime.currentTimeMillis();
     }
 
     public void addCommandReceiver(Rudder rd) {

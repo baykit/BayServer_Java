@@ -11,10 +11,7 @@ import yokohama.baykit.bayserver.docker.fcgi.command.*;
 import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.ship.Ship;
 import yokohama.baykit.bayserver.tour.Tour;
-import yokohama.baykit.bayserver.util.CGIUtil;
-import yokohama.baykit.bayserver.util.DataConsumeListener;
-import yokohama.baykit.bayserver.util.Headers;
-import yokohama.baykit.bayserver.util.StringUtil;
+import yokohama.baykit.bayserver.util.*;
 
 import java.io.CharArrayWriter;
 import java.io.IOException;
@@ -345,7 +342,7 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
         cmd.addParam(CGIUtil.SCRIPT_FILENAME, scriptFname[0]);
 
         cmd.addParam(FcgParams.CONTEXT_PREFIX, "");
-        cmd.addParam(FcgParams.UNIQUE_ID, Long.toString(System.currentTimeMillis()));
+        cmd.addParam(FcgParams.UNIQUE_ID, Long.toString(RoughTime.currentTimeMillis()));
         //cmd.addParam(FcgParams.X_FORWARDED_FOR, tour.remoteAddress);
         //cmd.addParam(FcgParams.X_FORRARDED_PROTO, tour.isSecure ? "https" : "http");
         //cmd.addParam(FcgParams.X_FORWARDED_PORT, Integer.toString(tour.serverPort));

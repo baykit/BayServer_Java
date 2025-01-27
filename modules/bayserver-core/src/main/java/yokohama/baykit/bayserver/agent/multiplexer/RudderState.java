@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.agent.multiplexer;
 import yokohama.baykit.bayserver.common.EOFChecker;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.util.RoughTime;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -52,7 +53,7 @@ public class RudderState {
     }
 
     public void access() {
-        lastAccessTime = System.currentTimeMillis();
+        lastAccessTime = RoughTime.currentTimeMillis();
     }
 
     void end() {

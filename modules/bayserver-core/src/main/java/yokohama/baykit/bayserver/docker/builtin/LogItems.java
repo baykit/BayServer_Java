@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.docker.builtin;
 
 import yokohama.baykit.bayserver.tour.Tour;
+import yokohama.baykit.bayserver.util.RoughTime;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -263,7 +264,7 @@ abstract class LogItems {
         }
 
         String getItem(Tour tour) {
-            return formatter.format(new Date());
+            return formatter.format(RoughTime.currentDate());
         }
     }
 
