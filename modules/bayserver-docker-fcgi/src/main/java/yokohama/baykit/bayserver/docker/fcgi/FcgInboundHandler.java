@@ -129,8 +129,9 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
         // Send end request command
         cmd = new CmdEndRequest(tur.req.key);
         Runnable ensureFunc = () -> {
-            if(!keepAlive)
-                ship().postClose();
+            // DO NOT close socket by FCGI server
+            //if(!keepAlive)
+            //    ship().postClose();
         };
 
         try {
