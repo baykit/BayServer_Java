@@ -12,15 +12,6 @@ public class ServerSocketChannelRudder extends NetworkChannelRudder {
 
 
     ////////////////////////////////////////////
-    // Implements Rudder
-    ////////////////////////////////////////////
-
-    @Override
-    public void setNonBlocking() throws IOException {
-        ((ServerSocketChannel)channel).configureBlocking(false);
-    }
-
-    ////////////////////////////////////////////
     // Implements ChannelRudder
     ////////////////////////////////////////////
 

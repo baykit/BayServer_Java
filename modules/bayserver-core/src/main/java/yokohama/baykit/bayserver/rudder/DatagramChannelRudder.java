@@ -16,11 +16,6 @@ public class DatagramChannelRudder extends NetworkChannelRudder {
     ////////////////////////////////////////////
 
     @Override
-    public void setNonBlocking() throws IOException {
-        ((DatagramChannel)channel).configureBlocking(false);
-    }
-
-    @Override
     public int read(ByteBuffer buf) throws IOException {
         throw new IOException("Not supported");
     }

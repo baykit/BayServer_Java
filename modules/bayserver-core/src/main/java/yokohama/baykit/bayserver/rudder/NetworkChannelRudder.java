@@ -3,11 +3,12 @@ package yokohama.baykit.bayserver.rudder;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.channels.NetworkChannel;
+import java.nio.channels.SelectableChannel;
 
-public abstract class NetworkChannelRudder extends ChannelRudder {
+public abstract class NetworkChannelRudder extends SelectableChannelRudder {
 
     public NetworkChannelRudder(NetworkChannel ch) {
-        super(ch);
+        super((SelectableChannel) ch);
     }
 
     ////////////////////////////////////////////

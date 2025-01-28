@@ -11,15 +11,6 @@ public class AsynchronousServerSocketChannelRudder extends NetworkChannelRudder 
     }
 
     ////////////////////////////////////////////
-    // Implements Rudder
-    ////////////////////////////////////////////
-
-    @Override
-    public void setNonBlocking() throws IOException {
-
-    }
-
-    ////////////////////////////////////////////
     // Implements NetChannelRudder
     ////////////////////////////////////////////
 
