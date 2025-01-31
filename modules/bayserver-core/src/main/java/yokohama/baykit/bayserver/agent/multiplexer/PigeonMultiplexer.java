@@ -49,12 +49,12 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
                         @Override
                         public void completed(AsynchronousSocketChannel clientCh, Rudder serverRd) {
                             BayLog.debug("%s Accepted: cli=%s", PigeonMultiplexer.this, clientCh);
-                            agent.sendAcceptedLetter(st, new AsynchronousSocketChannelRudder(clientCh), true);
+                            agent.sendAcceptedLetter(rd, PigeonMultiplexer.this, new AsynchronousSocketChannelRudder(clientCh), true);
                         }
 
                         @Override
                         public void failed(Throwable e, Rudder serverRd) {
-                            agent.sendErrorLetter(st, e, true);
+                            agent.sendErrorLetter(rd, PigeonMultiplexer.this, e, true);
                         }
                     });
         }
@@ -71,12 +71,12 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
 
             @Override
             public void completed(Void result, Void attachment) {
-                agent.sendConnectedLetter(st, true);
+                agent.sendConnectedLetter(rd, PigeonMultiplexer.this, true);
             }
 
             @Override
             public void failed(Throwable e, Void attachment) {
-                agent.sendErrorLetter(st, e, true);
+                agent.sendErrorLetter(rd, PigeonMultiplexer.this, e, true);
             }
         });
     }
@@ -116,7 +116,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
 
         RudderState state = getRudderState(rd);
         BayLog.debug("%s reqWrite tag=%s state=%s len=%d", this, tag, state, buf.remaining());
-        if(state == null || state.closed) {
+        if(state == null) {
             throw new IOException("Invalid rudder");
         }
         WriteUnit unt = new WriteUnit(buf, adr, tag, listener);
@@ -155,12 +155,17 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
     @Override
     public void reqClose(Rudder rd) {
         RudderState st = findRudderStateByKey(ChannelRudder.getChannel(rd));
-        if(st == null || st.closed) {
+        if(st == null) {
             BayLog.debug("%s Rudder is closed: %s", this, rd);
             return;
         }
         else {
-            agent.sendClosedLetter(st, true);
+            try {
+                rd.close();
+            } catch (IOException e) {
+                BayLog.error(e);
+            }
+            agent.sendClosedLetter(rd, this, true);
         }
     }
 
@@ -225,12 +230,12 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
         public void completed(Integer n, Rudder rd) {
             BayLog.debug("%s read completed: rd=%s buf=%s", PigeonMultiplexer.this, rd, state.readBuf);
             state.readBuf.flip();
-            agent.sendReadLetter(state, n, null, true);
+            agent.sendReadLetter(rd, PigeonMultiplexer.this, n, null, true);
         }
 
         @Override
         public void failed(Throwable e, Rudder rd) {
-            agent.sendErrorLetter(state, e, true);
+            agent.sendErrorLetter(rd, PigeonMultiplexer.this, e, true);
         }
 
     }
@@ -244,12 +249,12 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
 
         @Override
         public void completed(Integer n, Rudder rd) {
-            agent.sendWroteLetter(state, n, true);
+            agent.sendWroteLetter(rd, PigeonMultiplexer.this, n, true);
         }
 
         @Override
         public void failed(Throwable e, Rudder rd) {
-            agent.sendErrorLetter(state, e, true);
+            agent.sendErrorLetter(rd, PigeonMultiplexer.this, e, true);
         }
     }
 
@@ -267,10 +272,10 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
 
     private void nextFileWrite(RudderState st) {
         WriteUnit unit = st.writeQueue.get(0);
-        BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b", this, unit.tag, unit.buf.limit(), st.closed);
+        BayLog.debug("%s Try to write: pkt=%s buflen=%d", this, unit.tag, unit.buf.limit());
         //BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
 
-        if(!st.closed && unit.buf.limit() > 0) {
+        if(unit.buf.limit() > 0) {
             AsynchronousFileChannel ch = (AsynchronousFileChannel)ChannelRudder.getChannel(st.rudder);
             ch.write(
                     unit.buf,
@@ -306,10 +311,10 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
 
     private void nextNetworkWrite(RudderState st) {
         WriteUnit unit = st.writeQueue.get(0);
-        BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b rd=%s timeout=%d", this, unit.tag, unit.buf.limit(), st.closed, st.rudder, st.timeoutSec);
+        BayLog.debug("%s Try to write: pkt=%s buflen=%d rd=%s timeout=%d", this, unit.tag, unit.buf.limit(), st.rudder, st.timeoutSec);
        // BayLog.debug("Data: %s", new String(unit.buf.array(), unit.buf.position(), unit.buf.limit() - unit.buf.position()));
 
-        if(!st.closed && unit.buf.limit() > 0) {
+        if(unit.buf.limit() > 0) {
             AsynchronousSocketChannel ch = AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(st.rudder);
             ch.write(
                     unit.buf,

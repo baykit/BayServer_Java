@@ -2,6 +2,7 @@ package yokohama.baykit.bayserver;
 
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
+import yokohama.baykit.bayserver.common.RudderStateStore;
 import yokohama.baykit.bayserver.docker.City;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.protocol.PacketStore;
@@ -44,6 +45,7 @@ public class MemUsage {
         InboundShipStore.getStore(agentId).printUsage(indent+1);
         ProtocolHandlerStore.getStores(agentId).forEach(store -> store.printUsage(indent+1));
         PacketStore.getStores(agentId).forEach(store -> store.printUsage(indent+1));
+        RudderStateStore.getStore(agentId).printUsage(indent+1);
         TourStore.getStore(agentId).printUsage(indent+1);
         BayServer.cities.cities().forEach(city -> printCityUsage(null, city, indent));
         BayServer.ports.forEach(port -> {

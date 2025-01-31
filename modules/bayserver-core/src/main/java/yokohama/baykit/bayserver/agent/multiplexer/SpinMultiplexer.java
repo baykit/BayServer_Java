@@ -121,7 +121,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
         RudderState st = getRudderState(rd);
         st.closing = true;
         closeRudder(rd);
-        agent.sendClosedLetter(st, false);
+        agent.sendClosedLetter(rd, this, false);
     }
 
     @Override
@@ -309,10 +309,10 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
                 }
 
                 state.readBuf.flip();
-                agent.sendReadLetter(state, len, null, false);
+                agent.sendReadLetter(state.rudder, SpinMultiplexer.this, len, null, false);
 
             } catch (Exception e) {
-                agent.sendErrorLetter(state, e, false);
+                agent.sendErrorLetter(state.rudder, SpinMultiplexer.this, e, false);
             }
 
             return false;
@@ -343,10 +343,10 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
             try {
                 int len = curFuture.get();
                 BayLog.debug("%s wrote %d bytes", SpinMultiplexer.this, len);
-                agent.sendWroteLetter(state, len, false);
+                agent.sendWroteLetter(state.rudder, SpinMultiplexer.this, len, false);
             }
             catch (Exception e) {
-                agent.sendErrorLetter(state, e, false);
+                agent.sendErrorLetter(state.rudder, SpinMultiplexer.this, e, false);
             }
 
             return false;
@@ -400,10 +400,10 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
                     }
                 }
 
-                agent.sendReadLetter(state, len, null, false);
+                agent.sendReadLetter(state.rudder, SpinMultiplexer.this, len, null, false);
 
             } catch (Exception e) {
-                agent.sendErrorLetter(state, e, false);
+                agent.sendErrorLetter(state.rudder, SpinMultiplexer.this, e, false);
             }
 
             return false;
