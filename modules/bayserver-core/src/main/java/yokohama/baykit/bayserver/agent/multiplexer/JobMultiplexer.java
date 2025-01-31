@@ -54,7 +54,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
                 try {
                     ch = sch.accept();
                 } catch (IOException e) {
-                    agent.sendErrorLetter(st, e, true);
+                    agent.sendErrorLetter(rd, this, e, true);
                     return;
                 }
 
@@ -68,7 +68,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
                     }
                 }
                 else {
-                    agent.sendAcceptedLetter(st, new SocketChannelRudder(ch), true);
+                    agent.sendAcceptedLetter(rd, this, new SocketChannelRudder(ch), true);
                 }
 
             } catch(Throwable e) {
@@ -86,7 +86,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
         new Thread(() -> {
 
             RudderState st = getRudderState(rd);
-            if (st == null || st.closed) {
+            if (st == null) {
                 // channel is already closed
                 BayLog.debug("%s Rudder is already closed: rd=%s", agent, rd);
                 return;
@@ -96,11 +96,11 @@ public class JobMultiplexer extends JobMultiplexerBase {
                 SocketChannel ch = (SocketChannel)ChannelRudder.getChannel(rd);
                 ch.connect(addr);
             } catch (IOException e) {
-                agent.sendErrorLetter(st, e, true);
+                agent.sendErrorLetter(rd, this, e, true);
                 return;
             }
 
-            agent.sendConnectedLetter(st, true);
+            agent.sendConnectedLetter(rd, this, true);
 
         }).start();
 
@@ -117,7 +117,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
         if(st == null)
             return;
 
-        BayLog.debug("%s reqRead rd=%s state=%s", agent, st.rudder, st);
+        BayLog.debug("%s reqRead rd=%s state=%s reading=%b", agent, st.rudder, st, st.reading);
         boolean needRead = false;
         synchronized (st.reading) {
             if (!st.reading[0]) {
@@ -139,7 +139,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
 
         RudderState state = getRudderState(rd);
         BayLog.debug("%s reqWrite chState=%s tag=%s len=%d", agent, state, tag, buf.remaining());
-        if(state == null || state.closed) {
+        if(state == null) {
             throw new IOException("Invalid rudder");
         }
         WriteUnit unt = new WriteUnit(buf, adr, tag, listener);
@@ -195,7 +195,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
                 }
 
                 closeRudder(rd);
-                agent.sendClosedLetter(st, true);
+                agent.sendClosedLetter(rd, this, true);
             } catch(Throwable e) {
                 BayLog.fatal(e);
                 agent.shutdown();
@@ -224,12 +224,6 @@ public class JobMultiplexer extends JobMultiplexerBase {
     public void nextRead(RudderState st) {
 
         new Thread(() -> {
-            if (st.closed) {
-                // channel is already closed
-                BayLog.debug("%s Rudder is already closed: rd=%s", agent, st.rudder);
-                return;
-            }
-
             int n;
             InetSocketAddress sender = null;
             try {
@@ -252,15 +246,21 @@ public class JobMultiplexer extends JobMultiplexerBase {
                     if (n > 0)
                         st.readBuf.flip();
                 }
+
+                if(getRudderState(st.rudder) == null) {
+                    BayLog.debug("%s Rudder is already closed: %s", this, st.rudder);
+                }
+                else {
+                    agent.sendReadLetter(st.rudder, this, n, sender, true);
+                }
+
             } catch (AsynchronousCloseException e) {
                 BayLog.debug("%s Closed by another thread: %s (%s)", this, st.rudder, e);
-                return; // Do not do next action
+                // Do not do next action
             } catch (IOException e) {
-                agent.sendErrorLetter(st, e, true);
-                return;
+                agent.sendErrorLetter(st.rudder, this, e, true);
             }
 
-            agent.sendReadLetter(st, n, sender, true);
         }).start();
     }
 
@@ -268,18 +268,18 @@ public class JobMultiplexer extends JobMultiplexerBase {
     public void nextWrite(RudderState st) {
 
         new Thread(() -> {
-            if (st == null || st.closed) {
+            if (st == null) {
                 // channel is already closed
                 BayLog.debug("%s Rudder is already closed: rd=%s", agent, st.rudder);
                 return;
             }
 
             WriteUnit u = st.writeQueue.get(0);
-            BayLog.debug("%s Try to write: pkt=%s buflen=%d closed=%b", this, u.tag, u.buf.limit(), st.closed);
+            BayLog.debug("%s Try to write: pkt=%s buflen=%d", this, u.tag, u.buf.limit());
 
             int n = 0;
             try {
-                if(!st.closed && u.buf.limit() > 0) {
+                if(u.buf.limit() > 0) {
                     if (st.rudder instanceof DatagramChannelRudder) {
                         n = DatagramChannelRudder.getDataGramChannel(st.rudder).send(u.buf, u.adr);
                     }
@@ -288,10 +288,10 @@ public class JobMultiplexer extends JobMultiplexerBase {
                     }
                 }
             } catch (IOException e) {
-                agent.sendErrorLetter(st, e, true);
+                agent.sendErrorLetter(st.rudder, this, e, true);
                 return;
             }
-            agent.sendWroteLetter(st, n, true);
+            agent.sendWroteLetter(st.rudder, this, n, true);
 
         }).start();
 

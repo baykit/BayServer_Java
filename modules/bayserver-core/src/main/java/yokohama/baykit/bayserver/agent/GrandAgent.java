@@ -5,6 +5,8 @@ import yokohama.baykit.bayserver.agent.letter.*;
 import yokohama.baykit.bayserver.agent.multiplexer.*;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.common.Recipient;
+import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
+import yokohama.baykit.bayserver.common.RudderStateStore;
 import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.docker.base.PortBase;
@@ -129,7 +131,9 @@ public class GrandAgent extends Thread {
                             BayLog.fatal(e);
                         }
                     }
-                    netMultiplexer.addRudderState(pair.a, new RudderState(pair.a));
+                    RudderState st = RudderStateStore.getStore(agentId).rent();
+                    st.init(pair.a);
+                    netMultiplexer.addRudderState(pair.a, st);
                 }
             }
             else {
@@ -179,7 +183,7 @@ public class GrandAgent extends Thread {
                 if(spinMultiplexer.isEmpty() && letterQueue.isEmpty()) {
                     // timed out
                     // check per 10 seconds
-                    if((RoughTime.currentTimeMillis() - lastTimeoutCheck) % 1000 >= 10)
+                    if((RoughTime.currentTimeMillis() - lastTimeoutCheck) / 1000 >= 10)
                         ring();
                 }
 
@@ -190,23 +194,29 @@ public class GrandAgent extends Thread {
                         let = letterQueue.remove(0);
                     }
 
+                    RudderState st = let.multiplexer.getRudderState(let.rudder);
+                    if(st == null) {
+                        BayLog.debug("%s rudder is already returned: %s", this, let.rudder);
+                        continue;
+                    }
+
                     if(let instanceof AcceptedLetter) {
-                        onAccepted((AcceptedLetter) let);
+                        onAccepted((AcceptedLetter) let, st);
                     }
                     else if(let instanceof ConnectedLetter) {
-                        onConnected((ConnectedLetter) let);
+                        onConnected((ConnectedLetter) let, st);
                     }
                     else if(let instanceof ReadLetter) {
-                        onRead((ReadLetter) let);
+                        onRead((ReadLetter) let, st);
                     }
                     else if(let instanceof WroteLetter) {
-                        onWrote((WroteLetter) let);
+                        onWrote((WroteLetter) let, st);
                     }
                     else if(let instanceof ClosedLetter) {
-                        onClosed((ClosedLetter) let);
+                        onClosed((ClosedLetter) let, st);
                     }
                     else if(let instanceof ErrorLetter) {
-                        onError((ErrorLetter) let);
+                        onError((ErrorLetter) let, st);
                     }
                 }
             }
@@ -249,43 +259,45 @@ public class GrandAgent extends Thread {
         commandReceiver = new CommandReceiver();
         Transporter comTransporter = new PlainTransporter(netMultiplexer, commandReceiver, true, 8, false);
         commandReceiver.init(agentId, rd, comTransporter);
-        netMultiplexer.addRudderState(commandReceiver.rudder, new RudderState(commandReceiver.rudder, comTransporter));
+        RudderState st = RudderStateStore.getStore(agentId).rent();
+        st.init(commandReceiver.rudder, comTransporter);
+        netMultiplexer.addRudderState(commandReceiver.rudder, st);
     }
 
-    public void sendAcceptedLetter(RudderState st, Rudder clientRd, boolean wakeup) {
-        if(st == null)
+    public void sendAcceptedLetter(Rudder rd, Multiplexer mpx, Rudder clientRd, boolean wakeup) {
+        if(rd == null)
             throw new NullPointerException();
-        sendLetter(new AcceptedLetter(st, clientRd), wakeup);
+        sendLetter(new AcceptedLetter(rd, mpx, clientRd), wakeup);
     }
 
-    public void sendConnectedLetter(RudderState st, boolean wakeup) {
-        if(st == null)
+    public void sendConnectedLetter(Rudder rd, Multiplexer mpx, boolean wakeup) {
+        if(rd == null)
             throw new NullPointerException();
-        sendLetter(new ConnectedLetter(st), wakeup);
+        sendLetter(new ConnectedLetter(rd, mpx), wakeup);
     }
 
-    public void sendReadLetter(RudderState st, int n, InetSocketAddress adr, boolean wakeup) {
-        if(st == null)
+    public void sendReadLetter(Rudder rd, Multiplexer mpx, int n, InetSocketAddress adr, boolean wakeup) {
+        if(rd == null)
             throw new NullPointerException();
-        sendLetter(new ReadLetter(st, n, adr), wakeup);
+        sendLetter(new ReadLetter(rd, mpx, n, adr), wakeup);
     }
 
-    public void sendWroteLetter(RudderState st, int n, boolean wakeup) {
-        if(st == null)
+    public void sendWroteLetter(Rudder rd, Multiplexer mpx, int n, boolean wakeup) {
+        if(rd == null)
             throw new NullPointerException();
-        sendLetter(new WroteLetter(st, n), wakeup);
+        sendLetter(new WroteLetter(rd, mpx, n), wakeup);
     }
 
-    public void sendClosedLetter(RudderState st, boolean wakeup) {
-        if(st == null)
+    public void sendClosedLetter(Rudder rd, Multiplexer mpx, boolean wakeup) {
+        if(rd == null)
             throw new NullPointerException();
-        sendLetter(new ClosedLetter(st), wakeup);
+        sendLetter(new ClosedLetter(rd, mpx), wakeup);
     }
 
-    public void sendErrorLetter(RudderState st, Throwable e, boolean wakeup) {
-        if(st == null)
+    public void sendErrorLetter(Rudder rd, Multiplexer mpx, Throwable e, boolean wakeup) {
+        if(rd == null)
             throw new NullPointerException();
-        sendLetter(new ErrorLetter(st, e), wakeup);
+        sendLetter(new ErrorLetter(rd, mpx, e), wakeup);
     }
 
     public void shutdown() {
@@ -366,9 +378,9 @@ public class GrandAgent extends Thread {
             recipient.wakeup();
     }
 
-    private void onAccepted(AcceptedLetter let) {
+    private void onAccepted(AcceptedLetter let, RudderState st) {
+        //BayLog.debug("%s on Accepted rd=%s", this, st.rudder);
 
-        RudderState st = let.state;
         try {
             Port p = BayServer.findAnchorablePort(st.rudder);
             p.onConnected(agentId, let.clientRudder);
@@ -379,17 +391,14 @@ public class GrandAgent extends Thread {
         }
 
         if (!netMultiplexer.isBusy()) {
-            let.state.multiplexer.nextAccept(let.state);
+            st.multiplexer.nextAccept(st);
+        }
+        else {
+            BayLog.warn("%s net multiplexer is busy: %s", this, netMultiplexer);
         }
     }
 
-    private void onConnected(ConnectedLetter let) {
-        RudderState st = let.state;
-        if (st.closed) {
-            BayLog.debug("%s Rudder is already closed: rd=%s", this, st.rudder);
-            return;
-        }
-
+    private void onConnected(ConnectedLetter let, RudderState st) {
         BayLog.debug("%s connected rd=%s", this, st.rudder);
         NextSocketAction nextAct;
         try {
@@ -409,13 +418,7 @@ public class GrandAgent extends Thread {
         nextAction(st, nextAct, false);
     }
 
-    private void onRead(ReadLetter let) {
-        RudderState st = let.state;
-        if (st.closed) {
-            BayLog.debug("%s Rudder is already closed: rd=%s", this, st.rudder);
-            return;
-        }
-
+    private void onRead(ReadLetter let, RudderState st) {
         NextSocketAction nextAct;
 
         try {
@@ -442,13 +445,7 @@ public class GrandAgent extends Thread {
         nextAction(st, nextAct, true);
     }
 
-    private void onWrote(WroteLetter let) {
-        RudderState st = let.state;
-        if (st.closed) {
-            BayLog.debug("%s Rudder is already closed: rd=%s", this, st.rudder);
-            return;
-        }
-
+    private void onWrote(WroteLetter let, RudderState st) {
         BayLog.debug("%s wrote %d bytes rd=%s qlen=%d", this, let.nBytes, st.rudder, st.writeQueue.size());
         st.bytesWrote += let.nBytes;
 
@@ -490,14 +487,8 @@ public class GrandAgent extends Thread {
         }
     }
 
-    private void onClosed(ClosedLetter let) {
-        RudderState st = let.state;
-        BayLog.debug("%s reqClose rd=%s", this, st.rudder);
-        if (st.closed) {
-            BayLog.debug("%s Rudder is already closed: rd=%s", this, st.rudder);
-            return;
-        }
-
+    private void onClosed(ClosedLetter let, RudderState st) {
+        BayLog.debug("%s on Closed rd=%s", this, st.rudder);
         st.multiplexer.removeRudderState(st.rudder);
 
         while(st.multiplexer.consumeOldestUnit(st)) {
@@ -506,18 +497,17 @@ public class GrandAgent extends Thread {
         if (st.transporter != null)
             st.transporter.onClosed(st.rudder);
 
-        st.closed = true;
-        st.access();
+        RudderStateStore.getStore(agentId).Return(st);
     }
 
-    private void onError(ErrorLetter let) throws Throwable {
+    private void onError(ErrorLetter let, RudderState st) throws Throwable {
 
         try {
             throw let.err;
         }
         catch (IOException | HttpException e) {
-            let.state.transporter.onError(let.state.rudder, e);
-            nextAction(let.state, NextSocketAction.Close, false);
+            st.transporter.onError(st.rudder, e);
+            nextAction(st, NextSocketAction.Close, false);
         }
 
     }
