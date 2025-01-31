@@ -3,68 +3,110 @@ package yokohama.baykit.bayserver.agent.multiplexer;
 import yokohama.baykit.bayserver.common.EOFChecker;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.util.Reusable;
 import yokohama.baykit.bayserver.util.RoughTime;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.util.ArrayList;
 
-public class RudderState {
+public class RudderState implements Reusable {
 
-    public final Rudder rudder;
-    public final Transporter transporter;
+    public Rudder rudder;
+    public Transporter transporter;
     public Multiplexer multiplexer;
 
-    long lastAccessTime;
-    boolean closing;
-    public final ByteBuffer readBuf;
+    public long lastAccessTime;
+    public boolean closing;
+    public ByteBuffer readBuf;
     public ArrayList<WriteUnit> writeQueue = new ArrayList<>();
     public SelectionKey selectionKey;
     public boolean reading[] = new boolean[]{false};
     public boolean writing[] = new boolean[]{false};
     public int bytesRead;
     public int bytesWrote;
-    public boolean closed;
     public boolean finale;
-    EOFChecker eofChecker;
+    public EOFChecker eofChecker;
     public int timeoutSec;
 
-    public RudderState(Rudder rd) {
-        this(rd, null);
+    public RudderState() {
+
     }
 
-    public RudderState(Rudder rd, Transporter tp) {
-        this(rd, tp, 0);
+    public void init(Rudder rd) {
+        init(rd, null);
     }
 
-    public RudderState(Rudder rd, Transporter tp, int timeoutSec) {
+    public void init(Rudder rd, Transporter tp) {
+        init(rd, tp, 0);
+    }
+
+    public void init(Rudder rd, Transporter tp, int timeoutSec) {
         if (rd == null)
             throw new NullPointerException();
         this.rudder = rd;
         this.transporter = tp;
-        this.closed = false;
         this.timeoutSec = timeoutSec;
+
+        int bufsize;
         if(tp != null) {
-            this.readBuf = ByteBuffer.allocate(tp.getReadBufferSize());
+            bufsize = tp.getReadBufferSize();
         }
         else {
-            this.readBuf = ByteBuffer.allocate(8192);
+            bufsize = 8192;
         }
+
+        boolean alloc = true;
+        if(this.readBuf != null) {
+            if(this.readBuf.capacity() >= bufsize) {
+                alloc = false;
+            }
+        }
+        if(alloc)
+            this.readBuf = ByteBuffer.allocate(bufsize);
     }
+
+    @Override
+    public String toString() {
+        return "RdState(rd=" + rudder + " bufsize="
+                + (readBuf != null ? readBuf.capacity() : 0)
+                + " closing=" + closing + ")";
+    }
+
+    ////////////////////////////////////////////
+    // Implements Reusable
+    ////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+        rudder = null;
+        transporter = null;
+        multiplexer = null;
+
+        lastAccessTime = 0;
+        closing = false;
+        readBuf.clear();
+        writeQueue.clear();;
+        selectionKey = null;
+        bytesRead = 0;
+        bytesWrote = 0;
+        finale = false;
+        reading[0] = false;
+        writing[0] = false;
+        eofChecker = null;
+        timeoutSec = 0;
+    }
+
+    ////////////////////////////////////////////
+    // Custom methods
+    ////////////////////////////////////////////
 
     public void access() {
         lastAccessTime = RoughTime.currentTimeMillis();
     }
 
-    void end() {
+    public void end() {
         finale = true;
     }
 
-    @Override
-    public String toString() {
-        String str = super.toString();
-        if (closing)
-            str += " closing";
-        return str;
-    }
 }

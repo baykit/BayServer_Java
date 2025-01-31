@@ -60,7 +60,7 @@ public class TaxiMultiplexer extends MultiplexerBase {
     public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) throws IOException {
         BayLog.debug("%s TaxiMpx reqWrite rd=%s buf=%s", this, rd, buf);
         RudderState st = getRudderState(rd);
-        if(st == null || st.closed) {
+        if(st == null) {
             throw new IOException(this + " Invalid rudder: " + rd);
         }
         WriteUnit unt = new WriteUnit(buf, adr, tag, listener);
@@ -92,8 +92,7 @@ public class TaxiMultiplexer extends MultiplexerBase {
     public void reqClose(Rudder rd) {
         BayLog.debug("%s TaxiMpx reqClose rd=%s", this, rd);
         closeRudder(rd);
-        RudderState st = getRudderState(rd);
-        agent.sendClosedLetter(st, true);
+        agent.sendClosedLetter(rd, this, true);
     }
 
     @Override
@@ -198,10 +197,10 @@ public class TaxiMultiplexer extends MultiplexerBase {
             else {
                 st.readBuf.flip();
             }
-            agent.sendReadLetter(st, len, null, true);
+            agent.sendReadLetter(rd, this, len, null, true);
         }
         catch(Throwable e) {
-            agent.sendErrorLetter(st, e, true);
+            agent.sendErrorLetter(rd, this, e, true);
         }
     }
 
@@ -220,10 +219,10 @@ public class TaxiMultiplexer extends MultiplexerBase {
             else {
                 len = ((WritableByteChannel) ChannelRudder.getChannel(rd)).write(u.buf);
             }
-            agent.sendWroteLetter(st, len,true);
+            agent.sendWroteLetter(rd, this, len,true);
         }
         catch(Throwable e) {
-            agent.sendErrorLetter(st, e, true);
+            agent.sendErrorLetter(rd, this, e, true);
         }
     }
 }

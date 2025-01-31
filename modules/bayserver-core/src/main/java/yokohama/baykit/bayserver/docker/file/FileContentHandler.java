@@ -8,6 +8,7 @@ import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
 import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
 import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.common.RudderStateStore;
 import yokohama.baykit.bayserver.rudder.AsynchronousFileChannelRudder;
 import yokohama.baykit.bayserver.rudder.ReadableByteChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
@@ -154,7 +155,9 @@ public class FileContentHandler implements ReqContentHandler {
                 }
             });
 
-            mpx.addRudderState(rd, new RudderState(rd, tp));
+            RudderState st = RudderStateStore.getStore(agt.agentId).rent();
+            st.init(rd, tp);
+            mpx.addRudderState(rd, st);
             mpx.reqRead(rd);
 
 
