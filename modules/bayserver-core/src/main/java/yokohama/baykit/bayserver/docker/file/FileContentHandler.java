@@ -90,7 +90,13 @@ public class FileContentHandler implements ReqContentHandler {
 
     public synchronized void reqStartTour() throws HttpException {
         boolean[] reading = new boolean[1];
-        FileStore.FileContentStatus status = store.get(path, reading);
+        FileStore.FileContentStatus status;
+        if(store == null) {
+            status = new FileStore.FileContentStatus(null, FileStore.FileContentStatus.EXCEEDED);
+        }
+        else {
+            status = store.get(path, reading);
+        }
         fileContent = status.fileContent;
 
         BayLog.debug("%s file content status: %d", tour, status.status);
