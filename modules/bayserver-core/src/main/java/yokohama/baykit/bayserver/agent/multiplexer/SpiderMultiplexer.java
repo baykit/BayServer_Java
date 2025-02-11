@@ -157,16 +157,18 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
 
     @Override
     public void reqClose(Rudder rd) {
+        BayLog.debug("%s reqClose rd=%s", agent, rd);
         if(rd == null)
             throw new NullPointerException();
 
         RudderState st = getRudderState(rd);
-        BayLog.debug("%s reqClose chState=%s", agent, st);
-        addOperation(rd, OP_WRITE, true);
-
-        if(st == null)
+        if(st == null) {
+            BayLog.warn("%s RudderState not found: %s", agent, rd);
             return;
+        }
 
+        closeRudder(rd);
+        agent.sendClosedLetter(rd, this, false);
         st.access();
     }
 
@@ -194,11 +196,16 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
     public void cancelWrite(RudderState st) {
         SelectionKey key = st.selectionKey;
         // Write OP Off
-        int op = key.interestOps() & ~OP_WRITE;
-        if (op != OP_READ)
-            key.cancel();
-        else
-            key.interestOps(op);
+        try {
+            int op = key.interestOps() & ~OP_WRITE;
+            if (op != OP_READ)
+                key.cancel();
+            else
+                key.interestOps(op);
+        }
+        catch(CancelledKeyException e) {
+            BayLog.debug(e, "%s key cancelled: %s", agent, key);
+        }
     }
 
     @Override
