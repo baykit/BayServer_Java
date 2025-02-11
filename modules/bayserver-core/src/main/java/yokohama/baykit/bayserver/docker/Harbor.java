@@ -81,6 +81,12 @@ public interface Harbor {
     /** Multi core flag */
     boolean multiCore();
 
+    /** Lifespan seconds of cache */
+    int cacheLifespanSec();
+
+    /** Cache size */
+    int cacheSizeMb();
+
 
     static String getMultiplexerTypeName(MultiPlexerType type) {
         switch (type) {
