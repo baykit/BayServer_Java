@@ -3,7 +3,6 @@ package yokohama.baykit.bayserver.common;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
-import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
 import yokohama.baykit.bayserver.util.ObjectStore;
 import yokohama.baykit.bayserver.util.StringUtil;
 

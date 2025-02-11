@@ -1,7 +1,7 @@
-package yokohama.baykit.bayserver.agent.multiplexer;
+package yokohama.baykit.bayserver.common;
 
-import yokohama.baykit.bayserver.common.EOFChecker;
-import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
+import yokohama.baykit.bayserver.agent.multiplexer.WriteUnit;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.Reusable;
 import yokohama.baykit.bayserver.util.RoughTime;

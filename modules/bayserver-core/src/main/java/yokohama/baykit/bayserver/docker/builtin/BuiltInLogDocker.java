@@ -6,7 +6,7 @@ import yokohama.baykit.bayserver.agent.LifecycleListener;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.common.Multiplexer;
-import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
+import yokohama.baykit.bayserver.common.RudderState;
 import yokohama.baykit.bayserver.common.RudderStateStore;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Log;
