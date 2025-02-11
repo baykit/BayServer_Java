@@ -224,8 +224,8 @@ public class GrandAgent extends Thread {
         catch (Throwable e) {
             // If error occurs, grand agent ends
             BayLog.fatal(e, "%s Fatal error!", this);
-            shutdown();
-            System.exit(1);
+            //shutdown();
+            //System.exit(1);
         }
         finally {
             BayLog.info("%s end", this);
