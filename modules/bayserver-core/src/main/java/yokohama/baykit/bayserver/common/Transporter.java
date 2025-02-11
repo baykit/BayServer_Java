@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.agent.multiplexer;
+package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.rudder.Rudder;
