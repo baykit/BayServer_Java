@@ -10,7 +10,7 @@ import java.util.Map;
 
 public class FileStore {
 
-    public class FileContentStatus {
+    public static class FileContentStatus {
         static final int STARTED = 1;
         static final int READING = 2;
         static final int COMPLETED = 3;

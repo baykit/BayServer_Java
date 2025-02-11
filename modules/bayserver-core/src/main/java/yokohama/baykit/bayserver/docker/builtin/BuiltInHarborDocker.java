@@ -34,6 +34,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     public static final boolean DEFAULT_MULTI_CORE = true;
     public static final boolean DEFAULT_GZIP_COMP = false;
     public static final String DEFAULT_PID_FILE = "bayserver.pid";
+    public static boolean DEFAULT_ENABLE_CACHE = false;
     public static int DEFAULT_CACHE_LIFESPAN_SEC = 60;
     public static int DEFAULT_CACHE_SIZE_MB = 32;
 
@@ -99,6 +100,9 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
 
     /** PID file name */
     String pidFile = DEFAULT_PID_FILE;
+
+    /** True if cache is enabled */
+    boolean enableCache = DEFAULT_ENABLE_CACHE;
 
     /** Lifespan seconds of cache */
     int cacheLifespanSec = DEFAULT_CACHE_LIFESPAN_SEC;
@@ -343,6 +347,10 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                 pidFile = kv.value;
                 break;
 
+            case "enablecache":
+                enableCache = StringUtil.parseBool(kv.value);
+                break;
+
             case "cachelifespan":
                 cacheLifespanSec = Integer.parseInt(kv.value);
                 break;
@@ -463,6 +471,11 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     @Override
     public boolean multiCore() {
         return multiCore;
+    }
+
+    @Override
+    public boolean enableCache() {
+        return enableCache;
     }
 
     @Override

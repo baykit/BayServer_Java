@@ -81,6 +81,9 @@ public interface Harbor {
     /** Multi core flag */
     boolean multiCore();
 
+    /** True if cache is enabled */
+    boolean enableCache();
+
     /** Lifespan seconds of cache */
     int cacheLifespanSec();
 
