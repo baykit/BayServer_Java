@@ -1,10 +1,12 @@
 package yokohama.baykit.bayserver.docker.file;
 
+import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.base.ClubBase;
+import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.URLDecoder;
 import yokohama.baykit.bayserver.BayLog;
@@ -17,6 +19,8 @@ import java.io.UnsupportedEncodingException;
 public class FileDocker extends ClubBase {
 
     boolean listFiles = false;
+
+    private FileStore fileStore;
 
     ///////////////////////////////////////////////////////////////////////
     // Implements Docker
@@ -66,13 +70,20 @@ public class FileDocker extends ClubBase {
         }
 
         File real = new File(tur.town.location(), relPath);
-
-        if(real.isDirectory() && listFiles) {
-            DirectoryTrain train = new DirectoryTrain(tur, real);
-            train.startTour();
+        if(real.isDirectory()) {
+            if(listFiles) {
+                DirectoryTrain train = new DirectoryTrain(tur, real);
+                train.startTour();
+            }
+            else {
+                throw new HttpException(HttpStatus.FORBIDDEN, "Directory scan is prohibited");
+            }
         }
         else {
-            FileContentHandler handler = new FileContentHandler(real);
+            if(fileStore == null) {
+                fileStore = new FileStore(BayServer.harbor.cacheLifespanSec(), BayServer.harbor.cacheSizeMb() * 1024);
+            }
+            FileContentHandler handler = new FileContentHandler(tur, fileStore, real, tur.res.charset());
             tur.req.setReqContentHandler(handler);
         }
     }
