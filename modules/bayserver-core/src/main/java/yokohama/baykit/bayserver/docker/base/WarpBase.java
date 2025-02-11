@@ -6,7 +6,7 @@ import yokohama.baykit.bayserver.ConfigException;
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
-import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
+import yokohama.baykit.bayserver.common.Transporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.common.RudderState;

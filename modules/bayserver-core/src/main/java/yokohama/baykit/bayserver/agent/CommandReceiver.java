@@ -4,7 +4,7 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.MemUsage;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.monitor.GrandAgentMonitor;
-import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
+import yokohama.baykit.bayserver.common.Transporter;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.ship.Ship;

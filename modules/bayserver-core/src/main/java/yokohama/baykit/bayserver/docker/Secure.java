@@ -1,6 +1,6 @@
 package yokohama.baykit.bayserver.docker;
 
-import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
+import yokohama.baykit.bayserver.common.Transporter;
 import yokohama.baykit.bayserver.ship.Ship;
 
 public interface Secure {
