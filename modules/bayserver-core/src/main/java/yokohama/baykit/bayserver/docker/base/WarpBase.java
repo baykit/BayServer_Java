@@ -9,7 +9,7 @@ import yokohama.baykit.bayserver.agent.LifecycleListener;
 import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
-import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
+import yokohama.baykit.bayserver.common.RudderState;
 import yokohama.baykit.bayserver.common.RudderStateStore;
 import yokohama.baykit.bayserver.common.WarpShip;
 import yokohama.baykit.bayserver.common.WarpShipStore;

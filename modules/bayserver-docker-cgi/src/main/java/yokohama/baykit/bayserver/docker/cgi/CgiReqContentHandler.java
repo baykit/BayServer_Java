@@ -6,7 +6,7 @@ import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
-import yokohama.baykit.bayserver.agent.multiplexer.RudderState;
+import yokohama.baykit.bayserver.common.RudderState;
 import yokohama.baykit.bayserver.common.EOFChecker;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.common.RudderStateStore;
