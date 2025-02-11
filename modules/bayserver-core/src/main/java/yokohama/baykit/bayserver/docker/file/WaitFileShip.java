@@ -1,6 +1,8 @@
 package yokohama.baykit.bayserver.docker.file;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.HttpException;
+import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.common.ReadOnlyShip;
@@ -11,24 +13,25 @@ import yokohama.baykit.bayserver.util.HttpStatus;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class SendFileShip extends ReadOnlyShip {
-
-    int fileWroteLen;
+public class WaitFileShip extends ReadOnlyShip {
 
     FileContent fileContent;
+    FileContentHandler handler;
+
     Tour tour;
     int tourId;
 
-    public void init(Rudder rd, Transporter tp, Tour tur, FileContent fileContent) {
+    public void init(Rudder rd, Transporter tp, Tour tur, FileContent fileContent, FileContentHandler handler) {
         super.init(tur.ship.agentId, rd, tp);
         this.tour = tur;
         this.tourId = tur.tourId;
         this.fileContent = fileContent;
+        this.handler = handler;
     }
 
     @Override
     public String toString() {
-        return "agt#" + agentId + " send_file#" + shipId + "/" + objectId;
+        return "agt#" + agentId + " wait_file#" + shipId + "/" + objectId;
     }
 
 
@@ -38,7 +41,7 @@ public class SendFileShip extends ReadOnlyShip {
 
     public void reset() {
         super.reset();
-        fileWroteLen = 0;
+        fileContent = null;
         tourId = 0;
         tour = null;
     }
@@ -50,30 +53,22 @@ public class SendFileShip extends ReadOnlyShip {
     @Override
     public NextSocketAction notifyRead(ByteBuffer buf) {
 
-        fileWroteLen += buf.limit();
-        BayLog.debug("%s read file %d bytes: total=%d", this, buf.limit(), fileWroteLen);
+        BayLog.debug("%s file read completed", this);
 
         try {
-            boolean available = tour.res.sendResContent(tourId, buf.array(), 0, buf.limit());
-
-            if(fileContent != null) {
-		BayLog.debug("buf=%s target=%s", buf, fileContent.content);
-                fileContent.content.put(buf.array(), 0, buf.limit());
+            handler.sendFileFromCache();
+        }
+        catch(HttpException e) {
+            try {
+                tour.res.sendError(Tour.TOUR_ID_NOCHECK, e.status, e.getMessage());
             }
-
-            buf.position(buf.limit());
-
-            if(available) {
-                return NextSocketAction.Continue;
-            }
-            else {
-                return NextSocketAction.Suspend;
+            catch(IOException ex) {
+                notifyError(ex);
+                return NextSocketAction.Close;
             }
         }
-        catch(IOException e) {
-            notifyError(e);
-            return NextSocketAction.Close;
-        }
+
+        return NextSocketAction.Continue;
     }
 
     @Override
@@ -89,19 +84,7 @@ public class SendFileShip extends ReadOnlyShip {
 
     @Override
     public NextSocketAction notifyEof() {
-        BayLog.debug("%s EOF", this);
-
-        if(fileContent != null) {
-            fileContent.complete();
-        }
-
-        try {
-            tour.res.endResContent(tourId);
-        }
-        catch(IOException e) {
-            BayLog.debug(e);
-        }
-        return NextSocketAction.Close;
+        throw new Sink();
     }
 
     @Override

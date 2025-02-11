@@ -107,7 +107,20 @@ public class CgiReqContentHandler implements ReqContentHandler, Runnable {
     public void reqStartTour() {
         if(cgiDocker.addProcessCount()) {
             BayLog.info("%s start tour: wait count=%d", tour, cgiDocker.getWaitCount());
-            startTour();
+            try {
+                startTour();
+
+            } catch (IOException e) {
+                BayLog.error(e);
+                try {
+                    tour.res.sendError(tourId, HttpStatus.INTERNAL_SERVER_ERROR, "Cannot create process", e);
+                }
+                catch (IOException ex) {
+                    BayLog.error(ex);
+                }
+                cgiDocker.subProcessCount();
+                return;
+            }
         }
         else {
             BayLog.warn("%s Cannot start tour: wait count=%d", tour, cgiDocker.getWaitCount());
@@ -117,27 +130,15 @@ public class CgiReqContentHandler implements ReqContentHandler, Runnable {
         access();
     }
 
-    public void startTour() {
+    public void startTour() throws IOException {
 
-        try {
-            process = cgiDocker.createProcess(env);
-            BayLog.debug("%s created process; %s", tour, process);
+        process = cgiDocker.createProcess(env);
+        BayLog.debug("%s created process; %s", tour, process);
 
-            // catch up the postponed buffers
-            for(Pair<byte[], ContentConsumeListener> pair : buffers) {
-                BayLog.debug("%s write postponed data: len=%d", tour, pair.a.length);
-                writeToStdIn(tour, pair.a, 0, pair.a.length, pair.b);
-            }
-
-        } catch (IOException e) {
-            BayLog.error(e);
-            try {
-                tour.res.sendError(tourId, HttpStatus.INTERNAL_SERVER_ERROR, "Cannot create process", e);
-            }
-            catch (IOException ex) {
-                BayLog.error(ex);
-            }
-            return;
+        // catch up the postponed buffers
+        for(Pair<byte[], ContentConsumeListener> pair : buffers) {
+            BayLog.debug("%s write postponed data: len=%d", tour, pair.a.length);
+            writeToStdIn(tour, pair.a, 0, pair.a.length, pair.b);
         }
 
         int bufsize = tour.ship.protocolHandler.maxResPacketDataSize();
