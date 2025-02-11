@@ -4,7 +4,6 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
 import yokohama.baykit.bayserver.docker.Warp;
 import yokohama.baykit.bayserver.protocol.Command;
 import yokohama.baykit.bayserver.protocol.ProtocolException;

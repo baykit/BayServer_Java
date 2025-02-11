@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.docker.cgi;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
-import yokohama.baykit.bayserver.agent.multiplexer.Transporter;
+import yokohama.baykit.bayserver.common.Transporter;
 import yokohama.baykit.bayserver.common.ReadOnlyShip;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.tour.Tour;
