@@ -1,7 +1,9 @@
 package yokohama.baykit.bayserver.common;
 
+import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.multiplexer.WriteUnit;
 import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.util.Counter;
 import yokohama.baykit.bayserver.util.Reusable;
 import yokohama.baykit.bayserver.util.RoughTime;
 
@@ -11,9 +13,13 @@ import java.util.ArrayList;
 
 public class RudderState implements Reusable {
 
+    public static int STATE_ID_NOCHECK = -1;
     public Rudder rudder;
     public Transporter transporter;
     public Multiplexer multiplexer;
+
+    static Counter idCounter = new Counter();
+    public int id;
 
     public long lastAccessTime;
     public boolean closing;
@@ -43,6 +49,7 @@ public class RudderState implements Reusable {
     public void init(Rudder rd, Transporter tp, int timeoutSec) {
         if (rd == null)
             throw new NullPointerException();
+        this.id = idCounter.next();
         this.rudder = rd;
         this.transporter = tp;
         this.timeoutSec = timeoutSec;
@@ -67,7 +74,7 @@ public class RudderState implements Reusable {
 
     @Override
     public String toString() {
-        return "RdState(rd=" + rudder + " bufsize="
+        return "RdState(id=" + id + " rd=" + rudder + " bufsize="
                 + (readBuf != null ? readBuf.capacity() : 0)
                 + " closing=" + closing + ")";
     }
@@ -78,6 +85,7 @@ public class RudderState implements Reusable {
 
     @Override
     public void reset() {
+        id = 0;
         rudder = null;
         transporter = null;
         multiplexer = null;
@@ -106,6 +114,15 @@ public class RudderState implements Reusable {
 
     public void end() {
         finale = true;
+    }
+
+    public void checkStateId(int checkId) {
+        if(checkId == STATE_ID_NOCHECK)
+            return;
+
+        if(checkId != this.id) {
+            throw new Sink("%s Invalid state id : %d", this, checkId);
+        }
     }
 
 }

@@ -23,6 +23,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
 
     abstract class Lapper {
         RudderState state;
+        int stateId;
         long lastAccess;
 
         // Return if spun (method do nothing)
@@ -31,6 +32,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
 
         Lapper(RudderState state) {
             this.state = state;
+            this.stateId = state.id;
             access();
         }
 
@@ -122,7 +124,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
         RudderState st = getRudderState(rd);
         st.closing = true;
         closeRudder(rd);
-        agent.sendClosedLetter(rd, this, false);
+        agent.sendClosedLetter(st.id, rd, this, false);
     }
 
     @Override
@@ -310,10 +312,10 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
                 }
 
                 state.readBuf.flip();
-                agent.sendReadLetter(state.rudder, SpinMultiplexer.this, len, null, false);
+                agent.sendReadLetter(stateId, state.rudder, SpinMultiplexer.this, len, null, false);
 
             } catch (Exception e) {
-                agent.sendErrorLetter(state.rudder, SpinMultiplexer.this, e, false);
+                agent.sendErrorLetter(stateId, state.rudder, SpinMultiplexer.this, e, false);
             }
 
             return false;
@@ -344,10 +346,10 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
             try {
                 int len = curFuture.get();
                 BayLog.debug("%s wrote %d bytes", SpinMultiplexer.this, len);
-                agent.sendWroteLetter(state.rudder, SpinMultiplexer.this, len, false);
+                agent.sendWroteLetter(stateId, state.rudder, SpinMultiplexer.this, len, false);
             }
             catch (Exception e) {
-                agent.sendErrorLetter(state.rudder, SpinMultiplexer.this, e, false);
+                agent.sendErrorLetter(stateId, state.rudder, SpinMultiplexer.this, e, false);
             }
 
             return false;
@@ -401,10 +403,10 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
                     }
                 }
 
-                agent.sendReadLetter(state.rudder, SpinMultiplexer.this, len, null, false);
+                agent.sendReadLetter(stateId, state.rudder, SpinMultiplexer.this, len, null, false);
 
             } catch (Exception e) {
-                agent.sendErrorLetter(state.rudder, SpinMultiplexer.this, e, false);
+                agent.sendErrorLetter(stateId, state.rudder, SpinMultiplexer.this, e, false);
             }
 
             return false;

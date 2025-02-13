@@ -169,7 +169,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         }
 
         closeRudder(rd);
-        agent.sendClosedLetter(rd, this, false);
+        agent.sendClosedLetter(st.id, rd, this, false);
         st.access();
     }
 
@@ -427,6 +427,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
     private void onAcceptable(RudderState st) {
 
         Rudder serverRd = st.rudder;
+        int id = st.id;
         ServerSocketChannel sch = (ServerSocketChannel) SocketChannelRudder.getChannel(serverRd);
 
         //BayLog.debug(this + " onAcceptable");
@@ -447,11 +448,11 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
                 else {
                     SocketChannelRudder clientRd = new SocketChannelRudder(ch);
                     clientRd.setNonBlocking();
-                    agent.sendAcceptedLetter(serverRd, this, clientRd, false);
+                    agent.sendAcceptedLetter(id, serverRd, this, clientRd, false);
                 }
 
             } catch (IOException e) {
-                agent.sendErrorLetter(serverRd, this, e, false);
+                agent.sendErrorLetter(id, serverRd, this, e, false);
                 if(ch != null) {
                     try { ch.close(); } catch (IOException ee) {}
                 }
@@ -468,11 +469,11 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         }
         catch(IOException e) {
             BayLog.error("%s Connect failed: %s", this, e);
-            agent.sendErrorLetter(st.rudder, this, e, false);
+            agent.sendErrorLetter(st.id, st.rudder, this, e, false);
             return;
         }
 
-        agent.sendConnectedLetter(st.rudder, this,false);
+        agent.sendConnectedLetter(st.id, st.rudder, this,false);
     }
 
     private void onReadable(RudderState st) {
@@ -505,11 +506,11 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
             }
         }
         catch(IOException e) {
-            agent.sendErrorLetter(st.rudder, this, e, false);
+            agent.sendErrorLetter(st.id, st.rudder, this, e, false);
             return;
 
         }
-        agent.sendReadLetter(st.rudder, this, c, sender, false);
+        agent.sendReadLetter(st.id, st.rudder, this, c, sender, false);
     }
 
     private void onWritable(RudderState st) {
@@ -534,7 +535,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
                     n = st.rudder.write(wUnit.buf);
                 }
 
-                agent.sendWroteLetter(st.rudder, this, n, false);
+                agent.sendWroteLetter(st.id, st.rudder, this, n, false);
                 if(n < remain) {
                     BayLog.debug("%s Wrote %d bytes (Data remains)", this, n);
                     break;
@@ -542,14 +543,14 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
             }
         }
         catch(IOException e) {
-            agent.sendErrorLetter(st.rudder, this, e, false);
+            agent.sendErrorLetter(st.id, st.rudder, this, e, false);
         }
     }
 
     private void onCloseReq(RudderState st) {
         BayLog.debug("%s onCloseReq: rd=%s", this, st.rudder);
         st.multiplexer.closeRudder(st.rudder);
-        agent.sendClosedLetter(st.rudder, this, false);
+        agent.sendClosedLetter(st.id, st.rudder, this, false);
     }
 
 
