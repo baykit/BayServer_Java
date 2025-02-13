@@ -5,7 +5,7 @@ import yokohama.baykit.bayserver.rudder.Rudder;
 
 public class ConnectedLetter extends Letter {
 
-    public ConnectedLetter(Rudder rd, Multiplexer mpx) {
-        super(rd, mpx);
+    public ConnectedLetter(int stateId, Rudder rd, Multiplexer mpx) {
+        super(stateId, rd, mpx);
     }
 }
