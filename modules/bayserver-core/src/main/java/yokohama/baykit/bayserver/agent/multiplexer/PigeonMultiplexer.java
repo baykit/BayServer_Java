@@ -41,6 +41,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
         }
         AsynchronousServerSocketChannel sch = (AsynchronousServerSocketChannel) ChannelRudder.getChannel(rd);
         RudderState st = findRudderStateByKey(sch);
+        int id = st.id;
 
         try {
             AsynchronousSocketChannel ch = null;
@@ -50,12 +51,12 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
                         @Override
                         public void completed(AsynchronousSocketChannel clientCh, Rudder serverRd) {
                             BayLog.debug("%s Accepted: cli=%s", PigeonMultiplexer.this, clientCh);
-                            agent.sendAcceptedLetter(rd, PigeonMultiplexer.this, new AsynchronousSocketChannelRudder(clientCh), true);
+                            agent.sendAcceptedLetter(id, rd, PigeonMultiplexer.this, new AsynchronousSocketChannelRudder(clientCh), true);
                         }
 
                         @Override
                         public void failed(Throwable e, Rudder serverRd) {
-                            agent.sendErrorLetter(rd, PigeonMultiplexer.this, e, true);
+                            agent.sendErrorLetter(id, rd, PigeonMultiplexer.this, e, true);
                         }
                     });
         }
@@ -67,17 +68,19 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
     @Override
     public void reqConnect(Rudder rd, SocketAddress addr) throws IOException {
         RudderState st = findRudderStateByKey(ChannelRudder.getChannel(rd));
+        int id = st.id;
+
         AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(rd).connect(
                 addr, null, new CompletionHandler<Void, Void>() {
 
             @Override
             public void completed(Void result, Void attachment) {
-                agent.sendConnectedLetter(rd, PigeonMultiplexer.this, true);
+                agent.sendConnectedLetter(id, rd, PigeonMultiplexer.this, true);
             }
 
             @Override
             public void failed(Throwable e, Void attachment) {
-                agent.sendErrorLetter(rd, PigeonMultiplexer.this, e, true);
+                agent.sendErrorLetter(id, rd, PigeonMultiplexer.this, e, true);
             }
         });
     }
@@ -166,7 +169,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
             } catch (IOException e) {
                 BayLog.error(e);
             }
-            agent.sendClosedLetter(rd, this, true);
+            agent.sendClosedLetter(st.id, rd, this, true);
         }
     }
 
@@ -222,40 +225,44 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
 
     private class ReadCompletionHandler implements CompletionHandler<Integer, Rudder> {
         final RudderState state;
+        final int stateId;
 
         private ReadCompletionHandler(RudderState state) {
             this.state = state;
+            this.stateId = state.id;
         }
 
         @Override
         public void completed(Integer n, Rudder rd) {
             BayLog.debug("%s read completed: rd=%s buf=%s", PigeonMultiplexer.this, rd, state.readBuf);
             state.readBuf.flip();
-            agent.sendReadLetter(rd, PigeonMultiplexer.this, n, null, true);
+            agent.sendReadLetter(stateId, rd, PigeonMultiplexer.this, n, null, true);
         }
 
         @Override
         public void failed(Throwable e, Rudder rd) {
-            agent.sendErrorLetter(rd, PigeonMultiplexer.this, e, true);
+            agent.sendErrorLetter(stateId, rd, PigeonMultiplexer.this, e, true);
         }
 
     }
 
     private class WriteCompletionHandler implements CompletionHandler<Integer, Rudder> {
         final RudderState state;
+        final int stateId;
 
         private WriteCompletionHandler(RudderState state) {
             this.state = state;
+            this.stateId = state.id;
         }
 
         @Override
         public void completed(Integer n, Rudder rd) {
-            agent.sendWroteLetter(rd, PigeonMultiplexer.this, n, true);
+            agent.sendWroteLetter(stateId, rd, PigeonMultiplexer.this, n, true);
         }
 
         @Override
         public void failed(Throwable e, Rudder rd) {
-            agent.sendErrorLetter(rd, PigeonMultiplexer.this, e, true);
+            agent.sendErrorLetter(stateId, rd, PigeonMultiplexer.this, e, true);
         }
     }
 

@@ -6,8 +6,8 @@ import yokohama.baykit.bayserver.rudder.Rudder;
 public class WroteLetter extends Letter {
     public int nBytes;
 
-    public WroteLetter(Rudder rd, Multiplexer mpx, int n) {
-        super(rd, mpx);
+    public WroteLetter(int stateId, Rudder rd, Multiplexer mpx, int n) {
+        super(stateId, rd, mpx);
         this.nBytes = n;
     }
 }

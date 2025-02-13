@@ -6,8 +6,8 @@ import yokohama.baykit.bayserver.rudder.Rudder;
 public class ErrorLetter  extends Letter{
     public Throwable err;
 
-    public ErrorLetter(Rudder rd, Multiplexer mpx, Throwable err) {
-        super(rd, mpx);
+    public ErrorLetter(int stateId, Rudder rd, Multiplexer mpx, Throwable err) {
+        super(stateId, rd, mpx);
         this.err = err;
     }
 }

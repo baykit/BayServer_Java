@@ -6,8 +6,8 @@ import yokohama.baykit.bayserver.rudder.Rudder;
 public class AcceptedLetter extends Letter {
     public Rudder clientRudder;
 
-    public AcceptedLetter(Rudder rd, Multiplexer mpx, Rudder clientRd) {
-        super(rd, mpx);
+    public AcceptedLetter(int stateId, Rudder rd, Multiplexer mpx, Rudder clientRd) {
+        super(stateId, rd, mpx);
         this.clientRudder = clientRd;
     }
 }

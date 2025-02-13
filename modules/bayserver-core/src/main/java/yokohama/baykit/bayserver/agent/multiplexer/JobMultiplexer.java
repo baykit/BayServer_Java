@@ -44,6 +44,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
 
         ServerSocketChannel sch = (ServerSocketChannel) ChannelRudder.getChannel(rd);
         RudderState st = findRudderStateByKey(sch);
+        int id = st.id;
 
         new Thread(() -> {
             try {
@@ -55,7 +56,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
                 try {
                     ch = sch.accept();
                 } catch (IOException e) {
-                    agent.sendErrorLetter(rd, this, e, true);
+                    agent.sendErrorLetter(id, rd, this, e, true);
                     return;
                 }
 
@@ -69,7 +70,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
                     }
                 }
                 else {
-                    agent.sendAcceptedLetter(rd, this, new SocketChannelRudder(ch), true);
+                    agent.sendAcceptedLetter(id, rd, this, new SocketChannelRudder(ch), true);
                 }
 
             } catch(Throwable e) {
@@ -92,16 +93,17 @@ public class JobMultiplexer extends JobMultiplexerBase {
                 BayLog.debug("%s Rudder is already closed: rd=%s", agent, rd);
                 return;
             }
+            int id = st.id;
 
             try {
                 SocketChannel ch = (SocketChannel)ChannelRudder.getChannel(rd);
                 ch.connect(addr);
             } catch (IOException e) {
-                agent.sendErrorLetter(rd, this, e, true);
+                agent.sendErrorLetter(id, rd, this, e, true);
                 return;
             }
 
-            agent.sendConnectedLetter(rd, this, true);
+            agent.sendConnectedLetter(id, rd, this, true);
 
         }).start();
 
@@ -185,6 +187,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
             BayLog.debug("%s Rudder state not found: rd=%s", agent, rd);
             return;
         }
+        int id = state.id;
 
         new Thread(() -> {
             try {
@@ -196,7 +199,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
                 }
 
                 closeRudder(rd);
-                agent.sendClosedLetter(rd, this, true);
+                agent.sendClosedLetter(id, rd, this, true);
             } catch(Throwable e) {
                 BayLog.fatal(e);
                 agent.shutdown();
@@ -224,6 +227,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
     @Override
     public void nextRead(RudderState st) {
 
+        int id = st.id;
         new Thread(() -> {
             int n;
             InetSocketAddress sender = null;
@@ -252,14 +256,14 @@ public class JobMultiplexer extends JobMultiplexerBase {
                     BayLog.debug("%s Rudder is already closed: %s", this, st.rudder);
                 }
                 else {
-                    agent.sendReadLetter(st.rudder, this, n, sender, true);
+                    agent.sendReadLetter(id, st.rudder, this, n, sender, true);
                 }
 
             } catch (AsynchronousCloseException e) {
                 BayLog.debug("%s Closed by another thread: %s (%s)", this, st.rudder, e);
                 // Do not do next action
             } catch (IOException e) {
-                agent.sendErrorLetter(st.rudder, this, e, true);
+                agent.sendErrorLetter(id, st.rudder, this, e, true);
             }
 
         }).start();
@@ -268,6 +272,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
     @Override
     public void nextWrite(RudderState st) {
 
+        int id = st.id;
         new Thread(() -> {
             if (st == null) {
                 // channel is already closed
@@ -289,10 +294,10 @@ public class JobMultiplexer extends JobMultiplexerBase {
                     }
                 }
             } catch (IOException e) {
-                agent.sendErrorLetter(st.rudder, this, e, true);
+                agent.sendErrorLetter(id, st.rudder, this, e, true);
                 return;
             }
-            agent.sendWroteLetter(st.rudder, this, n, true);
+            agent.sendWroteLetter(id, st.rudder, this, n, true);
 
         }).start();
 

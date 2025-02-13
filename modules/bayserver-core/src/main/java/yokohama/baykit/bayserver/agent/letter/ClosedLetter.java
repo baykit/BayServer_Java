@@ -5,7 +5,7 @@ import yokohama.baykit.bayserver.rudder.Rudder;
 
 public class ClosedLetter extends Letter{
 
-    public ClosedLetter(Rudder rd, Multiplexer mpx) {
-        super(rd, mpx);
+    public ClosedLetter(int stateId, Rudder rd, Multiplexer mpx) {
+        super(stateId, rd, mpx);
     }
 }

@@ -9,8 +9,8 @@ public class ReadLetter extends Letter {
     public int nBytes;
     public InetSocketAddress address;
 
-    public ReadLetter(Rudder rd, Multiplexer mpx, int n, InetSocketAddress adr) {
-        super(rd, mpx);
+    public ReadLetter(int stateId, Rudder rd, Multiplexer mpx, int n, InetSocketAddress adr) {
+        super(stateId, rd, mpx);
         this.nBytes = n;
         this.address = adr;
     }

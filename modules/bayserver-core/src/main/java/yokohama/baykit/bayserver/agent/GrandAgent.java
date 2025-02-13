@@ -196,6 +196,7 @@ public class GrandAgent extends Thread {
                         BayLog.debug("%s rudder is already returned: %s", this, let.rudder);
                         continue;
                     }
+                    st.checkStateId(let.stateId);
 
                     if(let instanceof AcceptedLetter) {
                         onAccepted((AcceptedLetter) let, st);
@@ -261,40 +262,40 @@ public class GrandAgent extends Thread {
         netMultiplexer.addRudderState(commandReceiver.rudder, st);
     }
 
-    public void sendAcceptedLetter(Rudder rd, Multiplexer mpx, Rudder clientRd, boolean wakeup) {
+    public void sendAcceptedLetter(int stateId, Rudder rd, Multiplexer mpx, Rudder clientRd, boolean wakeup) {
         if(rd == null)
             throw new NullPointerException();
-        sendLetter(new AcceptedLetter(rd, mpx, clientRd), wakeup);
+        sendLetter(new AcceptedLetter(stateId, rd, mpx, clientRd), wakeup);
     }
 
-    public void sendConnectedLetter(Rudder rd, Multiplexer mpx, boolean wakeup) {
+    public void sendConnectedLetter(int stateId, Rudder rd, Multiplexer mpx, boolean wakeup) {
         if(rd == null)
             throw new NullPointerException();
-        sendLetter(new ConnectedLetter(rd, mpx), wakeup);
+        sendLetter(new ConnectedLetter(stateId, rd, mpx), wakeup);
     }
 
-    public void sendReadLetter(Rudder rd, Multiplexer mpx, int n, InetSocketAddress adr, boolean wakeup) {
+    public void sendReadLetter(int stateId, Rudder rd, Multiplexer mpx, int n, InetSocketAddress adr, boolean wakeup) {
         if(rd == null)
             throw new NullPointerException();
-        sendLetter(new ReadLetter(rd, mpx, n, adr), wakeup);
+        sendLetter(new ReadLetter(stateId, rd, mpx, n, adr), wakeup);
     }
 
-    public void sendWroteLetter(Rudder rd, Multiplexer mpx, int n, boolean wakeup) {
+    public void sendWroteLetter(int stateId, Rudder rd, Multiplexer mpx, int n, boolean wakeup) {
         if(rd == null)
             throw new NullPointerException();
-        sendLetter(new WroteLetter(rd, mpx, n), wakeup);
+        sendLetter(new WroteLetter(stateId, rd, mpx, n), wakeup);
     }
 
-    public void sendClosedLetter(Rudder rd, Multiplexer mpx, boolean wakeup) {
+    public void sendClosedLetter(int stateId, Rudder rd, Multiplexer mpx, boolean wakeup) {
         if(rd == null)
             throw new NullPointerException();
-        sendLetter(new ClosedLetter(rd, mpx), wakeup);
+        sendLetter(new ClosedLetter(stateId, rd, mpx), wakeup);
     }
 
-    public void sendErrorLetter(Rudder rd, Multiplexer mpx, Throwable e, boolean wakeup) {
+    public void sendErrorLetter(int stateId, Rudder rd, Multiplexer mpx, Throwable e, boolean wakeup) {
         if(rd == null)
             throw new NullPointerException();
-        sendLetter(new ErrorLetter(rd, mpx, e), wakeup);
+        sendLetter(new ErrorLetter(stateId, rd, mpx, e), wakeup);
     }
 
     public void shutdown() {
