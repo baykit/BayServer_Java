@@ -504,7 +504,12 @@ public class GrandAgent extends Thread {
             throw let.err;
         }
         catch (IOException | HttpException e) {
-            st.transporter.onError(st.rudder, e);
+            if(st.transporter != null || true) {
+                st.transporter.onError(st.rudder, e);
+            }
+            else {
+                BayLog.error(e, "%s onError error=%s", this, e);
+            }
             nextAction(st, NextSocketAction.Close, false);
         }
 

@@ -23,7 +23,7 @@ public class VehicleRunner {
         }
 
         @Override
-        public void remove(int agentId) {
+        public synchronized void remove(int agentId) {
             BayLog.debug("agt#%d remove VehicleRunner", agentId);
             services.get(agentId - 1).terminate();
             services.set(agentId - 1, null);
