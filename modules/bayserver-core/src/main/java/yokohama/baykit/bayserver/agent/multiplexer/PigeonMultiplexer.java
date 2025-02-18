@@ -158,6 +158,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
 
     @Override
     public void reqClose(Rudder rd) {
+        BayLog.debug("%s reqClose rd=%s", agent, rd);
         RudderState st = findRudderStateByKey(ChannelRudder.getChannel(rd));
         if(st == null) {
             BayLog.debug("%s Rudder is closed: %s", this, rd);
