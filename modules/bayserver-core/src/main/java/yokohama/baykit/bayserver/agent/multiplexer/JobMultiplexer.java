@@ -313,11 +313,6 @@ public class JobMultiplexer extends JobMultiplexerBase {
         return false;
     }
 
-    @Override
-    public void onBusy() {
-
-    }
-
     ////////////////////////////////////////////
     // Private methods
     ////////////////////////////////////////////
