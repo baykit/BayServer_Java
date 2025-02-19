@@ -1,10 +1,15 @@
 # BayServer for Java
 
+# 3.1.0
+
+- [Core] Improves performance
+- [Core] Supports enableCache parameter
+- [Core] Fixes minor bugs
+
 # 3.0.3
 
 - [Core] Modifies the default configuration file.
 - [CGI] Fixes a potential bug.
-
 
 # 3.0.2
 
