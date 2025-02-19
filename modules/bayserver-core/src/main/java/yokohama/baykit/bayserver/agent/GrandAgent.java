@@ -53,6 +53,7 @@ public class GrandAgent extends Thread {
     public CommandReceiver commandReceiver;
     private ArrayList<Runnable> postponeQueue = new ArrayList<>();
     private long lastTimeoutCheck;
+    private boolean busy;
 
 
     public GrandAgent(
@@ -148,19 +149,8 @@ public class GrandAgent extends Thread {
                 }
             }
 
-            boolean busy = true;
+            netMultiplexer.onFree();
             while (true) {
-                boolean testBusy = netMultiplexer.isBusy();
-                if (testBusy != busy) {
-                    busy = testBusy;
-                    if(busy) {
-                        netMultiplexer.onBusy();
-                    }
-                    else {
-                        netMultiplexer.onFree();
-                    }
-                }
-
                 boolean received;
                 if (!spinMultiplexer.isEmpty()) {
                     // If "SpinHandler" is running, the select function does not block.
@@ -377,7 +367,7 @@ public class GrandAgent extends Thread {
     }
 
     private void onAccepted(AcceptedLetter let, RudderState st) {
-        //BayLog.debug("%s on Accepted rd=%s", this, st.rudder);
+        BayLog.debug("%s onAccepted rd=%s", this, st.rudder);
 
         try {
             Port p = BayServer.findAnchorablePort(st.rudder);
@@ -388,11 +378,13 @@ public class GrandAgent extends Thread {
             nextAction(st, NextSocketAction.Close, false);
         }
 
-        if (!netMultiplexer.isBusy()) {
-            st.multiplexer.nextAccept(st);
+        if (netMultiplexer.isBusy()) {
+            BayLog.warn("%s net multiplexer is busy: %s", this, netMultiplexer);
+            netMultiplexer.onBusy();
+            busy = true;
         }
         else {
-            BayLog.warn("%s net multiplexer is busy: %s", this, netMultiplexer);
+            st.multiplexer.nextAccept(st);
         }
     }
 
@@ -496,6 +488,12 @@ public class GrandAgent extends Thread {
             st.transporter.onClosed(st.rudder);
 
         RudderStateStore.getStore(agentId).Return(st);
+
+        if(busy && !netMultiplexer.isBusy()) {
+            BayLog.warn("%s net multiplexer is free: %s", this, netMultiplexer);
+            netMultiplexer.onFree();
+            busy = false;
+        }
     }
 
     private void onError(ErrorLetter let, RudderState st) throws Throwable {

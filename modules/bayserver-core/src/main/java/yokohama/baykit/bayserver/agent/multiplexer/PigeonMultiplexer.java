@@ -18,6 +18,8 @@ import java.util.concurrent.TimeUnit;
 
 public class PigeonMultiplexer extends JobMultiplexerBase {
 
+    boolean accepting;
+
     public PigeonMultiplexer(GrandAgent agent, boolean anchorable) {
         super(agent, anchorable);
         if(!anchorable) {
@@ -59,6 +61,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
                             agent.sendErrorLetter(id, rd, PigeonMultiplexer.this, e, true);
                         }
                     });
+            accepting = true;
         }
         catch(AcceptPendingException e) {
             // Another thread already accepting
@@ -215,11 +218,6 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
         return true;
     }
 
-    @Override
-    public void onBusy() {
-
-    }
-
     ////////////////////////////////////////////
     // Private methods
     ////////////////////////////////////////////
@@ -236,12 +234,14 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
         @Override
         public void completed(Integer n, Rudder rd) {
             BayLog.debug("%s read completed: rd=%s buf=%s", PigeonMultiplexer.this, rd, state.readBuf);
+            accepting = false;
             state.readBuf.flip();
             agent.sendReadLetter(stateId, rd, PigeonMultiplexer.this, n, null, true);
         }
 
         @Override
         public void failed(Throwable e, Rudder rd) {
+            accepting = false;
             agent.sendErrorLetter(stateId, rd, PigeonMultiplexer.this, e, true);
         }
 

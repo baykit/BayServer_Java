@@ -50,7 +50,13 @@ public abstract class JobMultiplexerBase extends MultiplexerBase implements Time
     }
 
     @Override
+    public void onBusy() {
+        BayLog.debug("%s onBusy (ignore)", this);
+    }
+
+    @Override
     public void onFree() {
+        BayLog.debug("%s onFree", this);
         if(agent.aborted)
             return;
 
