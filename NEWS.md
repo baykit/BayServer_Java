@@ -1,5 +1,9 @@
 # BayServer for Java
 
+# 3.1.1
+
+- [Core] Fixes minor bugs
+
 # 3.1.0
 
 - [Core] Improves performance
