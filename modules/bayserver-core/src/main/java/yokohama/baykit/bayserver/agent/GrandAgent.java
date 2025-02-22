@@ -502,7 +502,7 @@ public class GrandAgent extends Thread {
             throw let.err;
         }
         catch (IOException | HttpException e) {
-            if(st.transporter != null || true) {
+            if(st.transporter != null) {
                 st.transporter.onError(st.rudder, e);
             }
             else {
