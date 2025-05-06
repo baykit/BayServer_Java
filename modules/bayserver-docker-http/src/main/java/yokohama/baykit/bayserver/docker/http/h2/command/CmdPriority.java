@@ -27,7 +27,7 @@ public class CmdPriority extends H2Command {
     }
 
     @Override
-    public void unpack(H2Packet pkt) {
+    public void unpack(H2Packet pkt) throws IOException {
         super.unpack(pkt);
         PacketPartAccessor acc = pkt.newDataAccessor();
 
@@ -39,7 +39,7 @@ public class CmdPriority extends H2Command {
     }
 
     @Override
-    public void pack(H2Packet pkt) {
+    public void pack(H2Packet pkt) throws IOException {
         PacketPartAccessor acc = pkt.newDataAccessor();
         acc.putInt(H2Packet.makeStreamDependency32(excluded, streamDependency));
         acc.putByte(weight);

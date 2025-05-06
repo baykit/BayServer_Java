@@ -33,7 +33,7 @@ public class CmdContent extends H1Command {
     }
 
     @Override
-    public void pack(H1Packet pkt) {
+    public void pack(H1Packet pkt) throws IOException {
         PacketPartAccessor acc = pkt.newDataAccessor();
         acc.putBytes(buffer, start, len);
     }

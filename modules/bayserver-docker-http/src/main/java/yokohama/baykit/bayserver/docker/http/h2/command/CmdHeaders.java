@@ -3,7 +3,6 @@ package yokohama.baykit.bayserver.docker.http.h2.command;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.http.h2.*;
-import yokohama.baykit.bayserver.docker.http.h2.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -43,7 +42,7 @@ public class CmdHeaders extends H2Command {
 
 
     @Override
-    public void unpack(H2Packet pkt) {
+    public void unpack(H2Packet pkt) throws IOException {
         super.unpack(pkt);
 
         H2Packet.H2DataAccessor acc = pkt.newH2DataAccessor();
@@ -62,7 +61,7 @@ public class CmdHeaders extends H2Command {
 
 
     @Override
-    public void pack(H2Packet pkt) {
+    public void pack(H2Packet pkt) throws IOException {
         H2Packet.H2DataAccessor acc = pkt.newH2DataAccessor();
 
         if(flags.padded()) {
@@ -81,7 +80,7 @@ public class CmdHeaders extends H2Command {
         return handler.handleHeaders(this);
     }
 
-    private void readHeaderBlock(H2Packet.H2DataAccessor acc, int len) {
+    private void readHeaderBlock(H2Packet.H2DataAccessor acc, int len) throws IOException {
         while(acc.pos < len) {
             HeaderBlock blk = HeaderBlock.unpack(acc);
             if(BayLog.isTraceMode())
@@ -90,7 +89,7 @@ public class CmdHeaders extends H2Command {
         }
     }
 
-    private void writeHeaderBlock(H2Packet.H2DataAccessor acc) {
+    private void writeHeaderBlock(H2Packet.H2DataAccessor acc) throws IOException {
         for(HeaderBlock blk : headerBlocks) {
             HeaderBlock.pack(blk, acc);
         }

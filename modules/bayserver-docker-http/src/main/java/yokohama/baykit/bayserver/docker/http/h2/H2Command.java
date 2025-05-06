@@ -23,13 +23,13 @@ public abstract class H2Command extends Command<H2Command, H2Packet, H2Type, H2C
     }
 
     @Override
-    public void unpack(H2Packet pkt) {
+    public void unpack(H2Packet pkt) throws IOException {
         streamId = pkt.streamId;
         flags = pkt.flags;
     }
 
     @Override
-    public void pack(H2Packet pkt) {
+    public void pack(H2Packet pkt) throws IOException {
         pkt.streamId = streamId;
         pkt.flags = flags;
         pkt.packHeader();
