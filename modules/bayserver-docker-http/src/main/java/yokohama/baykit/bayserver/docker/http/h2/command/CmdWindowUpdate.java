@@ -27,7 +27,7 @@ public class CmdWindowUpdate extends H2Command {
     }
 
     @Override
-    public void unpack(H2Packet pkt) {
+    public void unpack(H2Packet pkt) throws IOException {
         super.unpack(pkt);
         PacketPartAccessor acc = pkt.newDataAccessor();
         int val = acc.getInt();
@@ -35,7 +35,7 @@ public class CmdWindowUpdate extends H2Command {
     }
 
     @Override
-    public void pack(H2Packet pkt) {
+    public void pack(H2Packet pkt) throws IOException {
 
         PacketPartAccessor acc = pkt.newDataAccessor();
         acc.putInt(H2Packet.consolidateFlagAndInt32(0, windowSizeIncrement));

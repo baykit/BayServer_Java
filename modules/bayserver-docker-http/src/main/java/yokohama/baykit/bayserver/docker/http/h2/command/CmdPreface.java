@@ -21,7 +21,7 @@ public class CmdPreface extends H2Command {
     }
 
     @Override
-    public void unpack(H2Packet pkt) {
+    public void unpack(H2Packet pkt) throws IOException {
         PacketPartAccessor acc = pkt.newDataAccessor();
         byte[] prefaceData = new byte[24];
         acc.getBytes(prefaceData);
@@ -29,7 +29,7 @@ public class CmdPreface extends H2Command {
     }
 
     @Override
-    public void pack(H2Packet pkt) {
+    public void pack(H2Packet pkt) throws IOException {
         PacketPartAccessor acc = pkt.newH2DataAccessor();
         acc.putBytes(prefaceBytes);
     }

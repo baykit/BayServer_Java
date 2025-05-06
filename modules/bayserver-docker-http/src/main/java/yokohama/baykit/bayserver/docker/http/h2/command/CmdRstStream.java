@@ -27,14 +27,14 @@ public class CmdRstStream extends H2Command {
     }
 
     @Override
-    public void unpack(H2Packet pkt) {
+    public void unpack(H2Packet pkt) throws IOException {
         super.unpack(pkt);
         PacketPartAccessor acc = pkt.newDataAccessor();
         errorCode = acc.getInt();
     }
 
     @Override
-    public void pack(H2Packet pkt) {
+    public void pack(H2Packet pkt) throws IOException {
         PacketPartAccessor acc = pkt.newDataAccessor();
         acc.putInt(errorCode);
         super.pack(pkt);

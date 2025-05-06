@@ -55,7 +55,7 @@ public class CmdSettings extends H2Command {
     }
 
     @Override
-    public void unpack(H2Packet pkt)  {
+    public void unpack(H2Packet pkt) throws IOException {
         super.unpack(pkt);
         if(flags.ack()) {
             return;
@@ -72,7 +72,7 @@ public class CmdSettings extends H2Command {
     }
 
     @Override
-    public void pack(H2Packet pkt) {
+    public void pack(H2Packet pkt) throws IOException {
         
         if(flags.ack()) {
             // not pack payload
