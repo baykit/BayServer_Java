@@ -38,7 +38,7 @@ public class CmdData extends H2Command {
     }
 
     @Override
-    public void unpack(H2Packet pkt) {
+    public void unpack(H2Packet pkt) throws IOException {
         super.unpack(pkt);
         this.data = pkt.buf;
         this.start = pkt.headerLen;
@@ -46,7 +46,7 @@ public class CmdData extends H2Command {
     }
 
     @Override
-    public void pack(H2Packet pkt) {
+    public void pack(H2Packet pkt) throws IOException {
         PacketPartAccessor acc = pkt.newDataAccessor();
         if(flags.padded())
             throw new IllegalStateException("Padding not supported");
