@@ -100,9 +100,16 @@ public class CgiDocker extends ClubBase {
             throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, tur.town + " docRoot of cgi docker or location of town is not specified.");
         }
 
-        Map<String, String> env = CGIUtil.getEnv(tur.town.name(), root, base, tur);
-        if (BayServer.harbor.traceHeader()) {
-            env.forEach((name, value) -> BayLog.info("%s cgi: env: %s=%s", tur, name, value));
+        Map<String, String> env;
+        try {
+            env = CGIUtil.getEnv(tur.town.name(), root, base, tur);
+            if (BayServer.harbor.traceHeader()) {
+                env.forEach((name, value) -> BayLog.info("%s cgi: env: %s=%s", tur, name, value));
+            }
+        }
+        catch(Exception e) {
+            BayLog.error(e, "Invalid CGI environment value");
+            throw new HttpException(HttpStatus.BAD_REQUEST, tur.req.uri);
         }
 
         String fileName = env.get(CGIUtil.SCRIPT_FILENAME);
