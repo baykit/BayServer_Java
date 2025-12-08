@@ -301,7 +301,7 @@ public class GrandAgent extends Thread {
         BayLog.debug("%s remove listeners", this);
         listeners.forEach(lis -> lis.remove(agentId));
         commandReceiver.end();
-        agents.set(agentId, null);
+        agents.set(agentId-1, null);
     }
 
     void abort() {
