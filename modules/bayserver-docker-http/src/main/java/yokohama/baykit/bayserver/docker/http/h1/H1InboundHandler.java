@@ -178,7 +178,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
             tur = curTour;
 
         tur.res.sendError(Tour.TOUR_ID_NOCHECK, HttpStatus.BAD_REQUEST, e.getMessage(), e);
-        return true;
+        return false;
     }
 
 
