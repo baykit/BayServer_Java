@@ -163,6 +163,8 @@ public class CGIUtil {
     private static void addEnv(AddListener lis, String key, Object value) {
         if(value == null)
             value = "";
+        if(value instanceof String && ((String) value).indexOf('\0') != -1)
+            throw new IllegalArgumentException(key + " contains null byte: " + String.valueOf(value));
 
         lis.add(key, value.toString());
     }
