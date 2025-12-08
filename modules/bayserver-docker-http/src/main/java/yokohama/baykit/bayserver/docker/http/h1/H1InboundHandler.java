@@ -16,10 +16,7 @@ import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.tour.TourReq;
-import yokohama.baykit.bayserver.util.DataConsumeListener;
-import yokohama.baykit.bayserver.util.Headers;
-import yokohama.baykit.bayserver.util.HttpStatus;
-import yokohama.baykit.bayserver.util.URLEncoder;
+import yokohama.baykit.bayserver.util.*;
 
 import java.io.IOException;
 
@@ -240,6 +237,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
 
         tur.req.uri = URLEncoder.encodeTilde(cmd.uri);
         tur.req.method = cmd.method.toUpperCase();
+        HttpUtil.checkMethod(tur.req.method);
         tur.req.protocol = protocol;
 
         if (!(tur.req.protocol.equals("HTTP/1.1")

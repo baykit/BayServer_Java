@@ -144,8 +144,8 @@ public class TourReq implements Reusable {
     public synchronized void setReqContentHandler(ReqContentHandler hnd) {
         if(hnd == null)
             throw new NullPointerException();
-        if(contentHandler != null)
-            throw new Sink("content handler is already set");
+        //if(contentHandler != null)
+        //    throw new Sink("content handler is already set");
 
         this.contentHandler = hnd;
     }

@@ -331,12 +331,18 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
         final CmdParams cmd = new CmdParams(warpId);
 
         final String scriptFname[] = new String[1];
-        CGIUtil.getEnv(tur.town.name(), docRoot, scriptBase, tur, (name, value) -> {
-            if(name.equals(CGIUtil.SCRIPT_FILENAME))
-                scriptFname[0] = value;
-            else
-                cmd.addParam(name, value);
-        });
+        try {
+            CGIUtil.getEnv(tur.town.name(), docRoot, scriptBase, tur, (name, value) -> {
+                if(name.equals(CGIUtil.SCRIPT_FILENAME))
+                    scriptFname[0] = value;
+                else
+                    cmd.addParam(name, value);
+            });
+        }
+        catch(Exception e) {
+            BayLog.error(e, "Invalid CGI environment value");
+            throw new ProtocolException("Invalid CGI environment value");
+        }
 
         scriptFname[0] = "proxy:fcgi://" +  ((FcgWarpDocker) ship().docker()).host + ":" +  ship().docker().port() + scriptFname[0];
         cmd.addParam(CGIUtil.SCRIPT_FILENAME, scriptFname[0]);

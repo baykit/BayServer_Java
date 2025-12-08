@@ -7,7 +7,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.ProtocolException;
 import java.util.Iterator;
+import java.util.regex.Pattern;
 
 public class HttpUtil {
 
@@ -153,6 +155,29 @@ public class HttpUtil {
             BayLog.warn(e, "Cannot resolve host name: %s", e);
             return null;
         }
+    }
+
+
+    public static void checkUri(String uri) throws ProtocolException {
+        if (uri.indexOf('\0') != -1) {
+            throw new ProtocolException("path contains null byte");
+        }
+
+        for (int i = 0; i < uri.length(); i++) {
+            char ch = uri.charAt(i);
+            if (ch < 0x20 || ch == 0x7F) {
+                throw new ProtocolException("path contains control character");
+            }
+        }
+    }
+
+    private static final Pattern TOKEN_PATTERN =
+            Pattern.compile("^[A-Za-z0-9!#$%&'*+\\-.^_`|~]+$");
+
+    public static void checkMethod(String method) throws ProtocolException{
+        if (!TOKEN_PATTERN.matcher(method).matches())
+            throw new ProtocolException("Invalid method: " + method);
+
     }
 
 }
