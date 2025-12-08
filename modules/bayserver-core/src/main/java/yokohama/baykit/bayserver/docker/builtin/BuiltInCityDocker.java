@@ -1,18 +1,17 @@
 package yokohama.baykit.bayserver.docker.builtin;
 
 import yokohama.baykit.bayserver.*;
-import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.docker.*;
 import yokohama.baykit.bayserver.docker.base.DockerBase;
 import yokohama.baykit.bayserver.docker.file.FileDocker;
+import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.URLDecoder;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
@@ -149,12 +148,12 @@ public class BuiltInCityDocker extends DockerBase implements City {
                 try {
                     tur.req.pathInfo = URLDecoder.decode(tur.req.pathInfo, tur.req.charset());
                 }
-                catch(UnsupportedEncodingException e) {
+                catch(Exception e) {
                     BayLog.error(e);
                     try {
                         tur.req.pathInfo = URLDecoder.decode(tur.req.pathInfo, "UTF-8");
                     }
-                    catch (UnsupportedEncodingException ee) {
+                    catch (Exception ee) {
                         BayLog.error(ee);
                     }
                 }
