@@ -152,7 +152,10 @@ public class CmdForwardRequest extends AjpCommand {
         //BayLog.info("%s", this);
         AjpPacket.AjpAccessor acc = pkt.newAjpDataAccessor();
         acc.putByte(type.no); // prefix code
-        acc.putByte(getMethodCode(method));
+        int code = getMethodCode(method);
+        if(code <= 0)
+            throw new ProtocolException("Invalid method: " + method);
+        acc.putByte(code);
         acc.putString(protocol);
         acc.putString(reqUri);
         acc.putString(remoteAddr);
@@ -172,7 +175,10 @@ public class CmdForwardRequest extends AjpCommand {
         super.unpack(pkt);
         AjpPacket.AjpAccessor acc = pkt.newAjpDataAccessor();
         acc.getByte(); // prefix code
-        method = methods.get(acc.getByte());
+        int code = acc.getByte();
+        method = methods.get(code);
+        if(method == null)
+            throw new ProtocolException("Invalid method code: " + code);
         protocol = acc.getString();
         reqUri = acc.getString();
         remoteAddr = acc.getString();
