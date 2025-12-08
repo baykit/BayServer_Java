@@ -230,7 +230,7 @@ public class FileContentHandler implements ReqContentHandler {
         catch (FileNotFoundException e) {
             throw new HttpException(HttpStatus.NOT_FOUND, path.getPath());
         }
-        catch (IOException e) {
+        catch (Exception e) {
             BayLog.error(e);
             throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, path.getPath());
         }
