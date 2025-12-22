@@ -258,9 +258,6 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
         if(tur == null) {
             throw new IllegalArgumentException("Invalid stream id: " + cmd.streamId);
         }
-        if(tur.req.headers.contentLength() <= 0) {
-            throw new ProtocolException("Post content not allowed");
-        }
 
         try {
             boolean success = true;
