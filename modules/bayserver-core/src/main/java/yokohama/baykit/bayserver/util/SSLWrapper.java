@@ -20,7 +20,7 @@ public class SSLWrapper {
         netBufSize = engine.getSession().getPacketBufferSize();
         if(appProtocols != null) {
             SSLParameters params = new SSLParameters();
-            SSLUtil.setApplicationProtocols(params, new String[]{"h2"});
+            SSLUtil.setApplicationProtocols(params, appProtocols);
             engine.setSSLParameters(params);
         }
     }
