@@ -14,4 +14,6 @@ public interface Rudder {
     int write(ByteBuffer buf) throws IOException;
 
     void close() throws IOException;
+
+    boolean closed();
 }

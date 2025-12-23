@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-public class InputStreamRudder implements Rudder {
+public class InputStreamRudder extends RudderBase {
     public final InputStream input;
 
     public InputStreamRudder(InputStream in) {
@@ -43,6 +43,7 @@ public class InputStreamRudder implements Rudder {
     @Override
     public void close() throws IOException {
         input.close();
+        super.close();
     }
 
     ////////////////////////////////////////////
