@@ -195,6 +195,9 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
 
     @Override
     public void cancelWrite(RudderState st) {
+        if(st.rudder.closed())
+            return;
+
         SelectionKey key = st.selectionKey;
         // Write OP Off
         try {
@@ -205,7 +208,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
                 key.interestOps(op);
         }
         catch(CancelledKeyException e) {
-            BayLog.debug(e, "%s key cancelled: %s", agent, key);
+            BayLog.debug( "%s key cancelled: %s", agent, key);
         }
     }
 
@@ -217,13 +220,23 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
     @Override
     public void nextRead(RudderState st) {
         SelectionKey key = st.selectionKey;
-        key.interestOps(key.interestOps() | OP_READ);
+        try {
+            key.interestOps(key.interestOps() | OP_READ);
+        }
+        catch(CancelledKeyException e) {
+            BayLog.error(e, "%s key cancelled: %s", agent, key);
+        }
     }
 
     @Override
     public void nextWrite(RudderState st) {
         SelectionKey key = st.selectionKey;
-        key.interestOps(key.interestOps() | OP_WRITE);
+        try {
+            key.interestOps(key.interestOps() | OP_WRITE);
+        }
+        catch(CancelledKeyException e) {
+            BayLog.error(e, "%s key cancelled: %s", agent, key);
+        }
     }
 
     @Override

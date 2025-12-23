@@ -6,7 +6,7 @@ import java.nio.channels.Channel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
-public abstract class ChannelRudder implements Rudder {
+public abstract class ChannelRudder extends RudderBase {
     public final Channel channel;
 
     public ChannelRudder(Channel channel) {
@@ -42,6 +42,7 @@ public abstract class ChannelRudder implements Rudder {
     @Override
     public void close() throws IOException {
         channel.close();
+        super.close();
     }
 
     ////////////////////////////////////////////

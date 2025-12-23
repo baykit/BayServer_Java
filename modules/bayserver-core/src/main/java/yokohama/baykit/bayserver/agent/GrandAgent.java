@@ -442,7 +442,7 @@ public class GrandAgent extends Thread {
         if(st.writeQueue.isEmpty())
             throw new IllegalStateException(this + " Write queue is empty: rd=" + st.rudder);
 
-        boolean writeMore = true;
+        boolean writeMore;
         WriteUnit unit = st.writeQueue.get(0);
         //BayLog.debug("%s wrote buf=%s", this, unit.buf);
         if (unit.buf.hasRemaining()) {
@@ -450,13 +450,17 @@ public class GrandAgent extends Thread {
             writeMore = true;
         }
         else {
+            // Removes write unit from writeQueue
             st.multiplexer.consumeOldestUnit(st);
-        }
 
-        synchronized (st.writing) {
-            if (st.writeQueue.isEmpty()) {
-                writeMore = false;
-                st.writing[0] = false;
+            synchronized (st.writing) {
+                if (st.writeQueue.isEmpty()) {
+                    writeMore = false;
+                    st.writing[0] = false;
+                }
+                else {
+                    writeMore = true;
+                }
             }
         }
 
