@@ -4,8 +4,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-public class OutputStreamRudder implements Rudder {
+public class OutputStreamRudder extends RudderBase {
     public final OutputStream output;
+
 
     public OutputStreamRudder(OutputStream out) {
         this.output = out;
@@ -45,6 +46,7 @@ public class OutputStreamRudder implements Rudder {
     @Override
     public void close() throws IOException {
         output.close();
+        super.close();
     }
 
 
