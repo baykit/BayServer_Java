@@ -90,6 +90,7 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
         if (tur.res.headerSent())
             throw new ProtocolException("Header command not expected");
 
+        /*
         for(HeaderBlock blk : cmd.headerBlocks) {
             analyzer.clear();
             analyzer.analyzeHeaderBlock(blk, resHeaderTbl);
@@ -112,6 +113,7 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
                 }
             }
         }
+        */
 
         if(cmd.flags.endHeaders()) {
             tur.res.sendHeaders(Tour.TOUR_ID_NOCHECK);
@@ -167,6 +169,11 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
             }
         }
         return NextSocketAction.Continue;
+    }
+
+    @Override
+    public NextSocketAction handleContinuation(CmdContinuation cmd) throws IOException {
+        return null;
     }
 
     /////////////////////////////////////
@@ -230,6 +237,7 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
             townPath += "/";
         String newUri = ship().docker().warpBase() + tur.req.uri.substring(townPath.length());
 
+        /*
         CmdHeaders cmdHdr = new CmdHeaders(WarpData.get(tur).warpId);
         HeaderBlockBuilder bld = new HeaderBlockBuilder();
         HeaderBlock blk = bld.buildHeaderBlock(HeaderTable.PSEUDO_HEADER_METHOD, tur.req.method, reqHeaderTbl);
@@ -253,9 +261,9 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
                 }
             }
         }
-
         cmdHdr.flags = new H2Flags(H2Flags.FLAGS_END_HEADERS);
         ship().post(cmdHdr);
+*/
     }
 
 
