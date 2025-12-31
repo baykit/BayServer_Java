@@ -1,11 +1,10 @@
 package yokohama.baykit.bayserver.docker.http.h2.command;
 
-import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.http.h2.*;
+import yokohama.baykit.bayserver.protocol.PacketPartAccessor;
 
 import java.io.IOException;
-import java.util.ArrayList;
 
 /**
  * HTTP/2 Header payload format
@@ -23,13 +22,18 @@ import java.util.ArrayList;
  * +---------------------------------------------------------------+
  */
 public class CmdHeaders extends H2Command {
-    
+
+    /**
+     * This class refers external byte array, so this IS NOT mutable
+     */
+    public int start;
+    public int length;
+    public byte[] data;
+
     public int padLength;
     public boolean excluded;
     public int streamDependency;
     public int weight;
-    
-    public ArrayList<HeaderBlock> headerBlocks = new ArrayList<>();
     
     public CmdHeaders(int streamId, H2Flags flags) {
         super(H2Type.Headers, streamId, flags);
@@ -45,7 +49,7 @@ public class CmdHeaders extends H2Command {
     public void unpack(H2Packet pkt) throws IOException {
         super.unpack(pkt);
 
-        H2Packet.H2DataAccessor acc = pkt.newH2DataAccessor();
+        PacketPartAccessor acc = pkt.newDataAccessor();
 
         if(pkt.flags.padded())
             padLength = acc.getByte();
@@ -55,14 +59,15 @@ public class CmdHeaders extends H2Command {
             streamDependency = H2Packet.extractInt31(val);
             weight = acc.getByte();
         }
-        readHeaderBlock(acc, pkt.dataLen());
-        
+        this.data = pkt.buf;
+        this.start = pkt.headerLen + acc.pos;
+        this.length = pkt.dataLen() - acc.pos;
     }
 
 
     @Override
     public void pack(H2Packet pkt) throws IOException {
-        H2Packet.H2DataAccessor acc = pkt.newH2DataAccessor();
+        PacketPartAccessor acc = pkt.newDataAccessor();
 
         if(flags.padded()) {
             acc.putByte(padLength);
@@ -71,7 +76,8 @@ public class CmdHeaders extends H2Command {
             acc.putInt(H2Packet.makeStreamDependency32(excluded, streamDependency));
             acc.putByte(weight);
         }
-        writeHeaderBlock(acc);
+
+        acc.putBytes(data, start, length);
         super.pack(pkt);
     }
 
@@ -80,22 +86,4 @@ public class CmdHeaders extends H2Command {
         return handler.handleHeaders(this);
     }
 
-    private void readHeaderBlock(H2Packet.H2DataAccessor acc, int len) throws IOException {
-        while(acc.pos < len) {
-            HeaderBlock blk = HeaderBlock.unpack(acc);
-            if(BayLog.isTraceMode())
-                BayLog.trace("h2: header block read: " + blk);
-            headerBlocks.add(blk);
-        }
-    }
-
-    private void writeHeaderBlock(H2Packet.H2DataAccessor acc) throws IOException {
-        for(HeaderBlock blk : headerBlocks) {
-            HeaderBlock.pack(blk, acc);
-        }
-    }
-
-    public void addHeaderBlock(HeaderBlock blk) {
-        headerBlocks.add(blk);
-    }
 }

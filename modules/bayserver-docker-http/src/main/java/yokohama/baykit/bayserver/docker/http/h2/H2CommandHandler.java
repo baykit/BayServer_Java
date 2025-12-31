@@ -1,9 +1,8 @@
 package yokohama.baykit.bayserver.docker.http.h2;
 
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.docker.http.h2.command.*;
 import yokohama.baykit.bayserver.protocol.CommandHandler;
-import yokohama.baykit.bayserver.docker.http.h2.command.*;
-import yokohama.baykit.bayserver.docker.http.h2.command.*;
 
 import java.io.IOException;
 
@@ -26,4 +25,6 @@ public interface H2CommandHandler extends CommandHandler<H2Command> {
     NextSocketAction handlePing(CmdPing cmd) throws IOException;
 
     NextSocketAction handleRstStream(CmdRstStream cmd) throws IOException;
+
+    NextSocketAction handleContinuation(CmdContinuation cmd) throws IOException;
 }
