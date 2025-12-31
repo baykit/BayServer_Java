@@ -528,8 +528,11 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
 
     private void onWritable(RudderState st) {
         try {
-            if(st.writeQueue.isEmpty())
-                throw new IOException(agent + " No data to write");
+            if(st.writeQueue.isEmpty()) {
+                BayLog.debug("%s No data to write", this);
+                agent.sendWroteLetter(st.id, st.rudder, this, 0, false);
+                return;
+            }
 
             int i;
             for(i = 0; i < st.writeQueue.size(); i++) {
