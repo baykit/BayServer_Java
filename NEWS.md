@@ -1,5 +1,10 @@
 # BayServer for Java
 
+# 3.2.0
+
+- [H2] Adds support for HTTP/2 CONTINUATION frames
+- [Core] Fixes minor bugs
+
 # 3.1.2
 
 - [Core] Fixes minor bugs
