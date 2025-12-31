@@ -1,6 +1,5 @@
 package yokohama.baykit.bayserver.docker.http.h2;
 
-import yokohama.baykit.bayserver.docker.http.h2.huffman.HTree;
 import yokohama.baykit.bayserver.protocol.Packet;
 import yokohama.baykit.bayserver.protocol.PacketPartAccessor;
 
@@ -22,117 +21,6 @@ import java.io.IOException;
  * +---------------------------------------------------------------+
  */
 public class H2Packet extends Packet<H2Type> {
-
-
-    public class H2HeaderAccessor extends PacketPartAccessor {
-
-        public H2HeaderAccessor(Packet pkt, int start, int maxLen) {
-            super(pkt, start, maxLen);
-        }
-
-        public void putInt24(int len) throws IOException {
-            byte b1 = (byte)((len >> 16) & 0xFF);
-            byte b2 = (byte)((len >> 8) & 0xFF);
-            byte b3 = (byte)(len & 0xFF);
-            putBytes(new byte[]{b1, b2, b3}); 
-        }
-    }
-
-    public class H2DataAccessor extends PacketPartAccessor {
-
-        public H2DataAccessor(Packet pkt, int start, int maxLen) {
-            super(pkt, start, maxLen);
-        }
-
-        public int getHPackInt(int prefix, int[] head) throws IOException {
-            int maxVal = 0xFF >> (8 - prefix);
-
-            int firstByte = getByte();
-            int firstVal = firstByte & maxVal;
-            head[0] = firstByte >> prefix;
-            if(firstVal != maxVal) {
-                return firstVal;
-            }
-            else {
-                return maxVal + getHPackIntRest();
-            }
-        }
-
-        public int getHPackIntRest() throws IOException {
-            int rest = 0;
-            for(int i = 0; ; i++) {
-                int data = getByte();
-                boolean cont = (data & 0x80) != 0;
-                int value = (data & 0x7F);
-                rest = rest + (value << (i * 7));
-                if(!cont)
-                    break;
-            }
-            return rest;
-        }
-
-        public String getHPackString() throws IOException {
-            int isHuffman[] = new int[1];
-            int len = getHPackInt(7, isHuffman);
-            byte[] data = new byte[len];
-            getBytes(data);
-            if(isHuffman[0] == 1) {
-                // Huffman
-            /*
-            for(int i = 0; i < data.length; i++) {
-                String bits = "00000000" + Integer.toString(data[i] & 0xFF, 2);
-                BayServer.debug(bits.substring(bits.length() - 8));
-            }
-            */
-                return HTree.decode(data);
-            }
-            else {
-                // ASCII
-                return new String(data);
-            }
-        }
-
-
-        public void putHPackInt(int val, int prefix, int head) throws IOException {
-            int maxVal = 0xFF >> (8 - prefix);
-            int headVal = (head  << prefix) & 0xFF;
-            if(val < maxVal) {
-                putByte(val | headVal);
-            }
-            else {
-                putByte(headVal | maxVal);
-                putHPackIntRest(val - maxVal);
-            }
-        }
-
-        private void putHPackIntRest(int val) throws IOException {
-            while(true) {
-                int data = val & 0x7F;
-                int nextVal = val >> 7;
-                if(nextVal == 0) {
-                    // data end
-                    putByte(data);
-                    break;
-                }
-                else {
-                    // data continues
-                    putByte(data | 0x80);
-                    val = nextVal;
-                }
-            }
-        }
-
-        public void putHPackString(String value, boolean haffman) throws IOException {
-            if(haffman) {
-                throw new IllegalArgumentException();
-            }
-            else {
-                putHPackInt(value.length(), 7, 0);
-                putBytes(value.getBytes());
-            }
-        }
-
-    }
     
     public static final int MAX_PAYLOAD_MAXLEN = 0x00FFFFFF; // = 2^24-1 = 16777215 = 16MB-1
     public static final int DEFAULT_PAYLOAD_MAXLEN = 0x00004000; // = 2^14 = 16384 = 16KB
@@ -158,19 +46,11 @@ public class H2Packet extends Packet<H2Type> {
     }
 
     public void packHeader() throws IOException {
-        H2HeaderAccessor acc = newH2HeaderAccessor();
-        acc.putInt24(dataLen());
+        PacketPartAccessor acc = newHeaderAccessor();
+        putInt24(acc, dataLen());
         acc.putByte(type.no);
         acc.putByte(flags.flags);
         acc.putInt(H2Packet.extractInt31(streamId));
-    }
-
-    public H2HeaderAccessor newH2HeaderAccessor() {
-        return new H2HeaderAccessor(this, 0, headerLen);
-    }
-
-    public H2DataAccessor newH2DataAccessor() {
-        return new H2DataAccessor(this, headerLen, -1);
     }
 
     public static int extractInt31(int val) {
@@ -189,4 +69,10 @@ public class H2Packet extends Packet<H2Type> {
         return (excluded ? 1 : 0) << 31 | extractInt31(dep);
     }
 
+    public static void putInt24(PacketPartAccessor acc, int len) throws IOException {
+        byte b1 = (byte)((len >> 16) & 0xFF);
+        byte b2 = (byte)((len >> 8) & 0xFF);
+        byte b3 = (byte)(len & 0xFF);
+        acc.putBytes(new byte[]{b1, b2, b3});
+    }
 }

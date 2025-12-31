@@ -14,9 +14,11 @@ import yokohama.baykit.bayserver.tour.TourStore;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Headers;
 import yokohama.baykit.bayserver.util.HttpStatus;
+import yokohama.baykit.bayserver.util.SimpleBuffer;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Iterator;
 
 public class H2InboundHandler implements H2Handler, InboundHandler {
@@ -50,6 +52,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
     final HeaderBlockAnalyzer analyzer = new HeaderBlockAnalyzer();
     public final HeaderTable reqHeaderTbl = HeaderTable.createDynamicTable();
     public final HeaderTable resHeaderTbl = HeaderTable.createDynamicTable();
+    SimpleBuffer headerBuffer = new SimpleBuffer();
 
 
 
@@ -71,6 +74,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
 
         reqContLen = 0;
         reqContRead = 0;
+        headerBuffer.reset();
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -79,12 +83,12 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
 
     @Override
     public void sendHeaders(Tour tur) throws IOException {
-        CmdHeaders cmd = new CmdHeaders(tur.req.key);
-
         HeaderBlockBuilder bld = new HeaderBlockBuilder();
 
+        ArrayList<HeaderBlock> headerBlocks = new ArrayList<>();
+
         HeaderBlock blk = bld.buildHeaderBlock(":status", Integer.toString(tur.res.headers.status()), resHeaderTbl);
-        cmd.headerBlocks.add(blk);
+        headerBlocks.add(blk);
 
         // headers
         if(BayServer.harbor.traceHeader())
@@ -101,17 +105,47 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
                     if (BayServer.harbor.traceHeader())
                         BayLog.info("%s H2 res header: %s=%s", tur, name, value);
                     blk = bld.buildHeaderBlock(name, value, resHeaderTbl);
-                    cmd.headerBlocks.add(blk);
+                    headerBlocks.add(blk);
                 }
             }
         }
 
-        cmd.flags.setEndHeaders(true);
-        cmd.excluded = false;
-        // cmd.streamDependency = streamId;
-        cmd.flags.setPadded(false);
+        SimpleBuffer buf = new SimpleBuffer();
+        new HeaderBlockRenderer(buf).renderHeaderBlocks(headerBlocks);
 
-        protocolHandler.post(cmd);
+        int pos = 0;
+        int len = buf.length();
+        while(len > 0) {
+            int chunkLen = Math.min(len, H2Packet.DEFAULT_PAYLOAD_MAXLEN);
+
+            H2Command cmd;
+            if(pos == 0) {
+                CmdHeaders hcmd = new CmdHeaders(tur.req.key);
+                hcmd.excluded = false;
+                hcmd.data = buf.bytes();
+                hcmd.start = pos;
+                hcmd.length = len;
+                cmd = hcmd;
+            }
+            else {
+                CmdContinuation ccmd = new CmdContinuation(tur.req.key);
+                ccmd.data = buf.bytes();
+                ccmd.start = pos;
+                ccmd.length = len;
+                cmd = ccmd;
+            }
+
+            cmd.flags.setPadded(false);
+
+            pos += chunkLen;
+            len -= chunkLen;
+            if(len == 0) {
+                cmd.flags.setEndHeaders(true);
+            }
+
+            protocolHandler.post(cmd);
+        }
+
     }
 
     @Override
@@ -185,69 +219,13 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
             return NextSocketAction.Continue;
         }
 
-        for(HeaderBlock blk : cmd.headerBlocks) {
-            if(blk.op == HeaderBlock.HeaderOp.UpdateDynamicTableSize) {
-                BayLog.trace("%s header block update table size: %d", tur, blk.size);
-                reqHeaderTbl.setSize(blk.size);
-                continue;
-            }
-
-            analyzer.analyzeHeaderBlock(blk, reqHeaderTbl);
-            if(BayServer.harbor.traceHeader())
-                BayLog.info("%s req header: %s=%s :%s", tur, analyzer.name, analyzer.value, blk);
-
-            if(analyzer.name == null) {
-                continue;
-            }
-            else if(analyzer.name.charAt(0) != ':') {
-                tur.req.headers.add(analyzer.name, analyzer.value);
-            }
-            else if(analyzer.method != null) {
-                tur.req.method = analyzer.method;
-            }
-            else if(analyzer.path != null) {
-                tur.req.uri = analyzer.path;
-            }
-            else if(analyzer.scheme != null) {
-            }
-            else if(analyzer.status != null) {
-                throw new IllegalStateException();
-            }
+        if(cmd.flags.endHeaders()) {
+            return onEndHeader(tur, cmd.data, cmd.start, cmd.length);
+        }
+        else {
+            this.headerBuffer.put(cmd.data, cmd.start, cmd.length);
         }
 
-        if (cmd.flags.endHeaders()) {
-            tur.req.protocol = "HTTP/2.0";
-            BayLog.debug("%s H2 read header method=%s protocol=%s uri=%s contlen=%d",
-                            ship(), tur.req.method, tur.req.protocol, tur.req.uri, tur.req.headers.contentLength());
-
-            int reqContLen = tur.req.headers.contentLength();
-
-            if(reqContLen > 0) {
-                tur.req.setLimit(reqContLen);
-            }
-
-            try {
-                startTour(tur);
-                if (tur.req.headers.contentLength() <= 0) {
-                    endReqContent(tur.id(), tur);
-                }
-            } catch (HttpException e) {
-                BayLog.debug("%s Http error occurred: %s", this, e);
-                if(reqContLen <= 0) {
-                    // no post data
-                    tur.req.abort();
-                    tur.res.sendHttpException(Tour.TOUR_ID_NOCHECK, e);
-
-                    return NextSocketAction.Continue;
-                }
-                else {
-                    // Delay send
-                    tur.error = e;
-                    tur.req.setReqContentHandler(ReqContentHandler.devNull);
-                    return NextSocketAction.Continue;
-                }
-            }
-        }
         return NextSocketAction.Continue;
     }
 
@@ -403,6 +381,22 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
         return NextSocketAction.Continue;
     }
 
+    @Override
+    public NextSocketAction handleContinuation(CmdContinuation cmd) throws IOException {
+
+        Tour tur = getTour(cmd.streamId);
+        if(tur == null) {
+            throw new IllegalArgumentException("Invalid stream id: " + cmd.streamId);
+        }
+
+        this.headerBuffer.put(cmd.data, cmd.start, cmd.length);
+        if(cmd.flags.endHeaders()) {
+            return onEndHeader(tur, headerBuffer.bytes(), 0, headerBuffer.length());
+
+        }
+        return NextSocketAction.Continue;
+    }
+
     ///////////////////////////////////////////////////////////////////////////////////////////
     // private
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -457,6 +451,72 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
     }
 
 
+    NextSocketAction onEndHeader(Tour tur, byte[] buf, int start, int len) throws IOException {
 
+        ArrayList<HeaderBlock> headerBlocks = new HeaderBlockParser(buf, start, len).parseHeaderBlocks();
 
+        for(HeaderBlock blk : headerBlocks) {
+            if(blk.op == HeaderBlock.HeaderOp.UpdateDynamicTableSize) {
+                BayLog.trace("%s header block update table size: %d", tur, blk.size);
+                reqHeaderTbl.setSize(blk.size);
+                continue;
+            }
+
+            analyzer.analyzeHeaderBlock(blk, reqHeaderTbl);
+            if(BayServer.harbor.traceHeader())
+                BayLog.info("%s req header: %s=%s :%s", tur, analyzer.name, analyzer.value, blk);
+
+            if(analyzer.name == null) {
+                continue;
+            }
+            else if(analyzer.name.charAt(0) != ':') {
+                tur.req.headers.add(analyzer.name, analyzer.value);
+            }
+            else if(analyzer.method != null) {
+                tur.req.method = analyzer.method;
+            }
+            else if(analyzer.path != null) {
+                tur.req.uri = analyzer.path;
+            }
+            else if(analyzer.scheme != null) {
+            }
+            else if(analyzer.status != null) {
+                throw new IllegalStateException();
+            }
+        }
+
+        tur.req.protocol = "HTTP/2.0";
+        BayLog.debug("%s H2 read header method=%s protocol=%s uri=%s contlen=%d",
+                ship(), tur.req.method, tur.req.protocol, tur.req.uri, tur.req.headers.contentLength());
+
+        int reqContLen = tur.req.headers.contentLength();
+
+        if(reqContLen > 0) {
+            tur.req.setLimit(reqContLen);
+        }
+
+        try {
+            startTour(tur);
+            if (tur.req.headers.contentLength() <= 0) {
+                endReqContent(tur.id(), tur);
+            }
+        } catch (HttpException e) {
+            BayLog.debug("%s Http error occurred: %s", this, e);
+            if(reqContLen <= 0) {
+                // no post data
+                tur.req.abort();
+                tur.res.sendHttpException(Tour.TOUR_ID_NOCHECK, e);
+
+                return NextSocketAction.Continue;
+            }
+            else {
+                // Delay send
+                tur.error = e;
+                tur.req.setReqContentHandler(ReqContentHandler.devNull);
+                return NextSocketAction.Continue;
+            }
+        }
+
+        return NextSocketAction.Continue;
+    }
 }

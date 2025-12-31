@@ -30,7 +30,7 @@ public class CmdPreface extends H2Command {
 
     @Override
     public void pack(H2Packet pkt) throws IOException {
-        PacketPartAccessor acc = pkt.newH2DataAccessor();
+        PacketPartAccessor acc = pkt.newDataAccessor();
         acc.putBytes(prefaceBytes);
     }
 

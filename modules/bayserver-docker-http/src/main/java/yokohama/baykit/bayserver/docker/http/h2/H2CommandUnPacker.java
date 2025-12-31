@@ -1,10 +1,9 @@
 package yokohama.baykit.bayserver.docker.http.h2;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.protocol.CommandUnPacker;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.http.h2.command.*;
-import yokohama.baykit.bayserver.docker.http.h2.command.*;
+import yokohama.baykit.bayserver.protocol.CommandUnPacker;
 
 import java.io.IOException;
 
@@ -70,8 +69,12 @@ public class H2CommandUnPacker extends CommandUnPacker<H2Packet> {
                 cmd = new CmdRstStream(pkt.streamId);
                 break;
 
+            case Continuation:
+                cmd = new CmdContinuation(pkt.streamId);
+                break;
+
             default:
-                throw new IllegalStateException("Received packet" + pkt);
+                throw new IllegalStateException("Received packet: " + pkt);
         }
 
         cmd.unpack(pkt);
