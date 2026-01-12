@@ -496,6 +496,10 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
         }
 
         try {
+            if(tur.req.uri == null) {
+                throw new HttpException(HttpStatus.BAD_REQUEST, "Missing uri");
+            }
+
             startTour(tur);
             if (tur.req.headers.contentLength() <= 0) {
                 endReqContent(tur.id(), tur);
