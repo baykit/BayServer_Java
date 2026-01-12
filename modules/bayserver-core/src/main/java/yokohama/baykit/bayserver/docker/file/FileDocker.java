@@ -81,7 +81,7 @@ public class FileDocker extends ClubBase {
         }
         else {
             if(BayServer.harbor.enableCache() && fileStore == null) {
-                fileStore = new FileStore(BayServer.harbor.cacheLifespanSec(), BayServer.harbor.cacheSizeMb() * 1024);
+                fileStore = new FileStore(BayServer.harbor.cacheLifespanSec(), BayServer.harbor.cacheSizeMb() * 1024 * 1024);
             }
             FileContentHandler handler = new FileContentHandler(tur, fileStore, real, tur.res.charset());
             tur.req.setReqContentHandler(handler);
