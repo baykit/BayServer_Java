@@ -122,8 +122,12 @@ public class CGIUtil {
             }
         }
 
-        addEnv(lis, REMOTE_ADDR, tour.req.remoteAddress);
-        addEnv(lis, REMOTE_PORT, Integer.toString(tour.req.remotePort));
+        if(tour.req.remoteAddress != null) {
+            addEnv(lis, REMOTE_ADDR, tour.req.remoteAddress);
+        }
+        if(tour.req.remotePort >= 0) {
+            addEnv(lis, REMOTE_PORT, Integer.toString(tour.req.remotePort));
+        }
         //addEnv(map, REMOTE_USER, "unknown");
 
         addEnv(lis, REQUEST_SCHEME, tour.isSecure ? "https": "http");
