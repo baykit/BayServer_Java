@@ -14,7 +14,6 @@ import yokohama.baykit.bayserver.tour.TourHandler;
 import yokohama.baykit.bayserver.tour.TourStore;
 import yokohama.baykit.bayserver.util.Counter;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
-import yokohama.baykit.bayserver.util.Headers;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -224,20 +223,8 @@ public class InboundShip extends Ship {
         if(!tur.isValid()) {
             throw new Sink("%s Tour is not valid", this);
         }
-        boolean keepAlive = false;
-        if (tur.req.headers.getConnection() == Headers.ConnectionType.KeepAlive)
-            keepAlive = true;
-        if(keepAlive) {
-            Headers.ConnectionType resConn = tur.res.headers.getConnection();
-            keepAlive = (resConn == Headers.ConnectionType.KeepAlive)
-                    || (resConn == Headers.ConnectionType.Unknown);
-            if (keepAlive) {
-                if (tur.res.headers.contentLength() < 0)
-                    keepAlive = false;
-            }
-        }
 
-        tourHandler().sendEnd(tur, keepAlive, lis);
+        tourHandler().sendEndTour(tur, lis);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////

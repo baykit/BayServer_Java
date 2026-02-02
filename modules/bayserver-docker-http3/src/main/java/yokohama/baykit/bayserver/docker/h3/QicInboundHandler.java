@@ -164,7 +164,7 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
     }
 
     @Override
-    public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+    public void sendEndTour(Tour tur, DataConsumeListener lis) throws IOException {
 
         long stmId = tur.req.key;
         BayLog.debug("%s stm#%d sendEndTour", tur, stmId);

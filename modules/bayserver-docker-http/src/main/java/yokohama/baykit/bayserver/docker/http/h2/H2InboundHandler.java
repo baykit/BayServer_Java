@@ -152,7 +152,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
     }
 
     @Override
-    public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+    public void sendEndTour(Tour tur, DataConsumeListener lis) throws IOException {
         CmdData cmd = new CmdData(tur.req.key, null, new byte[0], 0, 0);
         cmd.flags.setEndStream(true);
         protocolHandler.post(cmd, lis);

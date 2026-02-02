@@ -95,7 +95,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         String resCon;
 
         // determine Connection header value
-        if(tur.req.headers.getConnection() != Headers.ConnectionType.KeepAlive)
+        if(tur.req.headers.getConnection() != Headers.ConnectionType.KeepAlive && tur.req.headers.getConnection() != Headers.ConnectionType.Unknown)
             // If client doesn't support "Keep-Alive", set "Close"
             resCon = "Close";
         else if (tur.res.headers.status() != HttpStatus.OK) {
@@ -104,7 +104,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         else {
             resCon = "Keep-Alive";
             // Client supports "Keep-Alive"
-            if (tur.res.headers.getConnection() != Headers.ConnectionType.KeepAlive) {
+            if (tur.res.headers.getConnection() != Headers.ConnectionType.KeepAlive && tur.res.headers.getConnection() != Headers.ConnectionType.Unknown) {
                 // If tour doesn't need "Keep-Alive"
                 if (tur.res.headers.contentLength() == -1) {
                     // If content-length not specified
@@ -137,8 +137,9 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
     }
 
     @Override
-    public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+    public void sendEndTour(Tour tur, DataConsumeListener lis) throws IOException {
         InboundShip ship = ship();
+        boolean keepAlive = tur.res.headers.getConnection() == Headers.ConnectionType.KeepAlive;
         BayLog.debug("%s H1 sendEnd: tur=%s keep=%s", ship, tur, keepAlive);
 
         // Send end request command

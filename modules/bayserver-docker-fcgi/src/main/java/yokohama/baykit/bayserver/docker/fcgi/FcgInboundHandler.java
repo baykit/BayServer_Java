@@ -118,9 +118,9 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
     }
 
     @Override
-    public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+    public void sendEndTour(Tour tur, DataConsumeListener lis) throws IOException {
 
-        BayLog.debug("%s PH:endTour: tur=%s keep=%s", ship(), tur, keepAlive);
+        BayLog.debug("%s PH:endTour: tur=%s", ship(), tur);
 
         // Send empty stdout command
         FcgCommand cmd = new CmdStdOut(tur.req.key);
@@ -136,13 +136,13 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
 
         try {
             protocolHandler.post(cmd, () -> {
-                BayLog.debug("%s call back in sendEndTour: tur=%s keep=%b", ship(), tur, keepAlive);
+                BayLog.debug("%s call back in sendEndTour: tur=%s", ship(), tur);
                 ensureFunc.run();
                 lis.dataConsumed();
             });
         }
         catch(IOException e) {
-            BayLog.debug("%s post faile in sendEndTour: tur=%s keep=%b", ship(), tur, keepAlive);
+            BayLog.debug("%s post faile in sendEndTour: tur=%s", ship(), tur);
             ensureFunc.run();
             throw e;
         }
