@@ -159,6 +159,10 @@ public class HttpUtil {
 
 
     public static void checkUri(String uri) throws ProtocolException {
+        if (uri == null) {
+            throw new ProtocolException("path is null");
+        }
+
         if (uri.indexOf('\0') != -1) {
             throw new ProtocolException("path contains null byte");
         }
