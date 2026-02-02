@@ -11,10 +11,7 @@ import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.tour.TourReq;
 import yokohama.baykit.bayserver.tour.TourStore;
-import yokohama.baykit.bayserver.util.DataConsumeListener;
-import yokohama.baykit.bayserver.util.Headers;
-import yokohama.baykit.bayserver.util.HttpStatus;
-import yokohama.baykit.bayserver.util.SimpleBuffer;
+import yokohama.baykit.bayserver.util.*;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -489,6 +486,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
         BayLog.debug("%s H2 read header method=%s protocol=%s uri=%s contlen=%d",
                 ship(), tur.req.method, tur.req.protocol, tur.req.uri, tur.req.headers.contentLength());
 
+        HttpUtil.checkUri(tur.req.uri);
         int reqContLen = tur.req.headers.contentLength();
 
         if(reqContLen > 0) {
