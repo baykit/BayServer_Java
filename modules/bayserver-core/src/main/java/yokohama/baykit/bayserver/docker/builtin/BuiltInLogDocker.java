@@ -37,6 +37,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
         Rudder rudder;
         Multiplexer multiplexer;
         RudderState rudderState;
+        boolean registered;
     }
 
     class AgentListener implements LifecycleListener {
@@ -83,6 +84,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
 
                 info.multiplexer = mpx;
                 info.rudder = rd;
+                info.registered = false;
 
                 while(loggers.size() < agentId) {
                     loggers.add(null);
@@ -99,7 +101,8 @@ public class BuiltInLogDocker extends DockerBase implements Log {
         public void remove(int agentId) {
             LoggerInfo info = loggers.get(agentId-1);
             Rudder rd = info.rudder;
-            info.multiplexer.reqClose(rd);
+            if(info.registered)
+                info.multiplexer.reqClose(rd);
             loggers.set(agentId - 1, null);
         }
     }
@@ -230,6 +233,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
                 info.rudderState.init(info.rudder);
                 info.rudderState.bytesWrote = (int)info.fileSize;
                 info.multiplexer.addRudderState(info.rudder, info.rudderState);
+                info.registered = true;
             }
             byte[] bytes = StringUtil.toBytes(sb.toString() + CharUtil.LF);
             ByteBuffer buf = ByteBuffer.wrap(bytes, 0, bytes.length);
