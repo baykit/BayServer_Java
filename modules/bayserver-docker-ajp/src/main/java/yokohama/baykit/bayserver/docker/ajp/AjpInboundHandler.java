@@ -106,26 +106,26 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
     }
 
     @Override
-    public void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+    public void sendEndTour(Tour tur, DataConsumeListener lis) throws IOException {
 
-        BayLog.debug(ship() + " endTour: tur=" + tur + " keep=" + keepAlive);
+        BayLog.debug("%s endTour: tur=%s", ship(), tur);
         CmdEndResponse cmd = new CmdEndResponse();
-        cmd.reuse = keepAlive;
+        cmd.reuse = true;  // Always reuse connection
 
         Runnable ensureFunc = () -> {
-            if (!keepAlive)
+            if (!cmd.reuse)
                 ship().postClose();
         };
 
         try {
             protocolHandler.post(cmd, () -> {
-                BayLog.debug(ship() + " call back in sendEndTour: tur=" + tur + " keep=" + keepAlive);
+                BayLog.debug("%s call back in sendEndTour: tur=%s", ship(), tur);
                 ensureFunc.run();
                 lis.dataConsumed();
             });
         }
         catch(IOException e) {
-            BayLog.debug(ship() + " post failed in sendEndTour: tur=" + tur + " keep=" + keepAlive);
+            BayLog.debug("%s post failed in sendEndTour: tur=%s", ship(), tur);
             ensureFunc.run();
             throw e;
         }

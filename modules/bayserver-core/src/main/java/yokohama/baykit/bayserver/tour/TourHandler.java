@@ -28,11 +28,10 @@ public interface TourHandler extends Reusable {
     /**
      * Send end of contents to client.
      * @param tur
-     * @param keepAlive
      * @lis listener
      * @throws IOException
      */
-    void sendEnd(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException;
+    void sendEndTour(Tour tur, DataConsumeListener lis) throws IOException;
 
     /**
      * Send protocol error to client
