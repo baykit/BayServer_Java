@@ -1,5 +1,12 @@
 # BayServer for Java
 
+# 3.2.1
+
+- [H2] Returns 400 for requests missing the :path pseudo-header
+- [H1] Default to Keep-Alive when the Connection header value is unknown for performance reasons
+- [Core] Fixes incorrect cache size calculation
+- [Core] Fixes minor bugs
+
 # 3.2.0
 
 - [H2] Adds support for HTTP/2 CONTINUATION frames
