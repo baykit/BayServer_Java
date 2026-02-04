@@ -4,12 +4,13 @@ package yokohama.baykit.bayserver.util;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 
-import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.HashSet;
 
 public class ObjectStore<T extends Reusable> implements Reusable{
 
-    final ArrayList<T> freeList = new ArrayList<>();
-    final ArrayList<T> activeList = new ArrayList<>();
+    final ArrayDeque<T> freeList = new ArrayDeque<>();
+    //final HashSet<T> activeList = new HashSet<>();
     public ObjectFactory<T> factory;
 
     public ObjectStore(ObjectFactory<T> factory) {
@@ -43,31 +44,31 @@ public class ObjectStore<T extends Reusable> implements Reusable{
             obj = factory.createObject();
         }
         else {
-            obj = freeList.remove(freeList.size() - 1);
+            obj = freeList.poll();
         }
         if(obj == null)
             throw new Sink();
-        activeList.add(obj);
+        //activeList.add(obj);
         //BayLog.debug(owner + " rent object " + obj);
         return obj;
     }
 
     public synchronized void Return(T obj, boolean reuse) {
         //BayLog.debug(" return object " + obj.hashCode());
-        if(freeList.contains(obj))
-            throw new Sink("This object already returned: " + obj);
+        //if(freeList.contains(obj))
+        //    throw new Sink("This object already returned: " + obj);
 
-        if(!activeList.contains(obj))
-            throw new Sink("This object is not active: " + obj);
+        //if(!activeList.contains(obj))
+        //    throw new Sink("This object is not active: " + obj);
 
-        activeList.remove(obj);
+        //activeList.remove(obj);
         if(reuse) {
             freeList.add(obj);
             obj.reset();
         }
     }
 
-    public synchronized void Return(T obj) {
+    public void Return(T obj) {
         Return(obj, true);
     }
 
