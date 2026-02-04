@@ -6,6 +6,7 @@ import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.TimerHandler;
 import yokohama.baykit.bayserver.common.RudderState;
 import yokohama.baykit.bayserver.rudder.AsynchronousFileChannelRudder;
+import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.rudder.InputStreamRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
@@ -17,6 +18,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.concurrent.Future;
 
 public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
@@ -271,18 +273,13 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
         ArrayList<Object> removeList = new ArrayList<>();;
         synchronized (rudders) {
             long now = RoughTime.currentTimeMillis();
-            for (Object key: rudders.keySet()) {
-                RudderState st = rudders.get(key);
+            for (Iterator<ChannelRudder> it = rudders.iterator(); it.hasNext(); ) {
+                ChannelRudder rd = it.next();
+                RudderState st = (RudderState)rd.state;
                 if (st.transporter != null && st.transporter.checkTimeout(st.rudder, (int) (now - st.lastAccessTime) / 1000)) {
                     closeRudder(st.rudder);
-                    removeList.add(key);
+                    it.remove();
                 }
-            }
-        }
-
-        for (Object key : removeList) {
-            synchronized (rudders) {
-                rudders.remove(key);
             }
         }
     }
