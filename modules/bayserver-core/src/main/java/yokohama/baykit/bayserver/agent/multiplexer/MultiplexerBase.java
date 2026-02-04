@@ -6,22 +6,20 @@ import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.common.RudderState;
 import yokohama.baykit.bayserver.common.Transporter;
+import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.RoughTime;
 
 import java.io.IOException;
 import java.nio.channels.AsynchronousCloseException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 
 public abstract class MultiplexerBase implements Multiplexer {
 
     int channelCount;
     protected final GrandAgent agent;
 
-    protected final Map<Object, RudderState> rudders = new HashMap<>();
+    protected final HashSet<ChannelRudder> rudders = new HashSet<>();
 
     public MultiplexerBase(GrandAgent agt) {
         this.agent = agt;
@@ -39,9 +37,7 @@ public abstract class MultiplexerBase implements Multiplexer {
     public final void addRudderState(Rudder rd, RudderState st) {
         BayLog.trace("%s add rd=%s chState=%s", agent, rd, st);
         st.multiplexer = this;
-        synchronized (rudders) {
-            rudders.put(rd.key(), st);
-        }
+        ((ChannelRudder)rd).state = st;
         channelCount++;
 
         st.access();
@@ -50,16 +46,14 @@ public abstract class MultiplexerBase implements Multiplexer {
     @Override
     public void removeRudderState(Rudder rd) {
         BayLog.trace("%s remove rd=%s", agent, rd);
-        synchronized (rudders) {
-            RudderState cm = rudders.remove(rd.key());
-            //BayServer.debug(cm.tpt.ship() + " removed");
-        }
+        ((ChannelRudder)rd).state = null;
         channelCount--;
     }
 
     @Override
     public final RudderState getRudderState(Rudder rd) {
-        return findRudderStateByKey(rd.key());
+        return (RudderState) ((ChannelRudder)rd).state;
+
     }
 
     @Override
@@ -114,42 +108,36 @@ public abstract class MultiplexerBase implements Multiplexer {
     // Custom methods
     ////////////////////////////////////////////
 
-    protected RudderState findRudderStateByKey(Object rdKey) {
-        synchronized (rudders) {
-            return rudders.get(rdKey);
-        }
-    }
-
     protected final void closeTimeoutSockets() {
         if(rudders.isEmpty())
             return;
 
-        ArrayList<RudderState> closeList = new ArrayList<>();
-        HashSet<RudderState> copied = null;
-        synchronized (rudders) {
-            copied = new HashSet<>(this.rudders.values());
-        }
-
         long now = RoughTime.currentTimeMillis();
 
-        for (RudderState st : copied) {
+        for (Iterator<ChannelRudder> it = rudders.iterator(); it.hasNext(); ) {
+            ChannelRudder rd = it.next();
+            if(rd.closed())
+                it.remove();
+
+            RudderState st = (RudderState)rd.state;
             if(st.transporter != null) {
-                if (st.transporter.checkTimeout(st.rudder, (int) (now - st.lastAccessTime) / 1000)) {
-                    BayLog.debug("%s timeout: rd=%s", agent, st.rudder);
-                    closeList.add(st);
+                if (st.transporter.checkTimeout(rd, (int) (now - st.lastAccessTime) / 1000)) {
+                    BayLog.debug("%s timeout: rd=%s", agent, rd);
+                    reqClose(rd);
+                    it.remove();
                 }
             }
         }
-
-        for (RudderState c : closeList) {
-            reqClose(c.rudder);
-        }
     }
+
     protected final void closeAll() {
         // Use copied ArrayList to avoid ConcurrentModificationException
-        for (RudderState st : new ArrayList<>(rudders.values())) {
-            if(st.rudder != agent.commandReceiver.rudder)
-                closeRudder(st.rudder);
+        for (Iterator<ChannelRudder> it = rudders.iterator(); it.hasNext(); ) {
+            ChannelRudder rd = it.next();
+            if(rd != agent.commandReceiver.rudder) {
+                closeRudder(rd);
+                it.remove();
+            }
         }
     }
 

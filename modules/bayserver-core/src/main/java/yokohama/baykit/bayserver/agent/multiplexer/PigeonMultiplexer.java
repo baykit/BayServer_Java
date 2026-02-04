@@ -42,7 +42,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
             return;
         }
         AsynchronousServerSocketChannel sch = (AsynchronousServerSocketChannel) ChannelRudder.getChannel(rd);
-        RudderState st = findRudderStateByKey(sch);
+        RudderState st = getRudderState(rd);
         int id = st.id;
 
         try {
@@ -70,7 +70,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
 
     @Override
     public void reqConnect(Rudder rd, SocketAddress addr) throws IOException {
-        RudderState st = findRudderStateByKey(ChannelRudder.getChannel(rd));
+        RudderState st = getRudderState(rd);
         int id = st.id;
 
         AsynchronousSocketChannelRudder.getAsynchronousSocketChannel(rd).connect(
@@ -162,7 +162,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
     @Override
     public void reqClose(Rudder rd) {
         BayLog.debug("%s reqClose rd=%s", agent, rd);
-        RudderState st = findRudderStateByKey(ChannelRudder.getChannel(rd));
+        RudderState st = getRudderState(rd);
         if(st == null) {
             BayLog.debug("%s Rudder is closed: %s", this, rd);
             return;
