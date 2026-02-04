@@ -338,7 +338,9 @@ public class Headers {
 
 
     public void clear() {
-        headers.clear();
+        // It turned out that creating a new instance is faster than calling HashMap.clear().
+        //headers.clear();
+        headers = new HashMap<>();
         status = HttpStatus.OK;
     }
 
