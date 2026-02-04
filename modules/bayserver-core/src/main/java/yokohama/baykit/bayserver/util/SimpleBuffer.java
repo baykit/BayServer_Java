@@ -24,7 +24,7 @@ public class SimpleBuffer implements Reusable {
 
     public void reset() {
         // clear for security reason
-        Arrays.fill(buf, (byte)0);
+        //Arrays.fill(buf, 0, len, (byte)0);
         len = 0;
     }
 
