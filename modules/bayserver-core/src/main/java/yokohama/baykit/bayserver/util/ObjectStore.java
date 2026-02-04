@@ -25,12 +25,13 @@ public class ObjectStore<T extends Reusable> implements Reusable{
     ////////////////////////////////////////////////////////////////////////////////
 
     public void reset() {
-        if (activeList.size() > 0) {
+        /*if (activeList.size() > 0) {
             BayLog.error("BUG?: There are %d active objects: %s", activeList.size(), activeList);
             // for security
             freeList.clear();
             activeList.clear();
-        }
+        }*/
+        freeList.clear();
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -77,9 +78,9 @@ public class ObjectStore<T extends Reusable> implements Reusable{
      */
     public synchronized void printUsage(int indent) {
         BayLog.info("%sfree list: %d", StringUtil.indent(indent), freeList.size());
-        BayLog.info("%sactive list: %d", StringUtil.indent(indent), activeList.size());
+        //BayLog.info("%sactive list: %d", StringUtil.indent(indent), activeList.size());
         if(BayLog.isDebugMode()) {
-            activeList.forEach(obj -> BayLog.debug("%s%s", StringUtil.indent(indent+1), obj));
+            //activeList.forEach(obj -> BayLog.debug("%s%s", StringUtil.indent(indent+1), obj));
         }
     }
 }
