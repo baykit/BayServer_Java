@@ -21,7 +21,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 
 public class QicProtocolHandler
-        extends ProtocolHandler<QicCommand, QicCommandPacket, QicCommandType>
+        extends ProtocolHandler<QicCommand, QicCommandPacket>
         implements Http3EventListener {
 
     enum ReqState {

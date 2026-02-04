@@ -22,11 +22,11 @@ import static yokohama.baykit.bayserver.docker.fcgi.FcgWarpHandler.CommandState.
 
 public class FcgWarpHandler implements WarpHandler, FcgHandler {
 
-    static class WarpProtocolHandlerFactory implements ProtocolHandlerFactory<FcgCommand, FcgPacket, FcgType> {
+    static class WarpProtocolHandlerFactory implements ProtocolHandlerFactory<FcgCommand, FcgPacket> {
 
         @Override
-        public ProtocolHandler<FcgCommand, FcgPacket, FcgType> createProtocolHandler(
-                PacketStore<FcgPacket, FcgType> pktStore) {
+        public ProtocolHandler<FcgCommand, FcgPacket> createProtocolHandler(
+                PacketStore<FcgPacket> pktStore) {
             FcgWarpHandler warpHandler = new FcgWarpHandler();
             FcgCommandUnPacker commandUnpacker = new FcgCommandUnPacker(warpHandler);
             FcgPacketUnPacker packetUnpacker = new FcgPacketUnPacker(commandUnpacker, pktStore);

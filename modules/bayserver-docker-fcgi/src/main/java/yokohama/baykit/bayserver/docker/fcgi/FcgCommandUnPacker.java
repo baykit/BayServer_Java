@@ -28,27 +28,27 @@ public class FcgCommandUnPacker extends CommandUnPacker<FcgPacket> {
 
         FcgCommand cmd;
         switch (pkt.type()) {
-            case BeginRequest:
+            case FcgType.BeginRequest:
                 cmd = new CmdBeginRequest(pkt.reqId);
                 break;
 
-            case EndRequest:
+            case FcgType.EndRequest:
                 cmd = new CmdEndRequest(pkt.reqId);
                 break;
 
-            case Params:
+            case FcgType.Params:
                 cmd = new CmdParams(pkt.reqId);
                 break;
 
-            case Stdin:
+            case FcgType.Stdin:
                 cmd = new CmdStdIn(pkt.reqId);
                 break;
 
-            case Stdout:
+            case FcgType.Stdout:
                 cmd = new CmdStdOut(pkt.reqId);
                 break;
 
-            case Stderr:
+            case FcgType.Stderr:
                 cmd = new CmdStdErr(pkt.reqId);
                 break;
 

@@ -3,41 +3,15 @@ package yokohama.baykit.bayserver.docker.ajp;
 /**
  * AJP command type
   */
-public enum AjpType {
+public class AjpType {
 
-    Data(0),
-    ForwardRequest(2),
-    SendBodyChunk(3),
-    SendHeaders(4),
-    EndResponse(5),
-    GetBodyChunk(6),
-    Shutdown(7),
-    Ping(8),
-    CPing(10);
-
-    static AjpType[] types = {
-            Data,
-            null,
-            ForwardRequest,
-            SendBodyChunk,
-            SendHeaders,
-            EndResponse,
-            GetBodyChunk,
-            Shutdown,
-            Ping,
-            null,
-            CPing,
-    };
-
-    public int no;
-    AjpType(int no) {
-        this.no = no;
-    }
-
-
-    public static AjpType getType(int no) {
-        if(no <= 0 || no >= types.length || types[no] == null)
-            throw new IllegalArgumentException("Invalid AJP type: " + no);
-        return types[no];
-    }
+    public static final int Data = 0;
+    public static final int ForwardRequest = 2;
+    public static final int SendBodyChunk = 3;
+    public static final int SendHeaders = 4;
+    public static final int EndResponse = 5;
+    public static final int GetBodyChunk = 6;
+    public static final int Shutdown = 7;
+    public static final int Ping = 8;
+    public static final int CPing = 10;
 }

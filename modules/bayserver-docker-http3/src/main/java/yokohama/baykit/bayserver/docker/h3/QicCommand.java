@@ -5,9 +5,9 @@ import yokohama.baykit.bayserver.protocol.Command;
 
 import java.io.IOException;
 
-public abstract class QicCommand extends Command<QicCommand, QicCommandPacket, QicCommandType, QicInboundHandler> {
+public abstract class QicCommand extends Command<QicCommand, QicCommandPacket, QicInboundHandler> {
 
-    public QicCommand(QicCommandType type) {
+    public QicCommand(int type) {
         super(type);
     }
 

@@ -8,11 +8,11 @@ import java.io.IOException;
  * AJP Protocol
  * https://tomcat.apache.org/connectors-doc/ajp/ajpv13a.html
  */
-public abstract class AjpCommand extends Command<AjpCommand, AjpPacket, AjpType, AjpCommandHandler> {
+public abstract class AjpCommand extends Command<AjpCommand, AjpPacket, AjpCommandHandler> {
 
     public boolean toServer;
 
-    public AjpCommand(AjpType type, boolean toServer) {
+    public AjpCommand(int type, boolean toServer) {
         super(type);
         this.toServer = toServer;
     }

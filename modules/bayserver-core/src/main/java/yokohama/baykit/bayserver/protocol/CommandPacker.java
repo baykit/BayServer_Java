@@ -7,13 +7,13 @@ import yokohama.baykit.bayserver.util.Reusable;
 
 import java.io.IOException;
 
-public class CommandPacker<C extends Command<C, P, T, H>, P extends Packet<T>, T, H extends CommandHandler<C>>
+public class CommandPacker<C extends Command<C, P, H>, P extends Packet, H extends CommandHandler<C>>
         implements Reusable {
 
     protected final PacketPacker<P> pktPacker;
-    protected final PacketStore<P, T> pktStore;
+    protected final PacketStore<P> pktStore;
 
-    public CommandPacker(PacketPacker<P> pktPacker, PacketStore<P, T> pktStore) {
+    public CommandPacker(PacketPacker<P> pktPacker, PacketStore<P> pktStore) {
         this.pktPacker = pktPacker;
         this.pktStore = pktStore;
     }
