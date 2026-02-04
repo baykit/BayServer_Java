@@ -43,7 +43,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
         }
 
         ServerSocketChannel sch = (ServerSocketChannel) ChannelRudder.getChannel(rd);
-        RudderState st = findRudderStateByKey(sch);
+        RudderState st = getRudderState(rd);
         int id = st.id;
 
         new Thread(() -> {

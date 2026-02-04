@@ -63,7 +63,13 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
 
     @Override
     public void reqAccept(Rudder rd) {
-        throw new Sink();
+        try {
+            SelectionKey key = ((ServerSocketChannel)ChannelRudder.getChannel(rd)).register(selector, SelectionKey.OP_ACCEPT);
+            key.attach(rd);
+        }
+        catch(ClosedChannelException e) {
+            BayLog.error(e);
+        }
     }
 
     @Override
@@ -236,12 +242,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
             return;
 
         for(Pair<Rudder, Port> pair: BayServer.anchorablePorts) {
-            try {
-                ((ServerSocketChannel)ChannelRudder.getChannel(pair.a)).register(selector, SelectionKey.OP_ACCEPT);
-            }
-            catch(ClosedChannelException e) {
-                BayLog.error(e);
-            }
+            reqAccept(pair.a);
         }
     }
 
@@ -294,6 +295,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
     private void addOperation(Rudder rd, int op, boolean close) {
         synchronized (ruddersToRegister) {
             ChannelRudder crd = (ChannelRudder)rd;
+
             if(crd.inDirtyList){ 
                 crd.pendingOps |= op;
                 // BayLog.debug("%s Update operation: %d(%s) rd=%s", agent, cop.op, opMode(cop.op), cop.rudder);
@@ -338,7 +340,8 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
                 }
                 else {
                     try {
-                        ch.register(selector, rd.pendingOps);
+                        key = ch.register(selector, rd.pendingOps);
+                        key.attach(rd);
                     } catch (ClosedChannelException e) {
                         //BayLog.debug(e, "%s Cannot register operation (Channel is closed): %s ch=%s op=%d(%s) close=%b",
                         //        agent, st, cop.rudder, cop.op, opMode(cop.op), cop.close);
@@ -358,7 +361,8 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         RudderState st;
         // ready for read
         SelectableChannel ch = key.channel();
-        st = findRudderStateByKey(ch);
+        Rudder rd = (Rudder)key.attachment();
+        st = getRudderState(rd);
         if (st == null) {
             BayLog.warn("%s Channel state is not registered", agent);
             key.cancel();

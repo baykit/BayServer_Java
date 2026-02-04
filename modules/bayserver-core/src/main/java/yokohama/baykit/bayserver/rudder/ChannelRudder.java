@@ -9,10 +9,14 @@ import java.nio.channels.WritableByteChannel;
 public abstract class ChannelRudder extends RudderBase {
     public final Channel channel;
 
+    // For multiplexer
+    public Object state;
+
     // For SpiderMultiplexer
     public boolean inDirtyList; // Flag indicating if the channel is already registered in the dirty list
     public int pendingOps;      // Bitmask of operations to be registered in the next selector cycle
-				//
+
+
     public ChannelRudder(Channel channel) {
         if(channel == null)
             throw new NullPointerException();
