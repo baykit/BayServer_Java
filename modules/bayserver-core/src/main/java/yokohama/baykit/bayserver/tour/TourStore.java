@@ -32,7 +32,7 @@ public class TourStore {
         }
     }
 
-    public static final int MAX_TOURS = 128;
+    public static final int MAX_TOURS = 12800;
 
     ArrayList<Tour> freeTours = new ArrayList<>();
     Map<Long, Tour> activeTourMap = new ConcurrentHashMap<>();
