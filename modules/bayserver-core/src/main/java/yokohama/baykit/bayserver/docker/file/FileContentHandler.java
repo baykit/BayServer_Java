@@ -239,7 +239,7 @@ public class FileContentHandler implements ReqContentHandler {
     public void sendFileFromCache() throws HttpException {
         tour.res.setConsumeListener(ContentConsumeListener.devNull);
         tour.res.headers.setContentType(mimeType);
-        tour.res.headers.setContentLength(path.length());
+        tour.res.headers.setContentLength(fileContent.content.array().length);
         try {
             tour.res.sendHeaders(Tour.TOUR_ID_NOCHECK);
             tour.res.sendResContent(Tour.TOUR_ID_NOCHECK, fileContent.content.array(), 0, fileContent.content.array().length);
