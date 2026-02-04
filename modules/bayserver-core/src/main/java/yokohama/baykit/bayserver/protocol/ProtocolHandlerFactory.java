@@ -1,6 +1,6 @@
 package yokohama.baykit.bayserver.protocol;
 
-public interface ProtocolHandlerFactory<C extends Command<C, P, T, ?>, P extends Packet<T>, T> {
+public interface ProtocolHandlerFactory<C extends Command<C, P, ?>, P extends Packet> {
 
-    ProtocolHandler<C, P, T> createProtocolHandler(PacketStore<P, T> pktStore);
+    ProtocolHandler<C, P> createProtocolHandler(PacketStore<P> pktStore);
 }

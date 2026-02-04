@@ -3,7 +3,7 @@ package yokohama.baykit.bayserver.docker.http.h2;
 import yokohama.baykit.bayserver.protocol.*;
 
 
-public class H2ProtocolHandler extends ProtocolHandler<H2Command, H2Packet, H2Type>  {
+public class H2ProtocolHandler extends ProtocolHandler<H2Command, H2Packet>  {
 
     public static final int CTL_STREAM_ID = 0;
 
@@ -12,7 +12,7 @@ public class H2ProtocolHandler extends ProtocolHandler<H2Command, H2Packet, H2Ty
             PacketUnpacker<H2Packet> packetUnpacker,
             PacketPacker<H2Packet> packetPacker,
             CommandUnPacker<H2Packet> commandUnpacker,
-            CommandPacker<H2Command, H2Packet, H2Type, ?> commandPacker,
+            CommandPacker<H2Command, H2Packet, ?> commandPacker,
             boolean serverMode) {
         super(packetUnpacker, packetPacker, commandUnpacker, commandPacker, h2Handler, serverMode);
     }

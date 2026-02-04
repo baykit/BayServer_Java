@@ -5,11 +5,11 @@ import yokohama.baykit.bayserver.protocol.PacketPartAccessor;
 
 import java.io.IOException;
 
-public abstract class FcgCommand extends Command<FcgCommand, FcgPacket, FcgType, FcgCommandHandler> {
+public abstract class FcgCommand extends Command<FcgCommand, FcgPacket, FcgCommandHandler> {
 
     public int reqId;
 
-    public FcgCommand(FcgType type, int reqId) {
+    public FcgCommand(int type, int reqId) {
         super(type);
         this.reqId = reqId;
     }
@@ -30,7 +30,7 @@ public abstract class FcgCommand extends Command<FcgCommand, FcgPacket, FcgType,
 
         PacketPartAccessor acc = pkt.newHeaderAccessor();
         acc.putByte(pkt.version);
-        acc.putByte(pkt.type().no);
+        acc.putByte(pkt.type());
         acc.putShort(pkt.reqId);
         acc.putShort(pkt.dataLen());
         acc.putByte(0);  // paddinglen

@@ -29,15 +29,15 @@ public class AjpPacketUnPacker extends PacketUnpacker<AjpPacket> {
     
     State state = State.ReadPreamble;
 
-    final PacketStore<AjpPacket, AjpType> pktStore;
+    final PacketStore<AjpPacket> pktStore;
     final AjpCommandUnPacker cmdUnpacker;
     int bodyLen;
     int readBytes;
-    AjpType type;
+    int type;
     boolean toServer;
     boolean needData;
 
-    public AjpPacketUnPacker(PacketStore<AjpPacket, AjpType> pktStore, AjpCommandUnPacker cmdUnpacker) {
+    public AjpPacketUnPacker(PacketStore<AjpPacket> pktStore, AjpCommandUnPacker cmdUnpacker) {
         this.pktStore = pktStore;
         this.cmdUnpacker = cmdUnpacker;
     }
@@ -137,7 +137,7 @@ public class AjpPacketUnPacker extends PacketUnpacker<AjpPacket> {
         if(needData)
             type = AjpType.Data;
         else
-            type = AjpType.getType(bodyBuf.bytes()[0] & 0xff);
+            type = bodyBuf.bytes()[0] & 0xff;
     }
 
 }

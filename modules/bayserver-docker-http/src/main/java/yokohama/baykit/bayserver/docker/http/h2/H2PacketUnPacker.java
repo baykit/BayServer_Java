@@ -61,19 +61,19 @@ public class H2PacketUnPacker extends PacketUnpacker<H2Packet> {
     SimpleBuffer tmpBuf = new SimpleBuffer();
     FrameHeaderItem item;
     boolean prefaceRead;
-    H2Type type;
+    int type;
     int payloadLen;
     int flags;
     int streamId;
     
     final H2CommandUnPacker cmdUnpacker;
-    final PacketStore<H2Packet, H2Type> pktStore;
+    final PacketStore<H2Packet> pktStore;
     final boolean serverMode;
 
     int contLen;
     int readBytes;
     
-    public H2PacketUnPacker(H2CommandUnPacker cmdUnpacker, PacketStore<H2Packet, H2Type> pktStore, boolean serverMode) {
+    public H2PacketUnPacker(H2CommandUnPacker cmdUnpacker, PacketStore<H2Packet> pktStore, boolean serverMode) {
         this.cmdUnpacker = cmdUnpacker;
         this.pktStore = pktStore;
         this.serverMode = serverMode;
@@ -93,7 +93,7 @@ public class H2PacketUnPacker extends PacketUnpacker<H2Packet> {
         contLen = 0;
         readBytes = 0;
         tmpBuf.reset();
-        type = null;
+        type = 0;
         flags = 0;
         streamId = 0;
         payloadLen = 0;
@@ -139,9 +139,7 @@ public class H2PacketUnPacker extends PacketUnpacker<H2Packet> {
 
                 case ReadType:
                     if(readHeaderItem(buf)) {
-                        type = H2Type.getType(item.get(0));
-                        if(type == null)
-                            throw new ProtocolException("Invalid H2 type: " + item.get(0));
+                        type = item.get(0);
                         item = new FrameHeaderItem(tmpBuf.length(), FRAME_LEN_FLAGS);
                         changeState(State.ReadFlags);
                     }

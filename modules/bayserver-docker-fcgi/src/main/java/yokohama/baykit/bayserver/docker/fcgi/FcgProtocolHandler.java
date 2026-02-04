@@ -9,14 +9,14 @@ import yokohama.baykit.bayserver.protocol.ProtocolHandler;
  * The class to hold FCGI ship (connection)
  */
 public class FcgProtocolHandler
-        extends ProtocolHandler<FcgCommand, FcgPacket, FcgType> {
+        extends ProtocolHandler<FcgCommand, FcgPacket> {
 
     public FcgProtocolHandler(
             FcgHandler fcgHandler,
             PacketUnpacker<FcgPacket> packetUnpacker,
             PacketPacker<FcgPacket> packetPacker,
             CommandUnPacker<FcgPacket> commandUnpacker,
-            CommandPacker<FcgCommand, FcgPacket, FcgType, ?> commandPacker,
+            CommandPacker<FcgCommand, FcgPacket, ?> commandPacker,
             boolean serverMode) {
         super(packetUnpacker, packetPacker, commandUnpacker, commandPacker, fcgHandler, serverMode);
     }

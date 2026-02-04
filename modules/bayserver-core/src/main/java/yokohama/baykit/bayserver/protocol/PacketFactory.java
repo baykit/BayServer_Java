@@ -1,12 +1,7 @@
 package yokohama.baykit.bayserver.protocol;
 
-import java.util.function.Function;
+import java.util.function.IntFunction;
 
-public abstract class PacketFactory<P extends Packet<T>, T> implements Function<T, P> {
-    public abstract P createPacket(T type);
-
-    @Override
-    public final P apply(T type) {
-        return apply(type);
-    }
+public abstract class PacketFactory<P extends Packet> {
+    public abstract P createPacket(int type);
 }

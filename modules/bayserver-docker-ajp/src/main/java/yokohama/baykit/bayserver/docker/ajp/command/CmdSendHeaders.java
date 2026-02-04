@@ -71,7 +71,7 @@ public class CmdSendHeaders extends AjpCommand {
     @Override
     public void pack(AjpPacket pkt) throws IOException {
         AjpPacket.AjpAccessor acc = pkt.newAjpDataAccessor();
-        acc.putByte(type.no);
+        acc.putByte(type);
         acc.putShort(status);
         acc.putString(HttpStatus.description(status));
 
@@ -103,7 +103,7 @@ public class CmdSendHeaders extends AjpCommand {
     public void unpack(AjpPacket pkt) throws IOException {
         AjpPacket.AjpAccessor acc = pkt.newAjpDataAccessor();
         int prefixCode = acc.getByte();
-        if(prefixCode != AjpType.SendHeaders.no)
+        if(prefixCode != AjpType.SendHeaders)
             throw new ProtocolException("Expected SEND_HEADERS");
         setStatus(acc.getShort());
         setDesc(acc.getString());

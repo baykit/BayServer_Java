@@ -4,11 +4,11 @@ import yokohama.baykit.bayserver.agent.NextSocketAction;
 
 import java.io.IOException;
 
-public abstract class Command<C extends Command<C, P, T, H>, P extends Packet<T>, T, H extends CommandHandler<C>> {
+public abstract class Command<C extends Command<C, P, H>, P extends Packet, H extends CommandHandler<C>> {
 
-    public T type;
+    public int type;
 
-    public Command(T type) {
+    public Command(int type) {
         this.type = type;
     }
 

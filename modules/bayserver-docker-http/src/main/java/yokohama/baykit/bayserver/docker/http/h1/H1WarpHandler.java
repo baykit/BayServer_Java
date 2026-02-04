@@ -21,11 +21,11 @@ import static yokohama.baykit.bayserver.docker.http.h1.H1WarpHandler.CommandStat
 
 public class H1WarpHandler implements WarpHandler, H1Handler {
 
-    public static class WarpProtocolHandlerFactory implements ProtocolHandlerFactory<H1Command, H1Packet, H1Type> {
+    public static class WarpProtocolHandlerFactory implements ProtocolHandlerFactory<H1Command, H1Packet> {
 
         @Override
-        public ProtocolHandler<H1Command, H1Packet, H1Type> createProtocolHandler(
-                PacketStore<H1Packet, H1Type> pktStore) {
+        public ProtocolHandler<H1Command, H1Packet> createProtocolHandler(
+                PacketStore<H1Packet> pktStore) {
             H1WarpHandler warpHandler = new H1WarpHandler();
             H1CommandUnPacker commandUnpacker = new H1CommandUnPacker(warpHandler, false);
             H1PacketUnpacker packetUnpacker = new H1PacketUnpacker(commandUnpacker, pktStore);

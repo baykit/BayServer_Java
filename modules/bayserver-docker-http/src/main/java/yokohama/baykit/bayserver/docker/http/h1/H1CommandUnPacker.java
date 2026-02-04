@@ -39,11 +39,11 @@ public class H1CommandUnPacker extends CommandUnPacker<H1Packet> {
 
         H1Command cmd;
         switch(pac.type()) {
-            case Header:
+            case H1Type.Header:
                 cmd = new CmdHeader(serverMode);
                 break;
 
-            case Content:
+            case H1Type.Content:
                 cmd = new CmdContent();
                 break;
 
