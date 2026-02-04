@@ -32,31 +32,11 @@ import static java.nio.channels.SelectionKey.*;
  */
 public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, Multiplexer, Recipient {
 
-    static class ChannelOperation {
-        final Rudder rudder;
-        int op;
-        boolean close;
-
-        ChannelOperation(Rudder rd, int op, boolean close) {
-            if(rd == null)
-                throw new NullPointerException();
-            this.rudder = rd;
-            this.op = op;
-            this.close = close;
-        }
-
-        ChannelOperation(Rudder rd, int op) {
-            this(rd, op, false);
-        }
-    }
-
-
-
     private final boolean anchorable;
 
     private Selector selector;
 
-    final ArrayList<ChannelOperation> operations = new ArrayList<>();
+    final ArrayList<ChannelRudder> ruddersToRegister = new ArrayList<>(16384);
 
     public SpiderMultiplexer(GrandAgent agent, boolean anchorable) {
         super(agent);
@@ -312,22 +292,19 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
     ////////////////////////////////////////////
 
     private void addOperation(Rudder rd, int op, boolean close) {
-        synchronized (operations) {
-            boolean found = false;
-            for(ChannelOperation cop : operations) {
-                if(cop.rudder == rd) {
-                    cop.op |= op;
-                    cop.close = cop.close || close;
-                    found = true;
-                    BayLog.debug("%s Update operation: %d(%s) rd=%s", agent, cop.op, opMode(cop.op), cop.rudder);
-                }
+        synchronized (ruddersToRegister) {
+            ChannelRudder crd = (ChannelRudder)rd;
+            if(crd.inDirtyList){ 
+                crd.pendingOps |= op;
+                // BayLog.debug("%s Update operation: %d(%s) rd=%s", agent, cop.op, opMode(cop.op), cop.rudder);
             }
-            if(!found) {
-                BayLog.debug("%s Add operation: %d(%s) rd=%s", agent, op, opMode(op), rd);
-                operations.add(new ChannelOperation(rd, op, close));
+	    else {
+                //BayLog.debug("%s Add operation: %d(%s) rd=%s", agent, op, opMode(op), rd);
+                crd.pendingOps = op;
+                ruddersToRegister.add(crd);
             }
         }
-        BayLog.trace("%s wakeup", agent);
+        //BayLog.trace("%s wakeup", agent);
         selector.wakeup();
     }
 
@@ -336,47 +313,41 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
     }
 
     private int registerChannelOps() {
-        if(operations.isEmpty())
+        if(ruddersToRegister.isEmpty())
             return 0;
 
         // register channels to selector
-        synchronized (operations) {
-            int nch = operations.size();
-            for (ChannelOperation cop : operations) {
-                RudderState st = getRudderState(cop.rudder);
+        synchronized (ruddersToRegister) {
+            int nch = ruddersToRegister.size();
+            for (int i = 0; i < nch; i++) {
+                ChannelRudder rd = ruddersToRegister.get(i);
+                RudderState st = getRudderState(rd);
                 if (st == null) {
                     BayLog.debug("%s cannot register rudder: (rudder is closed)");
                     continue;
                 }
 
-                SelectableChannel ch =  (SelectableChannel)ChannelRudder.getChannel(cop.rudder);
-                BayLog.debug("%s register chState=%s register op=%d(%s) ch=%s", agent, st, cop.op, opMode(cop.op), ch);
+                SelectableChannel ch =  (SelectableChannel)ChannelRudder.getChannel(rd);
+                //BayLog.debug("%s register chState=%s register op=%d(%s) ch=%s", agent, st, rd.op, opMode(cop.op), ch);
                 SelectionKey key = ch.keyFor(selector);
                 if(key != null) {
                     int op = key.interestOps();
-                    int newOp = op | cop.op;
-                    BayLog.debug("Already registered op=%d(%s) update to %s", op, opMode(op), opMode(newOp));
+                    int newOp = op | rd.pendingOps;
+                    //BayLog.debug("Already registered op=%d(%s) update to %s", op, opMode(op), opMode(newOp));
                     key.interestOps(newOp);
                 }
                 else {
                     try {
-                        ch.register(selector, cop.op);
+                        ch.register(selector, rd.pendingOps);
                     } catch (ClosedChannelException e) {
-                        BayLog.debug(e, "%s Cannot register operation (Channel is closed): %s ch=%s op=%d(%s) close=%b",
-                                agent, st, cop.rudder, cop.op, opMode(cop.op), cop.close);
+                        //BayLog.debug(e, "%s Cannot register operation (Channel is closed): %s ch=%s op=%d(%s) close=%b",
+                        //        agent, st, cop.rudder, cop.op, opMode(cop.op), cop.close);
                     }
                 }
-
-                if(cop.close) {
-                    if(st == null) {
-                        BayLog.warn("%s chState=%s register close but ChannelState is null", agent, st);
-                    }
-                    else {
-                        st.closing = true;
-                    }
-                }
+                rd.inDirtyList = false;
+                rd.pendingOps = 0;
             }
-            operations.clear();
+            ruddersToRegister.clear();
             return nch;
         }
     }
