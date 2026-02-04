@@ -4,7 +4,7 @@ import yokohama.baykit.bayserver.docker.http.HtpDocker;
 import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.ship.Ship;
 
-public class H1ProtocolHandler extends ProtocolHandler<H1Command, H1Packet, H1Type> {
+public class H1ProtocolHandler extends ProtocolHandler<H1Command, H1Packet> {
 
     boolean keeping;
 
@@ -13,7 +13,7 @@ public class H1ProtocolHandler extends ProtocolHandler<H1Command, H1Packet, H1Ty
             PacketUnpacker<H1Packet> packetUnpacker,
             PacketPacker<H1Packet> packetPacker,
             CommandUnPacker<H1Packet> commandUnpacker,
-            CommandPacker<H1Command, H1Packet, H1Type, ?> commandPacker,
+            CommandPacker<H1Command, H1Packet, ?> commandPacker,
             boolean serverMode) {
         super(packetUnpacker, packetPacker, commandUnpacker, commandPacker, h1Handler, serverMode);
     }

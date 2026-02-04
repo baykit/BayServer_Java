@@ -27,25 +27,25 @@ public class AjpCommandUnPacker extends CommandUnPacker<AjpPacket> {
         BayLog.debug("ajp:  packet received: type=%s datalen=%d", pkt.type(), pkt.dataLen());
         AjpCommand cmd;
         switch (pkt.type()) {
-            case Data:
+            case AjpType.Data:
                 cmd = new CmdData();
                 break;
-            case ForwardRequest:
+            case AjpType.ForwardRequest:
                 cmd = new CmdForwardRequest();
                 break;
-            case SendBodyChunk:
+            case AjpType.SendBodyChunk:
                 cmd = new CmdSendBodyChunk(pkt.buf, pkt.headerLen, pkt.dataLen());
                 break;
-            case SendHeaders:
+            case AjpType.SendHeaders:
                 cmd = new CmdSendHeaders();
                 break;
-            case EndResponse:
+            case AjpType.EndResponse:
                 cmd = new CmdEndResponse();
                 break;
-            case Shutdown:
+            case AjpType.Shutdown:
                 cmd = new CmdShutdown();
                 break;
-            case GetBodyChunk:
+            case AjpType.GetBodyChunk:
                 cmd = new CmdGetBodyChunk();
                 break;
             default:

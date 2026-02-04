@@ -21,11 +21,11 @@ import static yokohama.baykit.bayserver.docker.fcgi.FcgInboundHandler.CommandSta
 
 public class FcgInboundHandler implements InboundHandler, FcgHandler {
 
-    static class InboundProtocolHandlerFactory implements ProtocolHandlerFactory<FcgCommand, FcgPacket, FcgType> {
+    static class InboundProtocolHandlerFactory implements ProtocolHandlerFactory<FcgCommand, FcgPacket> {
 
         @Override
-        public ProtocolHandler<FcgCommand, FcgPacket, FcgType> createProtocolHandler(
-                PacketStore<FcgPacket, FcgType> pktStore) {
+        public ProtocolHandler<FcgCommand, FcgPacket> createProtocolHandler(
+                PacketStore<FcgPacket> pktStore) {
             FcgInboundHandler inboundHandler = new FcgInboundHandler();
             FcgCommandUnPacker commandUnpacker = new FcgCommandUnPacker(inboundHandler);
             FcgPacketUnPacker packetUnpacker = new FcgPacketUnPacker(commandUnpacker, pktStore);

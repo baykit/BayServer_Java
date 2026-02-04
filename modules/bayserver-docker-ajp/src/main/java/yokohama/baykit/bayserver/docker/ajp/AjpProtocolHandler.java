@@ -11,14 +11,14 @@ import yokohama.baykit.bayserver.protocol.ProtocolHandler;
  * The class to hold AJP ship (connection)
  */
 public class AjpProtocolHandler
-        extends ProtocolHandler<AjpCommand, AjpPacket, AjpType> {
+        extends ProtocolHandler<AjpCommand, AjpPacket> {
 
     public AjpProtocolHandler(
             AjpHandler ajpHandler,
             PacketUnpacker<AjpPacket> packetUnpacker,
             PacketPacker<AjpPacket> packetPacker,
             CommandUnPacker<AjpPacket> commandUnpacker,
-            CommandPacker<AjpCommand, AjpPacket, AjpType, ?> commandPacker,
+            CommandPacker<AjpCommand, AjpPacket, ?> commandPacker,
             boolean serverMode) {
         super(packetUnpacker, packetPacker, commandUnpacker, commandPacker, ajpHandler, serverMode);
     }

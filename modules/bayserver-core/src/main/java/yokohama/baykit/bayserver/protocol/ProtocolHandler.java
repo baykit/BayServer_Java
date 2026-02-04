@@ -9,13 +9,13 @@ import yokohama.baykit.bayserver.ship.Ship;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public abstract class ProtocolHandler<C extends Command<C, P, T, ?>, P extends Packet<T>, T>
+public abstract class ProtocolHandler<C extends Command<C, P, ?>, P extends Packet>
         implements Reusable {
 
     public final PacketUnpacker<P> packetUnpacker;
     public final PacketPacker<P> packetPacker;
     public final CommandUnPacker<P> commandUnpacker;
-    public final CommandPacker<C, P, T, ?> commandPacker;
+    public final CommandPacker<C, P, ?> commandPacker;
     public final CommandHandler<C>  commandHandler;
     public final boolean serverMode;
     public Ship ship;
@@ -24,7 +24,7 @@ public abstract class ProtocolHandler<C extends Command<C, P, T, ?>, P extends P
             PacketUnpacker<P> packetUnpacker,
             PacketPacker<P> packetPacker,
             CommandUnPacker<P> commandUnpacker,
-            CommandPacker<C, P, T, ?> commandPacker,
+            CommandPacker<C, P, ?> commandPacker,
             CommandHandler<C> commandHandler, boolean serverMode) {
         this.packetUnpacker = packetUnpacker;
         this.packetPacker = packetPacker;

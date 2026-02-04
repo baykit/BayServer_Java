@@ -4,7 +4,7 @@ import yokohama.baykit.bayserver.protocol.Packet;
 
 import java.nio.ByteBuffer;
 
-public class QicPacket extends Packet<QicType> {
+public class QicPacket extends Packet {
 
     public static final int MAX_DATAGRAM_SIZE = 1350;
 

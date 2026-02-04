@@ -63,7 +63,7 @@ public class ProtocolHandlerStore extends ObjectStore<ProtocolHandler> {
     ProtocolHandlerStore(
             String protocol,
             boolean svrMode,
-            ProtocolHandlerFactory<?, ?, ?> phFactory,
+            ProtocolHandlerFactory<?, ?> phFactory,
             PacketStore pktStore) {
         this.protocol = protocol;
         this.serverMode = svrMode;

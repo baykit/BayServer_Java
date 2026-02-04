@@ -39,10 +39,10 @@ public class H1PacketUnpacker extends PacketUnpacker<H1Packet> {
     State state = State.ReadHeaders;
 
     final H1CommandUnPacker cmdUnpacker;
-    final PacketStore<H1Packet, H1Type> pktStore;
+    final PacketStore<H1Packet> pktStore;
     final SimpleBuffer tmpBuf;
 
-    public H1PacketUnpacker(H1CommandUnPacker cmdUnpacker, PacketStore<H1Packet, H1Type> pktStore) {
+    public H1PacketUnpacker(H1CommandUnPacker cmdUnpacker, PacketStore<H1Packet> pktStore) {
         this.cmdUnpacker = Objects.requireNonNull(cmdUnpacker);
         this.pktStore = pktStore;
         this.tmpBuf = new SimpleBuffer();

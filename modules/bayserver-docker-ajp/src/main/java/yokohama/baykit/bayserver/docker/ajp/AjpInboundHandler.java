@@ -19,11 +19,11 @@ import java.io.IOException;
 
 public class AjpInboundHandler implements InboundHandler, AjpHandler {
 
-    static class InboundProtocolHandlerFactory implements ProtocolHandlerFactory<AjpCommand, AjpPacket, AjpType> {
+    static class InboundProtocolHandlerFactory implements ProtocolHandlerFactory<AjpCommand, AjpPacket> {
 
         @Override
-        public ProtocolHandler<AjpCommand, AjpPacket, AjpType> createProtocolHandler(
-                PacketStore<AjpPacket, AjpType> pktStore) {
+        public ProtocolHandler<AjpCommand, AjpPacket> createProtocolHandler(
+                PacketStore<AjpPacket> pktStore) {
             AjpInboundHandler inboundHandler = new AjpInboundHandler();
             AjpCommandUnPacker commandUnpacker = new AjpCommandUnPacker(inboundHandler);
             AjpPacketUnPacker packetUnpacker = new AjpPacketUnPacker(pktStore, commandUnpacker);

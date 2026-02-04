@@ -21,7 +21,6 @@ public class FcgPacketUnPacker extends PacketUnpacker<FcgPacket> {
 
     int version;
     int typeNo;
-    FcgType type;
     int reqId;
     int length;
     int padding;
@@ -37,11 +36,11 @@ public class FcgPacketUnPacker extends PacketUnpacker<FcgPacket> {
     State state;
 
     final FcgCommandUnPacker cmdUnpacker;
-    final PacketStore<FcgPacket, FcgType> pktStore;
+    final PacketStore<FcgPacket> pktStore;
     int contLen;
     int readBytes;
     
-    public FcgPacketUnPacker(FcgCommandUnPacker cmdUnpacker, PacketStore<FcgPacket, FcgType> pktStore) {
+    public FcgPacketUnPacker(FcgCommandUnPacker cmdUnpacker, PacketStore<FcgPacket> pktStore) {
         this.cmdUnpacker = cmdUnpacker;
         this.pktStore = pktStore;
         reset();
@@ -56,7 +55,6 @@ public class FcgPacketUnPacker extends PacketUnpacker<FcgPacket> {
     public void reset() {
         state = State.ReadPreamble;
         version = 0;
-        type = null;
         reqId = 0;
         length = 0;
         padding = 0;
@@ -83,9 +81,6 @@ public class FcgPacketUnPacker extends PacketUnpacker<FcgPacket> {
                         headerBuf.put(buf, len);
                         if (headerBuf.length() == FcgPacket.PREAMBLE_SIZE) {
                             headerReadDone();
-                            if (type == null) {
-                                throw new ProtocolException("Invalid FCGI Type: " + typeNo);
-                            }
                             if (length == 0) {
                                 if (padding == 0)
                                     changeState(State.End);
@@ -135,7 +130,7 @@ public class FcgPacketUnPacker extends PacketUnpacker<FcgPacket> {
             }
 
             if (state == State.End) {
-                FcgPacket pkt = pktStore.rent(type);
+                FcgPacket pkt = pktStore.rent(typeNo);
                 pkt.reqId = reqId;
                 pkt.newHeaderAccessor().putBytes(headerBuf.bytes(), 0, headerBuf.length());
                 pkt.newDataAccessor().putBytes(dataBuf.bytes(), 0, dataBuf.length());
@@ -188,13 +183,12 @@ public class FcgPacketUnPacker extends PacketUnpacker<FcgPacket> {
         byte[] pre = headerBuf.bytes();
         version = byteToInt(pre[0]);
         typeNo = byteToInt(pre[1]);
-        type = FcgType.getType(typeNo);
         reqId = bytesToInt(pre[2], pre[3]);
         length = bytesToInt(pre[4], pre[5]);
         padding = byteToInt(pre[6]);
         int reserved = byteToInt(pre[7]);
-        BayLog.debug("%s fcg Read packet header: version=%s type=%s reqId=%d length=%d padding=%d",
-                        this, version, type, reqId, length, padding);
+        BayLog.debug("%s fcg Read packet header: version=%s type=%d reqId=%d length=%d padding=%d",
+                        this, version, typeNo, reqId, length, padding);
     }
 
     private int byteToInt(byte b) {

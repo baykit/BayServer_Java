@@ -20,11 +20,11 @@ import java.util.Iterator;
 
 public class H2InboundHandler implements H2Handler, InboundHandler {
 
-    public static class InboundProtocolHandlerFactory implements ProtocolHandlerFactory<H2Command, H2Packet, H2Type> {
+    public static class InboundProtocolHandlerFactory implements ProtocolHandlerFactory<H2Command, H2Packet> {
 
         @Override
-        public ProtocolHandler<H2Command, H2Packet, H2Type> createProtocolHandler(
-                PacketStore<H2Packet, H2Type> pktStore) {
+        public ProtocolHandler<H2Command, H2Packet> createProtocolHandler(
+                PacketStore<H2Packet> pktStore) {
 
             H2InboundHandler inboundHandler = new H2InboundHandler();
             H2CommandUnPacker commandUnpacker = new H2CommandUnPacker(inboundHandler);

@@ -20,7 +20,7 @@ import java.io.IOException;
  * |                   Frame Payload (0...)                      ...
  * +---------------------------------------------------------------+
  */
-public class H2Packet extends Packet<H2Type> {
+public class H2Packet extends Packet {
     
     public static final int MAX_PAYLOAD_MAXLEN = 0x00FFFFFF; // = 2^24-1 = 16777215 = 16MB-1
     public static final int DEFAULT_PAYLOAD_MAXLEN = 0x00004000; // = 2^14 = 16384 = 16KB
@@ -29,7 +29,7 @@ public class H2Packet extends Packet<H2Type> {
     public H2Flags flags;
     public int streamId = -1;
 
-    public H2Packet(H2Type type) {
+    public H2Packet(int type) {
         super(type, FRAME_HEADER_LEN, DEFAULT_PAYLOAD_MAXLEN);
     }
 
@@ -42,13 +42,13 @@ public class H2Packet extends Packet<H2Type> {
 
     @Override
     public String toString() {
-        return "H2Packet(" + type.name() + ") hlen=" + headerLen + " dlen=" + dataLen() + " stm=" + streamId + " flg=" + flags;
+        return "H2Packet(" + type + ") hlen=" + headerLen + " dlen=" + dataLen() + " stm=" + streamId + " flg=" + flags;
     }
 
     public void packHeader() throws IOException {
         PacketPartAccessor acc = newHeaderAccessor();
         putInt24(acc, dataLen());
-        acc.putByte(type.no);
+        acc.putByte(type);
         acc.putByte(flags.flags);
         acc.putInt(H2Packet.extractInt31(streamId));
     }

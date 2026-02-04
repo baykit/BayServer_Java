@@ -37,7 +37,7 @@ public class CmdSendBodyChunk extends AjpCommand {
 
         AjpPacket.AjpAccessor acc = pkt.newAjpDataAccessor();
 
-        acc.putByte(type.no);
+        acc.putByte(type);
         acc.putShort(length);
         acc.putBytes(chunk, offset, length);
         acc.putByte(0);   // maybe document bug

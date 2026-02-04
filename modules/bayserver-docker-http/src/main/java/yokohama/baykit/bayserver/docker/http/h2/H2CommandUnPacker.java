@@ -33,43 +33,43 @@ public class H2CommandUnPacker extends CommandUnPacker<H2Packet> {
 
         H2Command cmd;
         switch (pkt.type()) {
-            case Preface:
+            case H2Type.Preface:
                 cmd = new CmdPreface(pkt.streamId, pkt.flags);
                 break;
 
-            case Headers:
+            case H2Type.Headers:
                 cmd = new CmdHeaders(pkt.streamId, pkt.flags);
                 break;
 
-            case Priority:
+            case H2Type.Priority:
                 cmd = new CmdPriority(pkt.streamId, pkt.flags);
                 break;
 
-            case Settings:
+            case H2Type.Settings:
                 cmd = new CmdSettings(pkt.streamId, pkt.flags);
                 break;
 
-            case WindowUpdate:
+            case H2Type.WindowUpdate:
                 cmd = new CmdWindowUpdate(pkt.streamId, pkt.flags);
                 break;
 
-            case Data:
+            case H2Type.Data:
                 cmd = new CmdData(pkt.streamId, pkt.flags);
                 break;
 
-            case Goaway:
+            case H2Type.Goaway:
                 cmd = new CmdGoAway(pkt.streamId, pkt.flags);
                 break;
 
-            case Ping:
+            case H2Type.Ping:
                 cmd = new CmdPing(pkt.streamId, pkt.flags);
                 break;
 
-            case RstStream:
+            case H2Type.RstStream:
                 cmd = new CmdRstStream(pkt.streamId);
                 break;
 
-            case Continuation:
+            case H2Type.Continuation:
                 cmd = new CmdContinuation(pkt.streamId);
                 break;
 

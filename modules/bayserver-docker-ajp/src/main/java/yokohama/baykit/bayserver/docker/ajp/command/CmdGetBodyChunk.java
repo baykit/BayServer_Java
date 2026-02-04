@@ -26,7 +26,7 @@ public class CmdGetBodyChunk extends AjpCommand {
     @Override
     public void pack(AjpPacket pkt) throws IOException {
         AjpPacket.AjpAccessor acc = pkt.newAjpDataAccessor();
-        acc.putByte(type.no);
+        acc.putByte(type);
         acc.putShort(reqLen);
 
         // must be called from last line

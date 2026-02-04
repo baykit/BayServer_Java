@@ -7,7 +7,7 @@ import yokohama.baykit.bayserver.util.Reusable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class PacketPacker<P extends Packet<?>> implements Reusable {
+public class PacketPacker<P extends Packet> implements Reusable {
 
     @Override
     public void reset() {

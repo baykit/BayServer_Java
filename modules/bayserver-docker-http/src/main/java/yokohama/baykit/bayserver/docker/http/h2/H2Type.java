@@ -1,20 +1,20 @@
 package yokohama.baykit.bayserver.docker.http.h2;
 
-public enum H2Type {
+public class H2Type {
 
-    Preface(-1),
-    Data(0),
-    Headers(1),
-    Priority(2),
-    RstStream(3),
-    Settings(4),
-    PushPromise(5),
-    Ping(6),
-    Goaway(7),
-    WindowUpdate(8),
-    Continuation(9);
+    public static final int Preface = -1;
+    public static final int Data = 0;
+    public static final int Headers = 1;
+    public static final int Priority = 2;
+    public static final int RstStream = 3;
+    public static final int Settings = 4;
+    public static final int PushPromise = 5;
+    public static final int Ping = 6;
+    public static final int Goaway = 7;
+    public static final int WindowUpdate = 8;
+    public static final int Continuation = 9;
 
-    static H2Type[] types = {
+    static int[] types = {
             Data,
             Headers,
             Priority,
@@ -26,15 +26,4 @@ public enum H2Type {
             WindowUpdate,
             Continuation
     };
-
-    public int no;
-    H2Type(int no) {
-        this.no = no;
-    }
-
-    public static H2Type getType(int no) {
-        if(no < 0 || no > types.length)
-            return null;
-        return types[no];
-    }
 }

@@ -40,7 +40,7 @@ import java.io.IOException;
  *       9     CPong Reply       The reply to a CPing request
  *
  */
-public class AjpPacket extends Packet<AjpType> {
+public class AjpPacket extends Packet {
 
     public class AjpAccessor extends PacketPartAccessor {
 
@@ -84,7 +84,7 @@ public class AjpPacket extends Packet<AjpType> {
 
     public boolean toServer;
 
-    AjpPacket(AjpType type) {
+    AjpPacket(int type) {
         super(type, PREAMBLE_SIZE, MAX_DATA_LEN);
     }
 
@@ -96,7 +96,7 @@ public class AjpPacket extends Packet<AjpType> {
 
     @Override
     public String toString() {
-        return "AjpPacket(" + type.name() + ")";
+        return "AjpPacket(" + type + ")";
     }
 
     public AjpAccessor newAjpHeaderAccessor() {

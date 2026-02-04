@@ -4,16 +4,16 @@ import yokohama.baykit.bayserver.protocol.Command;
 
 import java.io.IOException;
 
-public abstract class H2Command extends Command<H2Command, H2Packet, H2Type, H2CommandHandler> {
+public abstract class H2Command extends Command<H2Command, H2Packet, H2CommandHandler> {
 
     public H2Flags flags;
     public int streamId;
 
-    public H2Command(H2Type type, int streamId) {
+    public H2Command(int type, int streamId) {
         this(type, streamId, null);
     }
 
-    public H2Command(H2Type type, int streamId, H2Flags flags) {
+    public H2Command(int type, int streamId, H2Flags flags) {
         super(type);
         this.streamId = streamId;
         if(flags == null)

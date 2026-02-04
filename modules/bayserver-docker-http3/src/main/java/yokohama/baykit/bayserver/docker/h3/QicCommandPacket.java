@@ -5,9 +5,9 @@ import yokohama.baykit.bayserver.protocol.Packet;
 /**
  * Dummy packet
  */
-public class QicCommandPacket extends Packet<QicCommandType> {
+public class QicCommandPacket extends Packet {
 
-    public QicCommandPacket(QicCommandType type) {
+    public QicCommandPacket(int type) {
         super(type, 0, 0);
     }
 

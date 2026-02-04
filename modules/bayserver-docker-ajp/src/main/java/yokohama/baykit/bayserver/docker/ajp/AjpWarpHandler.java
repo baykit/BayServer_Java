@@ -21,11 +21,11 @@ import java.io.IOException;
  */
 public class AjpWarpHandler implements WarpHandler, AjpHandler {
 
-    static class WarpProtocolHandlerFactory implements ProtocolHandlerFactory<AjpCommand, AjpPacket, AjpType> {
+    static class WarpProtocolHandlerFactory implements ProtocolHandlerFactory<AjpCommand, AjpPacket> {
 
         @Override
-        public ProtocolHandler<AjpCommand, AjpPacket, AjpType> createProtocolHandler(
-                PacketStore<AjpPacket, AjpType> pktStore) {
+        public ProtocolHandler<AjpCommand, AjpPacket> createProtocolHandler(
+                PacketStore<AjpPacket> pktStore) {
             AjpWarpHandler warpHandler = new AjpWarpHandler();
             AjpCommandUnPacker commandUnpacker = new AjpCommandUnPacker(warpHandler);
             AjpPacketUnPacker packetUnpacker = new AjpPacketUnPacker(pktStore, commandUnpacker);

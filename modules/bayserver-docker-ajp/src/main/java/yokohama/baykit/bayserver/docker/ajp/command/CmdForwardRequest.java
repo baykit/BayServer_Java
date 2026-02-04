@@ -151,7 +151,7 @@ public class CmdForwardRequest extends AjpCommand {
     public void pack(AjpPacket pkt) throws IOException {
         //BayLog.info("%s", this);
         AjpPacket.AjpAccessor acc = pkt.newAjpDataAccessor();
-        acc.putByte(type.no); // prefix code
+        acc.putByte(type); // prefix code
         int code = getMethodCode(method);
         if(code <= 0)
             throw new ProtocolException("Invalid method: " + method);

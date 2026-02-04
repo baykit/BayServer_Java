@@ -26,7 +26,7 @@ public class CmdEndResponse extends AjpCommand {
     @Override
     public void pack(AjpPacket pkt) throws IOException {
         AjpPacket.AjpAccessor acc = pkt.newAjpDataAccessor();
-        acc.putByte(type.no);
+        acc.putByte(type);
         acc.putByte(reuse ? 1 : 0);
 
         // must be called from last line

@@ -13,17 +13,17 @@ import java.util.Arrays;
  *   +  Data(payload data)       +
  *   +---------------------------+
  */
-public abstract class Packet<T> implements Reusable {
+public abstract class Packet implements Reusable {
 
     public static final int INITIAL_BUF_SIZE = 8192 * 4;
 
-    protected final T type;
+    protected final int type;
     public byte[] buf;
     public int bufLen;
     public final int headerLen;
     public final int maxDataLen;
 
-    public Packet(T type, int headerLen, int maxDataLen) {
+    public Packet(int type, int headerLen, int maxDataLen) {
         this.type = type;
         this.headerLen = headerLen;
         this.maxDataLen = maxDataLen;
@@ -37,7 +37,7 @@ public abstract class Packet<T> implements Reusable {
         bufLen = headerLen;
     }
 
-    public final T type() {
+    public final int type() {
         return type;
     }
 

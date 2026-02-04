@@ -6,7 +6,7 @@ import yokohama.baykit.bayserver.util.Reusable;
 
 import java.io.IOException;
 
-public abstract class CommandUnPacker<P extends Packet<?>> implements Reusable {
+public abstract class CommandUnPacker<P extends Packet> implements Reusable {
 
     public abstract NextSocketAction packetReceived(P pac) throws IOException;
 }

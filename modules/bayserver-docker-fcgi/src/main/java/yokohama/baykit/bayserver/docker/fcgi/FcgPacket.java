@@ -20,7 +20,7 @@ import yokohama.baykit.bayserver.protocol.Packet;
  *             unsigned char paddingData[paddingLength];
  *         } FCGI_Record;
  */
-public class FcgPacket extends Packet<FcgType> {
+public class FcgPacket extends Packet {
     public static final int PREAMBLE_SIZE = 8;
 
     public static final int VERSION = 1;
@@ -30,7 +30,7 @@ public class FcgPacket extends Packet<FcgType> {
     public int version = VERSION;
     public int reqId;
 
-    FcgPacket(FcgType type) {
+    FcgPacket(int type) {
         super(type, PREAMBLE_SIZE, MAXLEN);
     }
 
@@ -43,6 +43,6 @@ public class FcgPacket extends Packet<FcgType> {
 
     @Override
     public String toString() {
-        return "FcgPacket(" + type.name() + ") id=" + reqId;
+        return "FcgPacket(" + type + ") id=" + reqId;
     }
 }
