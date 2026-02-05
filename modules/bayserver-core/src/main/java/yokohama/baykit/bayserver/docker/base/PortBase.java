@@ -11,6 +11,7 @@ import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.*;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
+import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.StringUtil;
@@ -19,6 +20,8 @@ import yokohama.baykit.bayserver.util.SysUtil;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.StandardSocketOptions;
+import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -219,6 +222,14 @@ public abstract class PortBase extends DockerBase implements Port {
     public void onConnected(int agentId, Rudder rd) throws HttpException {
 
         checkAdmitted((NetworkChannelRudder) rd);
+
+        SocketChannel ch = (SocketChannel) ChannelRudder.getChannel(rd);
+        try {
+            ch.setOption(StandardSocketOptions.TCP_NODELAY, true);
+        }
+        catch(IOException e) {
+            BayLog.error(e);
+        }
 
         InboundShip sip = getShipStore(agentId).rent();
         Transporter tp;
