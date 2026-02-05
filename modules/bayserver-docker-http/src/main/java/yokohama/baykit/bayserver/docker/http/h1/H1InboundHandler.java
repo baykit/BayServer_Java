@@ -376,7 +376,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         tur.req.parseAuthorization();
 
         // Get remote address
-        String clientAdr = tur.req.headers.get(Headers.X_FORWARDED_FOR);
+        String clientAdr = tur.req.headers.getFast(Headers.X_FORWARDED_FOR);
         if (clientAdr != null) {
             tur.req.remoteAddress = clientAdr;
             tur.req.remotePort = -1;
