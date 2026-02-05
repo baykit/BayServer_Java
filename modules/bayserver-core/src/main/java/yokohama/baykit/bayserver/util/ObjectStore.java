@@ -5,7 +5,6 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 
 import java.util.ArrayDeque;
-import java.util.HashSet;
 
 public class ObjectStore<T extends Reusable> implements Reusable{
 
@@ -38,7 +37,7 @@ public class ObjectStore<T extends Reusable> implements Reusable{
     // Other methods
     ////////////////////////////////////////////////////////////////////////////////
 
-    public synchronized T rent() {
+    public T rent() {
         T obj;
         //BayLog.debug(owner + " rent freeList=" + freeList);
         if(freeList.isEmpty()) {
@@ -54,7 +53,7 @@ public class ObjectStore<T extends Reusable> implements Reusable{
         return obj;
     }
 
-    public synchronized void Return(T obj, boolean reuse) {
+    public void Return(T obj, boolean reuse) {
         //BayLog.debug(" return object " + obj.hashCode());
         //if(freeList.contains(obj))
         //    throw new Sink("This object already returned: " + obj);
