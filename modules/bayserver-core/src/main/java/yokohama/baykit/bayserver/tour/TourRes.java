@@ -92,7 +92,7 @@ public class TourRes implements Reusable {
                 headers.contains(Headers.CONTENT_TYPE) &&
                 headers.contentType().toLowerCase().startsWith("text/") &&
                 !headers.contains(Headers.CONTENT_ENCODING)) {
-            String enc = tour.req.headers.get(Headers.ACCEPT_ENCODING);
+            String enc = tour.req.headers.getFast(Headers.ACCEPT_ENCODING);
             if (enc != null) {
                 StringTokenizer st = new StringTokenizer(enc, ",");
                 while (st.hasMoreTokens()) {

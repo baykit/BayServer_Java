@@ -164,7 +164,7 @@ public class TourReq implements Reusable {
      * Parse AUTHORIZATION header
      */
     public void parseAuthorization() {
-        String auth = headers.get(Headers.AUTHORIZATION);
+        String auth = headers.getFast(Headers.AUTHORIZATION);
         if (!StringUtil.empty(auth)) {
             Pattern ptn = Pattern.compile("Basic (.*)");
             Matcher mch = ptn.matcher(auth);
@@ -190,13 +190,13 @@ public class TourReq implements Reusable {
     public void parseHostPort(int defaultPort) {
         reqHost = "";
 
-        String hostPort = headers.get(Headers.X_FORWARDED_HOST);
+        String hostPort = headers.getFast(Headers.X_FORWARDED_HOST);
         if(StringUtil.isSet(hostPort)) {
             headers.remove(Headers.X_FORWARDED_HOST);
             headers.set(Headers.HOST, hostPort);
         }
 
-        hostPort = headers.get(Headers.HOST);
+        hostPort = headers.getFast(Headers.HOST);
         if(StringUtil.isSet(hostPort)) {
             int pos = hostPort.lastIndexOf(':');
             if(pos == -1) {

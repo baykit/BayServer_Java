@@ -4,6 +4,7 @@ import yokohama.baykit.bayserver.BayLog;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
@@ -21,29 +22,29 @@ public class Headers {
     public static final String CONTENT_LENGTH = "content-length";
     public static final String CONTENT_ENCODING = "content-encoding";
     public static final String HDR_TRANSFER_ENCODING = "Transfer-Encoding";
-    public static final String CONNECTION = "Connection";
-    public static final String AUTHORIZATION = "Authorization";
+    public static final String CONNECTION = "connection";
+    public static final String AUTHORIZATION = "authorization";
     public static final String WWW_AUTHENTICATE = "WWW-Authenticate";
     public static final String STATUS = "Status";
     public static final String LOCATION = "Location";
-    public static final String HOST = "Host";
+    public static final String HOST = "host";
     public static final String COOKIE = "Cookie";
     public static final String USER_AGENT = "User-Agent";
     public static final String ACCEPT = "Accept";
-    public static final String ACCEPT_LANGUAGE = "Accept-Language";
-    public static final String ACCEPT_ENCODING = "Accept-Encoding";
+    public static final String ACCEPT_LANGUAGE = "accept-language";
+    public static final String ACCEPT_ENCODING = "accept-encoding";
     public static final String UPGRADE_INSECURE_REQUESTS = "Upgrade-Insecure-Requests";
     public static final String SERVER = "Server";
-    public static final String X_FORWARDED_HOST = "X-Forwarded-Host";
-    public static final String X_FORWARDED_FOR = "X-Forwarded-For";
-    public static final String X_FORWARDED_PROTO = "X-Forwarded-Proto";
-    public static final String X_FORWARDED_PORT = "X-Forwarded-Port";
+    public static final String X_FORWARDED_HOST = "x-forwarded-host";
+    public static final String X_FORWARDED_FOR = "x-forwarded-for";
+    public static final String X_FORWARDED_PROTO = "x-forwarded-proto";
+    public static final String X_FORWARDED_PORT = "x-forwarded-port";
 
     /** Status */
     int status = HttpStatus.OK;
 
     /** Header hash */
-    Map<String, List<String>> headers = new HashMap<>();
+    Map<String, List<String>> headers = new ConcurrentHashMap<>();
 
     @Override
     public String toString() {
@@ -73,7 +74,24 @@ public class Headers {
         if (name == null)
             throw new NullPointerException();
 
-        List<String> values = headers.get(StringUtil.toLowerCase(name));
+        return getFast(StringUtil.toLowerCase(name));
+    }
+
+
+    /**
+     * Get the header value as string (Fast version)
+     *
+     * @param name
+     *            header name
+     * @return header value
+     * @throws NullPointerException
+     *             If name is null
+     */
+    public String getFast(String name) {
+        if (name == null)
+            throw new NullPointerException();
+
+        List<String> values = headers.get(name);
         if(values == null)
             return null;
         return values.get(0);
@@ -135,7 +153,25 @@ public class Headers {
         if (value == null)
             throw new NullPointerException();
 
-        name = StringUtil.toLowerCase(name);
+        setFast(StringUtil.toLowerCase(name), value);
+    }
+
+    /**
+     * Update the header value by string (Fast version)
+     *
+     * @param name
+     *            Header Name
+     * @param value
+     *            Header Value
+     * @throws NullPointerException
+     *             If either name or value is null
+     */
+    public void setFast(String name, String value) {
+        if (name == null)
+            throw new NullPointerException();
+        if (value == null)
+            throw new NullPointerException();
+
         List<String> values = headers.get(name);
         if(values == null) {
             values = new ArrayList<>();
@@ -144,7 +180,6 @@ public class Headers {
         values.clear();
         values.add(value);
     }
-
 
         /**
      * Update the header value by date
@@ -299,11 +334,11 @@ public class Headers {
     }
 
     public String contentType() {
-        return get(CONTENT_TYPE);
+        return getFast(CONTENT_TYPE);
     }
 
     public void setContentType(String s) {
-        set(CONTENT_TYPE, s);
+        setFast(CONTENT_TYPE, s);
     }
 
     /**
@@ -313,7 +348,7 @@ public class Headers {
      *         -1.
      */
     public int contentLength() {
-        String length = get(CONTENT_LENGTH);
+        String length = getFast(CONTENT_LENGTH);
         if (StringUtil.empty(length))
             return -1;
         else {
@@ -328,11 +363,11 @@ public class Headers {
     }
 
     public void setContentLength(long length) {
-        set(CONTENT_LENGTH, Long.toString(length));
+        setFast(CONTENT_LENGTH, Long.toString(length));
     }
 
     public ConnectionType getConnection() {
-        String con = get(CONNECTION);
+        String con = getFast(CONNECTION);
         return ConnectionType.getType(con);
     }
 
