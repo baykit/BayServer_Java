@@ -95,7 +95,8 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         String resCon;
 
         // determine Connection header value
-        if(tur.req.headers.getConnection() != Headers.ConnectionType.KeepAlive && tur.req.headers.getConnection() != Headers.ConnectionType.Unknown)
+        Headers.ConnectionType reqConType = tur.req.headers.getConnection();
+        if(reqConType != Headers.ConnectionType.KeepAlive && reqConType != Headers.ConnectionType.Unknown)
             // If client doesn't support "Keep-Alive", set "Close"
             resCon = "Close";
         else if (tur.res.headers.status() != HttpStatus.OK) {
@@ -104,7 +105,8 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         else {
             resCon = "Keep-Alive";
             // Client supports "Keep-Alive"
-            if (tur.res.headers.getConnection() != Headers.ConnectionType.KeepAlive && tur.res.headers.getConnection() != Headers.ConnectionType.Unknown) {
+            Headers.ConnectionType resConType = tur.res.headers.getConnection();
+            if (resConType != Headers.ConnectionType.KeepAlive && resConType != Headers.ConnectionType.Unknown) {
                 // If tour doesn't need "Keep-Alive"
                 if (tur.res.headers.contentLength() == -1) {
                     // If content-length not specified
