@@ -439,27 +439,28 @@ public class GrandAgent extends Thread {
         BayLog.debug("%s wrote %d bytes rd=%s qlen=%d", this, let.nBytes, st.rudder, st.writeQueue.size());
         st.bytesWrote += let.nBytes;
 
-        if(st.writeQueue.isEmpty())
-            throw new IllegalStateException(this + " Write queue is empty: rd=" + st.rudder);
+        if(st.writeQueue.isEmpty()) {
+            BayLog.debug("%s Write queue is empty: rd=%s", this, st.rudder);
+            return;
+        }
 
         boolean writeMore;
-        WriteUnit unit = st.writeQueue.get(0);
-        //BayLog.debug("%s wrote buf=%s", this, unit.buf);
-        if (unit.buf.hasRemaining()) {
-            BayLog.debug("Could not write enough data buf=%s", unit.buf);
-            writeMore = true;
-        }
-        else {
-            // Removes write unit from writeQueue
-            st.multiplexer.consumeOldestUnit(st);
+        while(true) {
+            WriteUnit unit = st.writeQueue.get(0);
+            //BayLog.debug("%s wrote buf=%s", this, unit.buf);
+            if (unit.buf.hasRemaining()) {
+                BayLog.debug("Could not write enough data buf=%s", unit.buf);
+                writeMore = true;
+                break;
+            }
+            else {
+                // Removes write unit from writeQueue
+                st.multiplexer.consumeOldestUnit(st);
 
-            synchronized (st.writing) {
                 if (st.writeQueue.isEmpty()) {
                     writeMore = false;
                     st.writing[0] = false;
-                }
-                else {
-                    writeMore = true;
+                    break;
                 }
             }
         }
@@ -468,7 +469,7 @@ public class GrandAgent extends Thread {
             st.multiplexer.nextWrite(st);
         }
         else {
-            if(st.finale) {
+            if (st.finale) {
                 // Close
                 BayLog.debug("%s finale return Close", this);
                 nextAction(st, NextSocketAction.Close, false);
@@ -477,7 +478,6 @@ public class GrandAgent extends Thread {
                 // Write off
                 st.multiplexer.cancelWrite(st);
             }
-
         }
     }
 
@@ -532,13 +532,13 @@ public class GrandAgent extends Thread {
                 break;
 
             case Write:
-                if(reading)
-                    cancel = true;
+                //if(reading)
+                //    cancel = true;
                 break;
 
             case Close:
-                if(reading)
-                    cancel = true;
+                //if(reading)
+                //    cancel = true;
                 st.multiplexer.reqClose(st.rudder);
                 break;
 
