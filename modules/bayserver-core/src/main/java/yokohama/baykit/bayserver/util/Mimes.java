@@ -2,11 +2,12 @@ package yokohama.baykit.bayserver.util;
 
 import yokohama.baykit.bayserver.bcf.*;
 
-import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Mimes {
 
-    static HashMap<String, String> mimeMap = new HashMap<>();
+    static Map<String, String> mimeMap = new ConcurrentHashMap<>();
 
     public static void init(String path) throws ParseException {
         BcfParser p = new BcfParser();
