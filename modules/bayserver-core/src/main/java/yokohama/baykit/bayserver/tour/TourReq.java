@@ -220,7 +220,7 @@ public class TourReq implements Reusable {
      * Additionally, it reduces the internal buffer space by the size of the data passed
      */
     public boolean postReqContent(int checkId, byte[] data, int start, int len, ContentConsumeListener lis) throws HttpException {
-        tour.checkTourId(checkId);
+        //tour.checkTourId(checkId);
 
         boolean dataPassed = false;
 
@@ -271,7 +271,7 @@ public class TourReq implements Reusable {
      */
     public void endReqContent(int checkId) throws IOException, HttpException {
         BayLog.debug("%s endReqContent", tour);
-        tour.checkTourId(checkId);
+        //tour.checkTourId(checkId);
         if (ended)
             throw new Sink(tour + " Request content is already ended");
         tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.RUNNING);

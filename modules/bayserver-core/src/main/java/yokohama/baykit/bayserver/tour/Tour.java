@@ -158,7 +158,7 @@ public class Tour implements Reusable {
 
     public void changeState(int checkId, TourState newState) {
         BayLog.trace("%s change state: %s", this, newState);
-        checkTourId(checkId);
+        //checkTourId(checkId);
         this.state = newState;
     }
 

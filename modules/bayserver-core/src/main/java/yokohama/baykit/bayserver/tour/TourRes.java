@@ -76,7 +76,7 @@ public class TourRes implements Reusable {
      * Whether this process is carried out synchronously or asynchronously is uncertain"
      */
     public void sendHeaders(int checkId) throws IOException {
-        tour.checkTourId(checkId);
+        //tour.checkTourId(checkId);
 
         if (tour.isZombie() || tour.isAborted())
             return;
@@ -179,7 +179,7 @@ public class TourRes implements Reusable {
     public synchronized boolean sendResContent(int checkId, byte[] buf, int ofs, int len) throws IOException {
         if (buf == null)
             throw new NullPointerException();
-        tour.checkTourId(checkId);
+        //tour.checkTourId(checkId);
         BayLog.debug("%s send content: len=%d", this, len);
 
 
@@ -248,7 +248,7 @@ public class TourRes implements Reusable {
      * If it occurs synchronously, the tour instance will be disposed, and no further processing on the tour will be allowed
      */
     public synchronized void endResContent(int checkId) throws IOException {
-        tour.checkTourId(checkId);
+        //tour.checkTourId(checkId);
 
         BayLog.debug("%s end ResContent", this);
         if(tour.isEnded()) {
@@ -317,7 +317,7 @@ public class TourRes implements Reusable {
      * Whether this process is carried out synchronously or asynchronously is uncertain
      */
     public void sendError(int checkId, int status, String message, Throwable e) throws IOException {
-        tour.checkTourId(checkId);
+        //tour.checkTourId(checkId);
 
         BayLog.debug("%s send error: status=%d, message=%s ex=%s", this, status, message, e == null ? "" : e.getMessage(), e);
         if (e != null)
@@ -363,7 +363,7 @@ public class TourRes implements Reusable {
 
 
     private void sendRedirect(int checkId, int status, String location) throws IOException {
-        tour.checkTourId(checkId);
+        //tour.checkTourId(checkId);
 
         try {
             if(headerSent) {
