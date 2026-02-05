@@ -18,8 +18,30 @@ public class PacketPartAccessor {
         this.pos = 0;
     }
 
+    public void beginFastPutByte(int len) throws IOException {
+        checkWrite(len);
+        while(start + pos + len > packet.buf.length) {
+            packet.expand();
+        }
+    }
+
+    public void fastPutByte(int b) {
+        packet.buf[start + pos] = (byte)b;
+        pos++;
+    }
+
+    public void endFastPutByte(int len) throws IOException {
+        if(start + pos > packet.bufLen)
+            packet.bufLen = start + pos;
+    }
+
     public void putByte(int b) throws IOException {
-        putBytes(new byte[]{(byte) b}, 0, 1);
+        checkWrite(1);
+        if(start + pos + 1 > packet.buf.length) {
+            packet.expand();
+        }
+        packet.buf[start + pos] = (byte)b;
+        forward(1);
     }
 
     public void putBytes(byte[] buf) throws IOException {
@@ -54,7 +76,13 @@ public class PacketPartAccessor {
     public void putString(String s) throws IOException {
         if (s == null)
             throw new NullPointerException();
-        putBytes(StringUtil.toBytes(s));
+
+        beginFastPutByte(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            fastPutByte((byte) c);
+        }
+        endFastPutByte(s.length());
     }
 
     public int getByte() throws IOException {
