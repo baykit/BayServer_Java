@@ -151,7 +151,7 @@ public class BuiltInCityDocker extends DockerBase implements City {
                 catch(Exception e) {
                     BayLog.error(e);
                     try {
-                        tur.req.pathInfo = URLDecoder.decode(tur.req.pathInfo, "UTF-8");
+                        tur.req.pathInfo = URLDecoder.decode(tur.req.pathInfo, null);
                     }
                     catch (Exception ee) {
                         BayLog.error(ee);
