@@ -2,10 +2,15 @@ package yokohama.baykit.bayserver.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 
 public class URLDecoder {
+
+    // Supports only ASCII '0'..'9', 'A'..'F', 'a'..'f'. All others map to -1.
+    private static final int[] HEX = new int[128];
 
     /**
      * Decode tilde char only
@@ -54,48 +59,55 @@ public class URLDecoder {
         return parseSpecial(str, enc);
     }
 
-    /* Parse special character */
-    static String parseSpecial(String str, String enc)
-            throws UnsupportedEncodingException {
 
-        ByteArrayOutputStream2 os = new ByteArrayOutputStream2();
-        int index = 0;
+    static String parseSpecial(String s, String enc) throws UnsupportedEncodingException {
+        final int n = s.length();
+        // The output will never be longer than the input
+        // (%xx sequences shrink from 3 characters to 1 byte)
+        byte[] out = new byte[n];
+        int o = 0;
 
-        while (index < str.length()) {
-            char c = str.charAt(index);
-
-            switch (c) {
-            case '+':
-                os.write((byte) ' ');
-                index++;
-                break;
-
-            case '%':
-                String hexStr = str.substring(index + 1, index + 3);
-                int ch = Integer.parseInt(hexStr, 16);
-                os.write(ch);
-                index += 3;
-                break;
-
-            default:
-                os.write((byte) c);
-                index++;
-                break;
+        for (int i = 0; i < n; ) {
+            char c = s.charAt(i);
+            if (c == '+') {
+                out[o++] = (byte) ' ';
+                i++;
+            }
+            else if (c == '%') {
+                if (i + 2 >= n)
+                    throw new IllegalArgumentException("Bad percent-encoding");
+                int hi = HEX[s.charAt(i + 1)];
+                int lo = HEX[s.charAt(i + 2)];
+                if ((hi | lo) < 0)
+                    throw new IllegalArgumentException("Bad percent-encoding");
+                out[o++] = (byte) ((hi << 4) | lo);
+                i += 3;
+            }
+            else {
+                // This is correct and fast only when the input is assumed to be ASCII-compatible
+                out[o++] = (byte) c;
+                i++;
             }
         }
 
-        byte[] b = os.getBuf();
-
-        if (enc == null || enc.equals(""))
-            return new String(b, 0, os.size());
+        Charset cs;
+        if (enc == null || enc.isEmpty())
+            cs = StandardCharsets.UTF_8;
         else
-            return new String(b, 0, os.size(), enc);
+            cs = Charset.forName(enc);
+
+        return new String(out, 0, o, cs);
     }
 
-    private static class ByteArrayOutputStream2 extends ByteArrayOutputStream {
+    static {
+        java.util.Arrays.fill(HEX, -1);
+        for (int i = '0'; i <= '9'; i++)
+            HEX[i] = i - '0';
 
-        byte[] getBuf() {
-            return buf;
-        }
+        for (int i = 'A'; i <= 'F'; i++)
+            HEX[i] = 10 + (i - 'A');
+
+        for (int i = 'a'; i <= 'f'; i++)
+            HEX[i] = 10 + (i - 'a');
     }
 }
