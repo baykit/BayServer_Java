@@ -10,10 +10,12 @@ import yokohama.baykit.bayserver.docker.http.h1.H1Packet;
 import yokohama.baykit.bayserver.docker.http.h1.H1Type;
 import yokohama.baykit.bayserver.protocol.PacketPartAccessor;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
+import yokohama.baykit.bayserver.util.ByteArrayUtil;
 import yokohama.baykit.bayserver.util.Headers;
 import yokohama.baykit.bayserver.util.HttpStatus;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
@@ -64,6 +66,9 @@ public class CmdHeader extends H1Command {
     /** HTTP 1.0 Protocol header bytes */
     public static String HTTP_10 = "HTTP/1.0";
     public static byte[] HTTP_10_BYTES = HTTP_10.getBytes();
+
+    private static final byte[] H11_200 = "HTTP/1.1 200 OK\r\n".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+    private static final byte[] H10_200 = "HTTP/1.0 200 OK\r\n".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
 
     public CmdHeader(boolean req) {
         super(H1Type.Header);
@@ -186,32 +191,64 @@ loop:
 
 
     private void unpackRequestLine(byte[] buf, int start, int len) throws IOException {
-        String line = new String(buf, start, len);
-        StringTokenizer st = new StringTokenizer(line);
+        int end = start + len;
 
-        try {
-            method = st.nextToken();
-            uri = st.nextToken();
-            version = st.nextToken();
-        } catch (NoSuchElementException e) {
-            throw new ProtocolException(
-                    BayMessage.get(Symbol.HTP_INVALID_FIRST_LINE, line));
-        }
+        // find first space
+        int sp1 = ByteArrayUtil.indexOf(buf, start, end, (byte) ' ');
+        if (sp1 < 0)
+            throw invalidFirstLine(buf, start, len);
+
+        // find second space (skip consecutive spaces just in case)
+        int i = sp1 + 1;
+        while (i < end && buf[i] == ' ') i++;
+        int sp2 = ByteArrayUtil.indexOf(buf, i, end, (byte) ' ');
+        if (sp2 < 0)
+            throw invalidFirstLine(buf, start, len);
+
+        // skip spaces before version
+        int j = sp2 + 1;
+        while (j < end && buf[j] == ' ') j++;
+        if (j >= end)
+            throw invalidFirstLine(buf, start, len);
+
+        method = new String(buf, start, sp1 - start, StandardCharsets.US_ASCII);
+        uri = new String(buf, i, sp2 - i, StandardCharsets.US_ASCII); // 方針次第で UTF_8
+        version = new String(buf, j, end - j, StandardCharsets.US_ASCII);
+    }
+
+    private ProtocolException invalidFirstLine(byte[] buf, int start, int len) {
+        String line = new String(buf, start, len, StandardCharsets.US_ASCII);
+        return new ProtocolException(BayMessage.get(Symbol.HTP_INVALID_FIRST_LINE, line));
     }
 
     private void unpackStatusLine(byte[] buf, int start, int len) throws IOException {
-        String line = new String(buf, start, len);
-        StringTokenizer st = new StringTokenizer(line);
+        int end = start + len;
 
-        try {
-            version = st.nextToken();
-            String status = st.nextToken();
-            this.status = Integer.parseInt(status);
+        // Find the space after "HTTP/1.x " (end of the HTTP version)
+        int sp1 = ByteArrayUtil.indexOf(buf, start, end, (byte) ' ');
+        if (sp1 < 0) throw invalidStatusLine(buf, start, len);
 
-        } catch (Exception e) {
-            throw new IOException(
-                    BayMessage.get(Symbol.HTP_INVALID_FIRST_LINE, line));
-        }
+        // Skip consecutive spaces
+        int i = sp1 + 1;
+        while (i < end && buf[i] == ' ') i++;
+
+        // HTTP status code is usually 3 digits
+        if (i + 2 >= end) throw invalidStatusLine(buf, start, len);
+        int s0 = buf[i] - '0';
+        int s1 = buf[i + 1] - '0';
+        int s2 = buf[i + 2] - '0';
+        if ((s0 | s1 | s2) < 0 || s0 > 9 || s1 > 9 || s2 > 9)
+            throw invalidStatusLine(buf, start, len);
+
+        this.status = s0 * 100 + s1 * 10 + s2;
+
+        // Create the version string here only if needed (ASCII only, no StringTokenizer)
+        this.version = new String(buf, start, sp1 - start, StandardCharsets.US_ASCII);
+    }
+
+    private IOException invalidStatusLine(byte[] buf, int start, int len) {
+        String line = new String(buf, start, len, StandardCharsets.US_ASCII);
+        return new IOException(BayMessage.get(Symbol.HTP_INVALID_FIRST_LINE, line));
     }
 
     private void unpackMessageHeader(byte[] bytes, int start, int len) throws IOException {
@@ -268,19 +305,27 @@ loop:
     }
 
     private void packStatusLine(PacketPartAccessor acc) throws IOException {
-        String desc = HttpStatus.description(status);
+        if(status == 200) {
+            if (version != null && version.equalsIgnoreCase("HTTP/1.1"))
+                acc.putBytes(H11_200);
+            else
+                acc.putBytes(H10_200);
+        }
+        else {
+            String desc = HttpStatus.description(status);
 
-        if (version != null && version.equalsIgnoreCase("HTTP/1.1"))
-            acc.putBytes(HTTP_11_BYTES);
-        else
-            acc.putBytes(HTTP_10_BYTES);
+            if (version != null && version.equalsIgnoreCase("HTTP/1.1"))
+                acc.putBytes(HTTP_11_BYTES);
+            else
+                acc.putBytes(HTTP_10_BYTES);
 
-        // status
-        acc.putBytes(H1Packet.SP_BYTES);
-        acc.putString(Integer.toString(status));
-        acc.putBytes(H1Packet.SP_BYTES);
-        acc.putString(desc);
-        acc.putBytes(H1Packet.CRLF_BYTES);
+            // status
+            acc.putBytes(H1Packet.SP_BYTES);
+            acc.putString(Integer.toString(status));
+            acc.putBytes(H1Packet.SP_BYTES);
+            acc.putString(desc);
+            acc.putBytes(H1Packet.CRLF_BYTES);
+        }
     }
 
     public void packMessageHeader(PacketPartAccessor acc, String name, String value) throws IOException {
