@@ -33,7 +33,7 @@ public abstract class Packet implements Reusable {
 
     @Override
     public void reset() {
-        Arrays.fill(buf, 0, headerLen, (byte) 0); // clear buffer for security
+        //Arrays.fill(buf, 0, headerLen, (byte) 0); // clear buffer for security
         bufLen = headerLen;
     }
 

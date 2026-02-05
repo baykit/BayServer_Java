@@ -6,6 +6,7 @@ import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
 import yokohama.baykit.bayserver.util.StringUtil;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,25 +35,25 @@ public class TourStore {
 
     public static final int MAX_TOURS = 12800;
 
-    ArrayList<Tour> freeTours = new ArrayList<>();
+    ArrayDeque<Tour> freeTours = new ArrayDeque<>();
     Map<Long, Tour> activeTourMap = new ConcurrentHashMap<>();
     public static int maxCount;
 
     /** stores[agent_id - 1] => TourStore */
     static ArrayList<TourStore> stores = new ArrayList<>();
 
-    public synchronized Tour get(long key) {
+    public Tour get(long key) {
         return activeTourMap.get(key);
     }
 
-    public synchronized Tour rent(long key, boolean force) {
+    public Tour rent(long key, boolean force) {
         Tour tur = get(key);
         if(tur != null)
             throw new Sink("Tour is active: " + tur);
 
         if (!freeTours.isEmpty()) {
             //BayLog.debug("rent: key=%d from free tours", key);
-            tur = freeTours.remove(freeTours.size() - 1);
+            tur = freeTours.poll();
         } else {
             //BayLog.debug("rent: key=%d Active tour count: %d", key, activeTourMap.size());
             if (!force && (activeTourMap.size() >= maxCount)) {
@@ -66,10 +67,10 @@ public class TourStore {
         return tur;
     }
 
-    public synchronized void Return(long key) {
-        if(!activeTourMap.containsKey(key)) {
-            throw new Sink("Tour is not active key=: " + key);
-        }
+    public void Return(long key) {
+        //if(!activeTourMap.containsKey(key)) {
+        //    throw new Sink("Tour is not active key=: " + key);
+        //}
         //BayLog.debug("return: key=%d Active tour count: before=%d", key, activeTourMap.size());
         Tour tur = activeTourMap.remove(key);
         //BayLog.debug("return: key=%d Active tour count: after=%d", key, activeTourMap.size());
