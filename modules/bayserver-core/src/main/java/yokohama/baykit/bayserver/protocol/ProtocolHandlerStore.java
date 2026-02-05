@@ -7,9 +7,9 @@ import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.ObjectStore;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Protocol handler pool
@@ -36,7 +36,7 @@ public class ProtocolHandlerStore extends ObjectStore<ProtocolHandler> {
         final ProtocolHandlerFactory protocolHandlerFactory;
 
         /** Agent ID => ProtocolHandlerStore */
-        final Map<Integer, ProtocolHandlerStore> stores = new HashMap<>();
+        final ArrayList<ProtocolHandlerStore> stores = new ArrayList<>();
 
         public ProtocolInfo(String proto, boolean svrMode, ProtocolHandlerFactory protocolHandlerFactory) {
             this.protocol = proto;
@@ -47,15 +47,18 @@ public class ProtocolHandlerStore extends ObjectStore<ProtocolHandler> {
 
         public void addAgent(int agtId) {
             PacketStore store = PacketStore.getStore(protocol, agtId);
-            stores.put(agtId, new ProtocolHandlerStore(protocol, serverMode, protocolHandlerFactory, store));
+            while(stores.size() < agtId) {
+                stores.add(null);
+            }
+            stores.set(agtId-1, new ProtocolHandlerStore(protocol, serverMode, protocolHandlerFactory, store));
         }
 
         public void removeAgent(int agtId) {
-            stores.remove(agtId);
+            stores.set(agtId-1, null);
         }
     }
 
-    static Map<String, ProtocolInfo> protoMap = new HashMap<>();
+    static Map<String, ProtocolInfo> protoMap = new ConcurrentHashMap<>();
 
     String protocol;
     boolean serverMode;
@@ -85,13 +88,13 @@ public class ProtocolHandlerStore extends ObjectStore<ProtocolHandler> {
     }
 
     public static ProtocolHandlerStore getStore(String protocol, boolean svrMode, int agentId) {
-        return protoMap.get(constructProtocol(protocol, svrMode)).stores.get(agentId);
+        return protoMap.get(constructProtocol(protocol, svrMode)).stores.get(agentId-1);
     }
 
     public static List<ProtocolHandlerStore> getStores(int agentId) {
         List<ProtocolHandlerStore> storeList = new ArrayList<>();
         protoMap.values().forEach(ifo -> {
-            storeList.add(ifo.stores.get(agentId));
+            storeList.add(ifo.stores.get(agentId-1));
         });
         return storeList;
     }
