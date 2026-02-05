@@ -178,7 +178,7 @@ public class InboundShip extends Ship {
             }
             if(tur.ship != this)
                 throw new Sink();
-            tur.checkTourId(tur.id());
+            //tur.checkTourId(tur.id());
             return tur;
         }
     }

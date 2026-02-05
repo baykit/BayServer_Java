@@ -167,9 +167,12 @@ public class Tour implements Reusable {
         if(checkId == TOUR_ID_NOCHECK)
             return;
 
+        /*
         if(!isInitialized()) {
             throw new Sink("%s Tour not initialized", this);
         }
+        */
+
         if(checkId != this.tourId) {
             throw new Sink("%s Invalid tour id : %d", this, tourId);
         }
