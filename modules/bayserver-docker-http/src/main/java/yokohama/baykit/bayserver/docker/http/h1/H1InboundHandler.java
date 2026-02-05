@@ -275,7 +275,8 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
 
             if (reqContLen <= 0) {
                 endReqContent(curTourId, tur);
-                return NextSocketAction.Suspend;  // end reading
+                //return NextSocketAction.Suspend;  // end reading
+                return NextSocketAction.Continue;  // continue reading
             } else {
                 changeState(ReadContent);
                 return NextSocketAction.Continue;
