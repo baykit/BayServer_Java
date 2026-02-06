@@ -2,7 +2,7 @@ package yokohama.baykit.bayserver.docker.http.h2;
 
 public class H2Type {
 
-    public static final int Preface = -1;
+    public static final int Preface = 31;
     public static final int Data = 0;
     public static final int Headers = 1;
     public static final int Priority = 2;
