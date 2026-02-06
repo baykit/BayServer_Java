@@ -35,13 +35,13 @@ public class FileContentHandler implements ReqContentHandler {
     final String charset;
     String mimeType;
     boolean abortable;
-    FileStore store;
     FileContent fileContent;
+    FileStore.FileContentStatus status;
 
-    public FileContentHandler(Tour tur, FileStore store, File path, String charset) {
+    public FileContentHandler(Tour tur, File path, FileStore.FileContentStatus status, String charset) {
         this.tour = tur;
-        this.store = store;
         this.path = path;
+        this.status = status;
         this.charset = charset;
         this.abortable = true;
 
@@ -89,14 +89,6 @@ public class FileContentHandler implements ReqContentHandler {
     ////////////////////////////////////////////////////////////////////////////////
 
     public synchronized void reqStartTour() throws HttpException {
-        boolean[] reading = new boolean[1];
-        FileStore.FileContentStatus status;
-        if(store == null) {
-            status = new FileStore.FileContentStatus(null, FileStore.FileContentStatus.EXCEEDED);
-        }
-        else {
-            status = store.get(path, reading);
-        }
         fileContent = status.fileContent;
 
         BayLog.debug("%s file content status: %d", tour, status.status);
