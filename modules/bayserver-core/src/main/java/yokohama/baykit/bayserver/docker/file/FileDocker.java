@@ -55,6 +55,11 @@ public class FileDocker extends ClubBase {
     @Override
     public void arrive(Tour tur) throws HttpException {
 
+        // Setup FileStore
+        if(BayServer.harbor.enableCache() && fileStore == null) {
+            fileStore = new FileStore(BayServer.harbor.cacheLifespanSec(), BayServer.harbor.cacheSizeMb() * 1024 * 1024);
+        }
+
         String relPath = tur.req.rewrittenURI != null ? tur.req.rewrittenURI : tur.req.uri;
         if(!StringUtil.empty(tur.town.name()))
             relPath = relPath.substring(tur.town.name().length());
@@ -70,21 +75,39 @@ public class FileDocker extends ClubBase {
         }
 
         File real = new File(tur.town.location(), relPath);
-        if(real.isDirectory()) {
-            if(listFiles) {
-                DirectoryTrain train = new DirectoryTrain(tur, real);
-                train.startTour();
-            }
-            else {
-                throw new HttpException(HttpStatus.FORBIDDEN, "Directory scan is prohibited");
-            }
+
+        FileStore.FileContentStatus status = null;
+        boolean[] reading = new boolean[1];
+
+        if(fileStore != null) {
+            status = fileStore.get(real, reading);
         }
         else {
-            if(BayServer.harbor.enableCache() && fileStore == null) {
-                fileStore = new FileStore(BayServer.harbor.cacheLifespanSec(), BayServer.harbor.cacheSizeMb() * 1024 * 1024);
-            }
-            FileContentHandler handler = new FileContentHandler(tur, fileStore, real, tur.res.charset());
+            if (real.isDirectory())
+                status = null;
+            else
+                status = new FileStore.FileContentStatus(null, FileStore.FileContentStatus.EXCEEDED);
+        }
+
+        if(status == null) {
+            handleDirectory(tur, real);
+        }
+        else {
+            FileContentHandler handler = new FileContentHandler(tur, real, status, tur.res.charset());
             tur.req.setReqContentHandler(handler);
         }
+    }
+
+
+    public void handleDirectory(Tour tur, File path) throws HttpException {
+        if(listFiles) {
+            DirectoryTrain train = new DirectoryTrain(tur, path);
+            train.startTour();
+        }
+        else {
+            throw new HttpException(HttpStatus.FORBIDDEN, "Directory scan is prohibited");
+        }
+
+
     }
 }
