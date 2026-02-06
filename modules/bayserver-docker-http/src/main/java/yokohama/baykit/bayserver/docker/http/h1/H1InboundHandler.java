@@ -103,23 +103,23 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
             resCon = "Close";
         }
         else {
-            resCon = "Keep-Alive";
             // Client supports "Keep-Alive"
-            Headers.ConnectionType resConType = tur.res.headers.getConnection();
-            if (resConType != Headers.ConnectionType.KeepAlive && resConType != Headers.ConnectionType.Unknown) {
-                // If tour doesn't need "Keep-Alive"
-                if (tur.res.headers.contentLength() == -1) {
-                    // If content-length not specified
-                    if (tur.res.headers.contentType() != null &&
-                            tur.res.headers.contentType().startsWith("text/")) {
-                        // If content is text, connection must be closed
-                        resCon = "Close";
-                    }
+
+            // If the client supports Keep-Alive, the response uses Keep-Alive when Content-Length is present
+            // in the response headers; otherwise, it uses Close.
+            resCon = "Keep-Alive";
+            // If tour doesn't need "Keep-Alive"
+            if (tur.res.headers.contentLength() == -1) {
+                // If content-length not specified
+                if (tur.res.headers.contentType() != null &&
+                        tur.res.headers.contentType().startsWith("text/")) {
+                    // If content is text, connection must be closed
+                    resCon = "Close";
                 }
             }
         }
 
-        tur.res.headers.set(Headers.CONNECTION, resCon);
+        tur.res.headers.setFast(Headers.CONNECTION, resCon);
 
         if(BayServer.harbor.traceHeader()) {
             BayLog.info("%s resStatus:%d", tur, tur.res.headers.status());
