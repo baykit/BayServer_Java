@@ -76,7 +76,7 @@ public class PacketStore<P extends Packet> implements Reusable {
     }
 
 
-    public synchronized P rent(int typ) {
+    public P rent(int typ) {
         ObjectStore<P> store = storeMap.get(typ);
         if(store == null) {
             store = new ObjectStore<P>(() -> factory.createPacket(typ));
@@ -85,7 +85,7 @@ public class PacketStore<P extends Packet> implements Reusable {
         return store.rent();
     }
 
-    public synchronized void Return(P pkt) {
+    public void Return(P pkt) {
         ObjectStore<P> store = storeMap.get(pkt.type);
         store.Return(pkt);
         //BayServer.debug(owner + " return packet " + type + " activeCount=" + activeCount);
