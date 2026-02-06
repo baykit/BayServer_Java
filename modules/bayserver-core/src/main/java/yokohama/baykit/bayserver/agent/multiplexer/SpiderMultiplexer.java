@@ -15,7 +15,9 @@ import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.rudder.SocketChannelRudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Pair;
+import yokohama.baykit.bayserver.util.SimpleBuffer;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -175,7 +177,12 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
 
     @Override
     public void cancelRead(RudderState st) {
-        st.selectionKey.cancel();
+        SelectionKey key = st.selectionKey;
+        if(key == null)
+            return;
+
+        key.cancel();
+        st.selectionKey = null;
     }
 
     @Override
@@ -184,16 +191,27 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
             return;
 
         SelectionKey key = st.selectionKey;
+        if(key == null)
+            return;
+
         // Write OP Off
         try {
-            int op = key.interestOps() & ~OP_WRITE;
-            if (op != OP_READ)
-                key.cancel();
-            else
-                key.interestOps(op);
+            int op = key.interestOps();
+            if((op & OP_WRITE) == 0) {
+                BayLog.warn( "%s do nothing: %s", agent, key);
+            }
+            else {
+                int newOp = op & ~OP_WRITE;
+                if (newOp != OP_READ) {
+                    key.cancel();
+                    st.selectionKey = null;
+                }
+                else
+                    key.interestOps(newOp);
+            }
         }
         catch(CancelledKeyException e) {
-            BayLog.debug( "%s key cancelled: %s", agent, key);
+            BayLog.warn( "%s key cancelled: %s", agent, key);
         }
     }
 
@@ -330,7 +348,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
 
             SelectableChannel ch =  (SelectableChannel)ChannelRudder.getChannel(rd);
             //BayLog.debug("%s register chState=%s register op=%d(%s) ch=%s", agent, st, rd.op, opMode(cop.op), ch);
-            SelectionKey key = ch.keyFor(selector);
+            SelectionKey key = st.selectionKey;
             if(key != null) {
                 int op = key.interestOps();
                 int newOp = op | rd.pendingOps;
@@ -343,6 +361,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
                 try {
                     key = ch.register(selector, rd.pendingOps);
                     key.attach(rd);
+                    st.selectionKey = key;
                 } catch (ClosedChannelException e) {
                     //BayLog.debug(e, "%s Cannot register operation (Channel is closed): %s ch=%s op=%d(%s) close=%b",
                     //        agent, st, cop.rudder, cop.op, opMode(cop.op), cop.close);
@@ -366,12 +385,12 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         if (st == null) {
             BayLog.warn("%s Channel state is not registered", agent);
             key.cancel();
+            st.selectionKey = null;
             return;
         }
 
         BayLog.debug("%s handleChannel st=%s acceptable=%b readable=%b writable=%b connectable=%b",
                         agent, st, key.isAcceptable(), key.isReadable(), key.isWritable(), key.isConnectable());
-        st.selectionKey = key;
 
         try {
             if (st.closing) {
