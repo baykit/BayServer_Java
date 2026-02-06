@@ -222,18 +222,21 @@ public class Headers {
      *             If either name or value is null
      */
     public void add(String name, String value) {
-        if (name == null)
+        // 1. Fail-fast null checks to prevent unnecessary processing
+        if (name == null || value == null) {
             throw new NullPointerException();
-        if (value == null)
-            throw new NullPointerException();
-
-        name = StringUtil.toLowerCase(name);
-        List<String> values = headers.get(name);
-        if(values == null) {
-            values = new ArrayList<>();
-            headers.put(name, values);
         }
-        values.add(value);
+
+        // 2. Normalize key case once to avoid repeated String allocations
+        // NOTE: For extreme performance, consider a CaseInsensitiveKey wrapper
+        // to cache the hash code and avoid string recreation.
+        String key = name.toLowerCase(Locale.ROOT);
+
+        // 3. Use computeIfAbsent to avoid double-lookup (get + put)
+        // 4. Set initial ArrayList capacity to 2, as most headers have few values
+        // This reduces memory overhead and potential array resizing.
+        headers.computeIfAbsent(key, k -> new ArrayList<>(2))
+                .add(value);
     }
 
     /**
