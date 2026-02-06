@@ -524,6 +524,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         try {
             if(st.writeQueue.isEmpty()) {
                 BayLog.debug("%s No data to write", this);
+                cancelWrite(st);
                 return;
             }
 
