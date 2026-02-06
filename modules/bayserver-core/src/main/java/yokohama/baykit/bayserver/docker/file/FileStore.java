@@ -42,7 +42,8 @@ public class FileStore {
 
         if (fileContent != null) {
             long now =  RoughTime.currentTimeMillis();
-            if (fileContent.loadedTime + lifespanMilliSec < RoughTime.currentTimeMillis()) {
+            if (fileContent.loadedTime + lifespanMilliSec < now) {
+                // Cached file expired
                 totalBytes -= fileContent.content.capacity();
                 BayLog.debug("Remove expired content: %s", path);
                 contents.remove(path);
@@ -59,6 +60,10 @@ public class FileStore {
         }
 
         if(fileContent == null) {
+            if(file.isDirectory()) {
+                return null;
+            }
+
             long len = file.length();
             boolean exceeded = false;
             if (len <= limitBytes) {
