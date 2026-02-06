@@ -223,14 +223,6 @@ public abstract class PortBase extends DockerBase implements Port {
 
         checkAdmitted((NetworkChannelRudder) rd);
 
-        SocketChannel ch = (SocketChannel) ChannelRudder.getChannel(rd);
-        try {
-            ch.setOption(StandardSocketOptions.TCP_NODELAY, true);
-        }
-        catch(IOException e) {
-            BayLog.error(e);
-        }
-
         InboundShip sip = getShipStore(agentId).rent();
         Transporter tp;
         GrandAgent agt = GrandAgent.get(agentId);
