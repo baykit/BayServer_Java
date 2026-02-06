@@ -4,6 +4,7 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.LifecycleListener;
+import yokohama.baykit.bayserver.util.LongHash;
 import yokohama.baykit.bayserver.util.StringUtil;
 
 import java.util.ArrayDeque;
@@ -36,7 +37,7 @@ public class TourStore {
     public static final int MAX_TOURS = 12800;
 
     ArrayDeque<Tour> freeTours = new ArrayDeque<>();
-    Map<Long, Tour> activeTourMap = new ConcurrentHashMap<>();
+    LongHash<Tour> activeTourMap = new LongHash<>(1024);
     public static int maxCount;
 
     /** stores[agent_id - 1] => TourStore */
@@ -71,7 +72,7 @@ public class TourStore {
         //if(!activeTourMap.containsKey(key)) {
         //    throw new Sink("Tour is not active key=: " + key);
         //}
-        //BayLog.debug("return: key=%d Active tour count: before=%d", key, activeTourMap.size());
+        //BayLog.info("return: key=%d Active tour count: before=%d", key, activeTourMap.size());
         Tour tur = activeTourMap.remove(key);
         //BayLog.debug("return: key=%d Active tour count: after=%d", key, activeTourMap.size());
         tur.reset();
@@ -86,7 +87,10 @@ public class TourStore {
         BayLog.info("%sfreeList: %d", StringUtil.indent(indent+1), freeTours.size());
         BayLog.info("%sactiveList: %d", StringUtil.indent(indent+1), activeTourMap.size());
         if(BayLog.isDebugMode()) {
-            activeTourMap.values().forEach(obj -> BayLog.debug("%s%s", StringUtil.indent(indent+1), obj));
+            Tour[] tours = activeTourMap.values();
+            for(int i = 0; i < tours.length; i++) {
+                BayLog.debug("%s%s", StringUtil.indent(indent+1), tours[i]);
+            }
         }
     }
 
