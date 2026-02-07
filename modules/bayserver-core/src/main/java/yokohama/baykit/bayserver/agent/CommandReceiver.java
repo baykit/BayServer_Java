@@ -104,8 +104,11 @@ public class CommandReceiver extends Ship {
 
             sendCommandToMonitor(agent, GrandAgent.CMD_OK, false);
         } catch (IOException e) {
-            BayLog.error(e, "%s Command thread aborted(end)", agent);
+            BayLog.fatal(e);
             close();
+        } catch (Throwable e) {
+            BayLog.fatal(e);
+            end();
         } finally {
             BayLog.debug("%s Command ended", this);
         }
