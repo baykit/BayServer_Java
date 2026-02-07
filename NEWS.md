@@ -1,5 +1,9 @@
 # BayServer for Java
 
+# 3.3.0
+
+- [Core, H1] Significant performance boost achieved
+
 # 3.2.1
 
 - [H2] Returns 400 for requests missing the :path pseudo-header
