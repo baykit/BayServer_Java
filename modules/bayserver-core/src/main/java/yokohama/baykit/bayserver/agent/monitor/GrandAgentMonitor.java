@@ -16,10 +16,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -285,12 +282,17 @@ public class GrandAgentMonitor extends Thread {
         BayLog.info(" Free memory: %d MBytes", freeMemory / (1024 * 1024));
         BayLog.info(" Used memory: %d MBytes", usedMemory / (1024 * 1024));
 
-        for (GrandAgentMonitor mon : monitors.values()) {
-            try {
-                mon.printUsage();
-            } catch (IOException e) {
-                BayLog.error(e);
+        try {
+            for (GrandAgentMonitor mon : monitors.values()) {
+                try {
+                    mon.printUsage();
+                } catch (IOException e) {
+                    BayLog.error(e);
+                }
             }
+        }
+        catch(ConcurrentModificationException e) {
+            BayLog.fatal(e, "Some monitor down?");
         }
     }
 

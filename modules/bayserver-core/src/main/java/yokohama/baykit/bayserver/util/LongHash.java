@@ -187,7 +187,16 @@ public class LongHash<V> {
     }
 
     public long[] keys() { return keys; }
-    public V[] values() { return values; }
+
+    public Object[] values() {
+        ArrayList<V> vals = new ArrayList<>();
+        for(int i = 0; i < keys.length; i++) {
+            if(keys[i] != EMPTY_KEY && keys[i] != REMOVED_KEY)
+                vals.add(values[i]);
+        }
+        return vals.toArray();
+    }
+
     public boolean hasZeroKey() { return hasZeroKey; }
     public V zeroValue() { return zeroValue; }
     public boolean hasMinKey() { return hasMinKey; }

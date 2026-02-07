@@ -87,7 +87,7 @@ public class TourStore {
         BayLog.info("%sfreeList: %d", StringUtil.indent(indent+1), freeTours.size());
         BayLog.info("%sactiveList: %d", StringUtil.indent(indent+1), activeTourMap.size());
         if(BayLog.isDebugMode()) {
-            Tour[] tours = activeTourMap.values();
+            Object[] tours = activeTourMap.values();
             for(int i = 0; i < tours.length; i++) {
                 BayLog.debug("%s%s", StringUtil.indent(indent+1), tours[i]);
             }
