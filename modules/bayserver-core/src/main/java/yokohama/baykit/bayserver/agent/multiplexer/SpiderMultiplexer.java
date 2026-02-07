@@ -350,11 +350,15 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
             //BayLog.debug("%s register chState=%s register op=%d(%s) ch=%s", agent, st, rd.op, opMode(cop.op), ch);
             SelectionKey key = st.selectionKey;
             if(key != null) {
-                int op = key.interestOps();
-                int newOp = op | rd.pendingOps;
-                if(newOp != op) {
-                    //BayLog.debug("Already registered op=%d(%s) update to %s", op, opMode(op), opMode(newOp));
-                    key.interestOps(newOp);
+                try {
+                    int op = key.interestOps();
+                    int newOp = op | rd.pendingOps;
+                    if(newOp != op) {
+                        //BayLog.debug("Already registered op=%d(%s) update to %s", op, opMode(op), opMode(newOp));
+                        key.interestOps(newOp);
+                    }
+                } catch (CancelledKeyException e) {
+                    BayLog.debug(e, "%s Cannot modify operation (Channel is canceled): %s ch=%s", agent, st, rd);
                 }
             }
             else {
