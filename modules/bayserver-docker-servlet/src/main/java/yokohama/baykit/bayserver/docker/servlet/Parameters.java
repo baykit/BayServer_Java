@@ -7,8 +7,10 @@ import yokohama.baykit.bayserver.util.URLDecoder;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Parameters {
 
@@ -57,12 +59,12 @@ public class Parameters {
             String name;
             try {
                 name = URLDecoder.decode(nv.name, charset);
-            } catch (UnsupportedEncodingException e) {
+            } catch (Exception e) {
                 BayLog.error(e);
                 try {
                     name = URLDecoder.decode(nv.name, null);
                 }
-                catch(UnsupportedEncodingException ex) {
+                catch(Exception ex) {
                     name = null;
                 }
             }
@@ -70,12 +72,12 @@ public class Parameters {
             String val = null;
             try {
                 val = URLDecoder.decode(nv.value, charset);
-            } catch (UnsupportedEncodingException e) {
+            } catch (Exception e) {
                 BayLog.error(e);
                 try {
                     val = URLDecoder.decode(nv.value, null);
                 }
-                catch(UnsupportedEncodingException ex) {
+                catch(Exception ex) {
                     name = null;
                 }
             }
