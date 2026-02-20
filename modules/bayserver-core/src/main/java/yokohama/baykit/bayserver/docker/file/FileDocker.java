@@ -1,20 +1,19 @@
 package yokohama.baykit.bayserver.docker.file;
 
+import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
-import yokohama.baykit.bayserver.bcf.BcfKeyVal;
-import yokohama.baykit.bayserver.tour.Tour;
+import yokohama.baykit.bayserver.ConfigException;
+import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.bcf.BcfElement;
+import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.base.ClubBase;
+import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.URLDecoder;
-import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.ConfigException;
-import yokohama.baykit.bayserver.HttpException;
 
 import java.io.File;
-import java.io.UnsupportedEncodingException;
 
 public class FileDocker extends ClubBase {
 
@@ -70,7 +69,7 @@ public class FileDocker extends ClubBase {
         try {
             relPath = URLDecoder.decode(relPath, tur.req.charset());
         }
-        catch(UnsupportedEncodingException | NumberFormatException e) {
+        catch(Exception e) {
             BayLog.error("Cannot decode path: %s: %s", relPath, e);
         }
 
