@@ -1,5 +1,6 @@
 package yokohama.baykit.bayserver.docker.ajp;
 
+import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.docker.base.PortBase;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
@@ -12,6 +13,16 @@ public class AjpPortDocker extends PortBase implements AjpDocker {
     @Override
     public String protocol() {
         return PROTO_NAME;
+    }
+
+    @Override
+    public boolean selfListen() {
+        return false;
+    }
+
+    @Override
+    public SelfListener createListener(int agentId) {
+        throw new Sink();
     }
 
     ///////////////////////////////////////////////////////////////////////
