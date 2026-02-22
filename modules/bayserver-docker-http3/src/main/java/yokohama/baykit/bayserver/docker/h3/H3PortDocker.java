@@ -1,8 +1,10 @@
 package yokohama.baykit.bayserver.docker.h3;
 
-import io.quiche4j.Config;
-import io.quiche4j.ConfigBuilder;
-import io.quiche4j.Quiche;
+import io.quiche4j.*;
+import io.quiche4j.http3.Http3;
+import io.quiche4j.http3.Http3Config;
+import io.quiche4j.http3.Http3ConfigBuilder;
+import io.quiche4j.http3.Http3Connection;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.common.RudderState;
@@ -17,8 +19,15 @@ import yokohama.baykit.bayserver.rudder.Rudder;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketAddress;
+import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class H3PortDocker extends PortBase implements H3Docker {
+
 
     Config config;
     String appProtocols[] = {
@@ -69,8 +78,8 @@ public class H3PortDocker extends PortBase implements H3Docker {
                 .withInitialMaxStreamDataBidiLocal(1_000_000)
                 .withInitialMaxStreamDataBidiRemote(1_000_000)
                 .withInitialMaxStreamDataUni(1_000_000)
-                .withInitialMaxStreamsBidi(4)
-                .withInitialMaxStreamsUni(4)
+                .withInitialMaxStreamsBidi(100)
+                .withInitialMaxStreamsUni(100)
                 .withDisableActiveMigration(true)
                 .enableEarlyData()
                 .build();
@@ -121,8 +130,36 @@ public class H3PortDocker extends PortBase implements H3Docker {
         agt.netMultiplexer.reqRead(rd);
     }
 
+    @Override
+    public boolean selfListen() {
+        return true;
+    }
+
+    @Override
+    public SelfListener createListener(int agentId) {
+        return new Http3Server(this, agentId);
+        /*return new SelfListener() {
+            @Override
+            public void listen() {
+                try {
+                    Http3Server.main(new String[]{":2024"}, config);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            @Override
+            public void shutdown() {
+
+            }
+        };
+         */
+    }
+
     ////////////////////////////////////////////
     // private methods
     ////////////////////////////////////////////
+
+
 
 }

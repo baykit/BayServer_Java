@@ -48,27 +48,31 @@ public class GrandAgent extends Thread {
 
     public final int maxInboundShips;
     public boolean aborted;
-    private boolean anchorable;
     private ArrayList<TimerHandler> timerHandlers = new ArrayList<>();
     public CommandReceiver commandReceiver;
     private ArrayList<Runnable> postponeQueue = new ArrayList<>();
     private long lastTimeoutCheck;
     private boolean busy;
+    public boolean selfListen;
+    private int selfListenPortIndex;
+    private Port.SelfListener selfListener;
 
 
     public GrandAgent(
             int agentId,
             int maxShips,
-            boolean anchorable) {
+            boolean selfListen,
+            int selfListenPortIdx) {
         this.agentId = agentId;
 
         this.maxInboundShips = maxShips > 0 ? maxShips : 1;
-        this.spiderMultiplexer = new SpiderMultiplexer(this, anchorable);
-        this.jobMultiplexer = new JobMultiplexer(this, anchorable);
+        this.spiderMultiplexer = new SpiderMultiplexer(this);
+        this.jobMultiplexer = new JobMultiplexer(this);
         this.taxiMultiplexer = new TaxiMultiplexer(this);
         this.spinMultiplexer = new SpinMultiplexer(this);
-        this.pegionMultiplexer = new PigeonMultiplexer(this, anchorable);
-        this.anchorable = anchorable;
+        this.pegionMultiplexer = new PigeonMultiplexer(this);
+        this.selfListen = selfListen;
+        this.selfListenPortIndex = selfListenPortIdx;
 
         switch(BayServer.harbor.recipient()) {
             case Spider:
@@ -118,7 +122,12 @@ public class GrandAgent extends Thread {
 
             netMultiplexer.reqRead(commandReceiver.rudder);
 
-            if(anchorable) {
+            if(selfListen) {
+                Port dkr = BayServer.ports.get(selfListenPortIndex);
+                selfListener = dkr.createListener(agentId);
+                selfListener.listen();
+            }
+            else {
                 // Adds server socket channel of anchorable ports
                 for(Pair<Rudder, Port> pair: BayServer.anchorablePorts) {
                     if(netMultiplexer.isNonBlocking()) {
@@ -132,20 +141,6 @@ public class GrandAgent extends Thread {
                     RudderState st = RudderStateStore.getStore(agentId).rent();
                     st.init(pair.a);
                     netMultiplexer.addRudderState(pair.a, st);
-                }
-            }
-            else {
-                // Adds server socket  up unanchorable ports
-                for(Pair<Rudder, Port> pair: BayServer.unanchorablePorts) {
-                    if(netMultiplexer.isNonBlocking()) {
-                        try {
-                            pair.a.setNonBlocking();
-                        }
-                        catch(IOException e) {
-                            BayLog.fatal(e);
-                        }
-                    }
-                    pair.b.onConnected(agentId, pair.a);
                 }
             }
 
@@ -296,6 +291,8 @@ public class GrandAgent extends Thread {
         aborted = true;
 
         BayLog.debug("%s shutdown netMultiplexer", this);
+        if(selfListener != null)
+            selfListener.shutdown();
         netMultiplexer.shutdown();
 
         BayLog.debug("%s remove listeners", this);
@@ -576,15 +573,18 @@ public class GrandAgent extends Thread {
         return agents.get(id-1);
     }
 
-    public static GrandAgent add(int agtId, boolean anchorable) {
+    public static GrandAgent add(
+            int agtId,
+            boolean selfListen,
+            int selfListenPortIdx) {
         if(agtId == -1)
             agtId = ++maxAgentId;
-        BayLog.debug("Add agent: id=%d anchorable=%s", agtId, anchorable);
+        BayLog.debug("Add agent: id=%d", agtId);
 
         if(agtId > maxAgentId)
             maxAgentId = agtId;
 
-        GrandAgent agt = new GrandAgent(agtId, maxShips, anchorable);
+        GrandAgent agt = new GrandAgent(agtId, maxShips, selfListen, selfListenPortIdx);
         while(agents.size() < agtId) {
             agents.add(null);
         }

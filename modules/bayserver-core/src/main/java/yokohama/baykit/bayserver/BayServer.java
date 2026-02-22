@@ -72,7 +72,7 @@ public class BayServer {
 
     public static final ArrayList<Pair<Rudder, Port>> anchorablePorts = new ArrayList<>();
 
-    public static final ArrayList<Pair<Rudder, Port>> unanchorablePorts = new ArrayList<>();
+    public static int selfListenPortIndex;
 
     /**
      * Date format for debug
@@ -218,7 +218,17 @@ public class BayServer {
 
             invokeRunners();
 
+            for(int i = 0; i < ports.size(); i++) {
+                Port dkr = ports.get(i);
+                if(dkr.selfListen()) {
+                    GrandAgentMonitor.add(true, i);
+                }
+            }
+
             GrandAgentMonitor.init(harbor.grandAgents());
+            for(int i = 0; i < harbor.grandAgents(); i++) {
+                GrandAgentMonitor.add(false, -1);
+            }
             SignalAgent.init(harbor.controlPort());
             createPidFile(SysUtil.pid());
 
@@ -234,7 +244,7 @@ public class BayServer {
             // Open TCP port
             SocketAddress adr = portDkr.address();
 
-            if(portDkr.anchored()) {
+            if(!portDkr.selfListen()) {
                 BayLog.info(BayMessage.get(Symbol.MSG_OPENING_TCP_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), portDkr.protocol()));
                 AsynchronousServerSocketChannel ach = null;
                 ServerSocketChannel ch = null;
@@ -271,17 +281,6 @@ public class BayServer {
                     BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
                     throw e;
                 }
-            }
-            else {
-                BayLog.info(BayMessage.get(Symbol.MSG_OPENING_UDP_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), portDkr.protocol()));
-                DatagramChannel ch = DatagramChannel.open();
-                try {
-                    ch.bind(adr);
-                } catch (SocketException e) {
-                    BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
-                    return;
-                }
-                unanchorablePorts.add(new Pair<>(new DatagramChannelRudder(ch), portDkr));
             }
         }
 

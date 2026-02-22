@@ -29,12 +29,18 @@ public class GrandAgentMonitor extends Thread {
 
 
     int agentId;
-    boolean anchorable;
+    boolean selfListen;
+    int selfListenPortIdx;
     Rudder rudder;
 
-    GrandAgentMonitor(int agentId, boolean anchorable, Rudder rd) {
+    GrandAgentMonitor(
+            int agentId,
+            boolean selfListen,
+            int selfListenPortIdx,
+            Rudder rd) {
         this.agentId = agentId;
-        this.anchorable = anchorable;
+        this.selfListen = selfListen;
+        this.selfListenPortIdx = selfListenPortIdx;
         this.rudder = rd;
     }
 
@@ -80,7 +86,7 @@ public class GrandAgentMonitor extends Thread {
         catch (IOException e) {
             BayLog.fatal(e);
         }
-        GrandAgentMonitor.agentAborted(agentId, anchorable);
+        agentAborted(agentId);
     }
 
     /////////////////////////////////////////////////
@@ -150,15 +156,32 @@ public class GrandAgentMonitor extends Thread {
         send(GrandAgent.CMD_CATCHUP);
     }
 
+    private synchronized void agentAborted(int agtId) {
+
+        BayLog.error(BayMessage.get(Symbol.MSG_GRAND_AGENT_SHUTDOWN, agtId));
+
+        monitors.remove(agtId);
+
+        if(!finale) {
+            if (selfListen || monitors.size() < numAgents) {
+                try {
+                    add(selfListen, selfListenPortIdx);
+                }
+                catch (IOException e) {
+                    BayLog.error(e);
+                }
+            }
+        }
+    }
 
     /////////////////////////////////////////////////
     // static methods                              //
     /////////////////////////////////////////////////
-    public static void init(
-            int numAgents) throws IOException
+    public static void init(int numAgents) throws IOException
     {
         GrandAgentMonitor.numAgents = numAgents;
 
+        /*
         if(!BayServer.unanchorablePorts.isEmpty()) {
             add(false);
             GrandAgentMonitor.numAgents++;
@@ -167,9 +190,12 @@ public class GrandAgentMonitor extends Thread {
         for(int i = 0; i < numAgents; i++) {
             add(true);
         }
+        */
     }
 
-    static void add(boolean anchorable) throws IOException
+    public static void add(
+            boolean selfListen,
+            int selfListenPortIdx) throws IOException
     {
         int agtId = ++curId;
         if (agtId > 100) {
@@ -177,7 +203,7 @@ public class GrandAgentMonitor extends Thread {
             System.exit(1);
         }
 
-        GrandAgent agt = GrandAgent.add(agtId, anchorable);
+        GrandAgent agt = GrandAgent.add(agtId, selfListen, selfListenPortIdx);
 
         Rudder rd1, rd2;
 
@@ -195,7 +221,8 @@ public class GrandAgentMonitor extends Thread {
 
         GrandAgentMonitor mon = new GrandAgentMonitor(
                 agtId,
-                anchorable,
+                selfListen,
+                selfListenPortIdx,
                 rd2);
 
         monitors.put(agtId, mon);
@@ -204,23 +231,6 @@ public class GrandAgentMonitor extends Thread {
         agt.start();
     }
 
-    static synchronized void agentAborted(int agtId, boolean anchorable) {
-
-        BayLog.error(BayMessage.get(Symbol.MSG_GRAND_AGENT_SHUTDOWN, agtId));
-
-        monitors.remove(agtId);
-
-        if(!finale) {
-            if (monitors.size() < numAgents) {
-                try {
-                    add(anchorable);
-                }
-                catch (IOException e) {
-                    BayLog.error(e);
-                }
-            }
-        }
-    }
 
     /**
      * Reload certificate for all agents

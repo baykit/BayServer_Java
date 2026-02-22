@@ -189,11 +189,6 @@ public abstract class PortBase extends DockerBase implements Port {
     }
 
     @Override
-    public boolean anchored() {
-        return anchored;
-    }
-
-    @Override
     public final int timeoutSec() {
         return timeoutSec;
     }

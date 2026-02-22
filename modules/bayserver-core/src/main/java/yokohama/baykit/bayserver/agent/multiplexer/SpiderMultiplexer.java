@@ -34,16 +34,13 @@ import static java.nio.channels.SelectionKey.*;
  */
 public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, Multiplexer, Recipient {
 
-    private final boolean anchorable;
-
     private Selector selector;
 
     final ArrayList<ChannelRudder> ruddersToRegister = new ArrayList<>(16384);
 
-    public SpiderMultiplexer(GrandAgent agent, boolean anchorable) {
+    public SpiderMultiplexer(GrandAgent agent) {
         super(agent);
 
-        this.anchorable = anchorable;
         try {
             this.selector = Selector.open();
         }
@@ -257,11 +254,12 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
     @Override
     public synchronized void onFree() {
         BayLog.debug("%s onFree aborted=%s", agent, agent.aborted);
-        if(agent.aborted)
+        if(agent.selfListen || agent.aborted)
             return;
 
         for(Pair<Rudder, Port> pair: BayServer.anchorablePorts) {
-            reqAccept(pair.a);
+            if(!pair.b.selfListen())
+                reqAccept(pair.a);
         }
     }
 

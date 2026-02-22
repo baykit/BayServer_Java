@@ -22,8 +22,8 @@ import java.nio.channels.SocketChannel;
  */
 public class JobMultiplexer extends JobMultiplexerBase {
 
-    public JobMultiplexer(GrandAgent agent, boolean anchorable) {
-        super(agent, anchorable);
+    public JobMultiplexer(GrandAgent agent) {
+        super(agent);
     }
 
     public String toString() {

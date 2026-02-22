@@ -17,18 +17,15 @@ import java.nio.channels.Pipe;
  */
 public abstract class JobMultiplexerBase extends MultiplexerBase implements TimerHandler, Multiplexer {
 
-    private final boolean anchorable;
-
     private Pipe pipe;
 
     ////////////////////////////////////////////
     // Constructor
     ////////////////////////////////////////////
 
-    public JobMultiplexerBase(GrandAgent agent, boolean anchorable) {
+    public JobMultiplexerBase(GrandAgent agent) {
         super(agent);
 
-        this.anchorable = anchorable;
         agent.addTimerHandler(this);
 
         try {
@@ -60,10 +57,8 @@ public abstract class JobMultiplexerBase extends MultiplexerBase implements Time
         if(agent.aborted)
             return;
 
-        if(anchorable) {
-            for (Pair<Rudder, Port> pair : BayServer.anchorablePorts) {
-                reqAccept(pair.a);
-            }
+        for (Pair<Rudder, Port> pair : BayServer.anchorablePorts) {
+            reqAccept(pair.a);
         }
     }
 

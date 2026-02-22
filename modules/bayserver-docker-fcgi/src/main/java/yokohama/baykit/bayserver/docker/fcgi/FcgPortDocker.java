@@ -1,5 +1,6 @@
 package yokohama.baykit.bayserver.docker.fcgi;
 
+import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.docker.base.PortBase;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
@@ -13,6 +14,17 @@ public class FcgPortDocker extends PortBase implements FcgDocker{
     public String protocol() {
         return PROTO_NAME;
     }
+
+    @Override
+    public boolean selfListen() {
+        return false;
+    }
+
+    @Override
+    public SelfListener createListener(int agentId) {
+        throw new Sink();
+    }
+
 
     ///////////////////////////////////////////////////////////////////////
     // Implements PortBase

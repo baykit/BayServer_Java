@@ -12,6 +12,11 @@ import java.util.Collection;
 
 public interface Port {
 
+    interface SelfListener {
+        void listen();
+        void shutdown();
+    }
+
     String protocol();
 
     String host();
@@ -21,8 +26,6 @@ public interface Port {
     String socketPath();
 
     SocketAddress address() throws IOException;
-
-    boolean anchored();
 
     boolean secure();
 
@@ -39,5 +42,9 @@ public interface Port {
     void returnProtocolHandler(int agentId, ProtocolHandler protoHnd);
 
     void returnShip(InboundShip ship);
+
+    boolean selfListen();
+
+    SelfListener createListener(int agentId);
 
 }

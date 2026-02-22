@@ -75,11 +75,11 @@ public class URLDecoder {
             }
             else if (c == '%') {
                 if (i + 2 >= n)
-                    throw new IllegalArgumentException("Bad percent-encoding");
+                    throw new UnsupportedEncodingException("Bad percent-encoding");
                 int hi = HEX[s.charAt(i + 1)];
                 int lo = HEX[s.charAt(i + 2)];
                 if ((hi | lo) < 0)
-                    throw new IllegalArgumentException("Bad percent-encoding");
+                    throw new UnsupportedEncodingException("Bad percent-encoding");
                 out[o++] = (byte) ((hi << 4) | lo);
                 i += 3;
             }

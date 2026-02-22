@@ -2,6 +2,7 @@ package yokohama.baykit.bayserver.docker.http;
 
 
 import yokohama.baykit.bayserver.ConfigException;
+import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
@@ -57,6 +58,17 @@ public class HtpPortDocker extends PortBase implements HtpDocker {
     public String protocol() {
         return H1_PROTO_NAME;
     }
+
+    @Override
+    public boolean selfListen() {
+        return false;
+    }
+
+    @Override
+    public SelfListener createListener(int agentId) {
+        throw new Sink();
+    }
+
 
     ///////////////////////////////////////////////////////////////////////
     // Implements PortBase
