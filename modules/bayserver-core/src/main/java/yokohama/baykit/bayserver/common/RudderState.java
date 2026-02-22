@@ -1,7 +1,6 @@
 package yokohama.baykit.bayserver.common;
 
 import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.agent.multiplexer.WriteUnit;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.Counter;
 import yokohama.baykit.bayserver.util.Reusable;
