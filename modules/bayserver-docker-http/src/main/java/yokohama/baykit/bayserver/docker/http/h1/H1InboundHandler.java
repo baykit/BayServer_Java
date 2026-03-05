@@ -13,6 +13,7 @@ import yokohama.baykit.bayserver.docker.http.h1.command.CmdHeader;
 import yokohama.baykit.bayserver.docker.http.h2.H2ProtocolHandler;
 import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
+import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.tour.TourReq;
@@ -136,6 +137,11 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
     public void sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
         CmdContent cmd = new CmdContent(bytes, ofs, len);
         protocolHandler.post(cmd, lis);
+    }
+
+    @Override
+    public void transferContent(Tour tur, Rudder fileRd, int ofs, int len, DataConsumeListener lis) throws IOException {
+        ship().transporter.reqTransfer(tur.ship.rudder, fileRd, ofs, len, lis);
     }
 
     @Override

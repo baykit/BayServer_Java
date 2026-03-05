@@ -34,9 +34,9 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     public static final boolean DEFAULT_MULTI_CORE = true;
     public static final boolean DEFAULT_GZIP_COMP = false;
     public static final String DEFAULT_PID_FILE = "bayserver.pid";
-    public static boolean DEFAULT_ENABLE_CACHE = false;
+    public static boolean DEFAULT_DIRECT_BOARDING = false;
     public static int DEFAULT_CACHE_LIFESPAN_SEC = 60;
-    public static int DEFAULT_CACHE_SIZE_MB = 32;
+    public static int DEFAULT_DIRECT_BOARDING_FILE_COUNT = 128;
 
     /** Default charset */
     String charset = DEFAULT_CHARSET;
@@ -101,14 +101,20 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     /** PID file name */
     String pidFile = DEFAULT_PID_FILE;
 
-    /** True if cache is enabled */
-    boolean enableCache = DEFAULT_ENABLE_CACHE;
+    /**
+     * Whether to enable Direct Boarding (the sendfile API).
+     * This bypasses user-space formalities for efficient data transfer.
+     */
+    boolean directBoarding = DEFAULT_DIRECT_BOARDING;
 
     /** Lifespan seconds of cache */
     int cacheLifespanSec = DEFAULT_CACHE_LIFESPAN_SEC;
 
-    /** Cache size */
-    int cacheSizeMb = DEFAULT_CACHE_SIZE_MB;
+    /**
+     * The maximum number of files (file descriptors) to be cached for Direct Boarding.
+     * When this limit is reached, the least recently used (LRU) items are evicted.
+     */
+    int maxDirectBoardingFileCount =DEFAULT_DIRECT_BOARDING_FILE_COUNT;
 
 
     ///////////////////////////////////////////////////////////////////////
@@ -347,16 +353,16 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                 pidFile = kv.value;
                 break;
 
-            case "enablecache":
-                enableCache = StringUtil.parseBool(kv.value);
+            case "directboarding":
+                directBoarding = StringUtil.parseBool(kv.value);
                 break;
 
             case "cachelifespan":
                 cacheLifespanSec = Integer.parseInt(kv.value);
                 break;
 
-            case "cachesize":
-                cacheSizeMb = Integer.parseInt(kv.value);
+            case "maxdirectboardingfilecount":
+                maxDirectBoardingFileCount = Integer.parseInt(kv.value);
                 break;
 
         }
@@ -474,8 +480,8 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     }
 
     @Override
-    public boolean enableCache() {
-        return enableCache;
+    public boolean directBoarding() {
+        return directBoarding;
     }
 
     @Override
@@ -484,7 +490,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     }
 
     @Override
-    public int cacheSizeMb() {
-        return cacheSizeMb;
+    public int maxDirectBoardingFileCount() {
+        return maxDirectBoardingFileCount;
     }
 }

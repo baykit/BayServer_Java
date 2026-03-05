@@ -1,20 +1,28 @@
 package yokohama.baykit.bayserver.docker.file;
 
-import yokohama.baykit.bayserver.BayServer;
+import yokohama.baykit.bayserver.*;
+import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
+import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.docker.Port;
+import yokohama.baykit.bayserver.rudder.AsynchronousFileChannelRudder;
+import yokohama.baykit.bayserver.rudder.ReadableByteChannelRudder;
+import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.base.ClubBase;
 import yokohama.baykit.bayserver.util.HttpStatus;
+import yokohama.baykit.bayserver.util.Pair;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.URLDecoder;
-import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.ConfigException;
-import yokohama.baykit.bayserver.HttpException;
 
-import java.io.File;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.file.*;
 
 public class FileDocker extends ClubBase {
 
@@ -55,9 +63,13 @@ public class FileDocker extends ClubBase {
     @Override
     public void arrive(Tour tur) throws HttpException {
 
-        // Setup FileStore
-        if(BayServer.harbor.enableCache() && fileStore == null) {
-            fileStore = new FileStore(BayServer.harbor.cacheLifespanSec(), BayServer.harbor.cacheSizeMb() * 1024 * 1024);
+        // Setup FileStore if HTTP/1.x
+        Port portDkr = tur.ship.portDocker();
+        if(portDkr.protocol().equals("h1")
+                && !portDkr.secure()
+                && BayServer.harbor.directBoarding()
+                && fileStore == null) {
+            fileStore = new FileStore(BayServer.harbor.cacheLifespanSec(), BayServer.harbor.maxDirectBoardingFileCount() * 1024 * 1024);
         }
 
         String relPath = tur.req.rewrittenURI != null ? tur.req.rewrittenURI : tur.req.uri;
@@ -74,40 +86,9 @@ public class FileDocker extends ClubBase {
             BayLog.error("Cannot decode path: %s: %s", relPath, e);
         }
 
-        File real = new File(tur.town.location(), relPath);
+        Path real = Paths.get(tur.town.location(), relPath);
 
-        FileStore.FileContentStatus status = null;
-        boolean[] reading = new boolean[1];
-
-        if(fileStore != null) {
-            status = fileStore.get(real, reading);
-        }
-        else {
-            if (real.isDirectory())
-                status = null;
-            else
-                status = new FileStore.FileContentStatus(null, FileStore.FileContentStatus.EXCEEDED);
-        }
-
-        if(status == null) {
-            handleDirectory(tur, real);
-        }
-        else {
-            FileContentHandler handler = new FileContentHandler(tur, real, status, tur.res.charset());
-            tur.req.setReqContentHandler(handler);
-        }
-    }
-
-
-    public void handleDirectory(Tour tur, File path) throws HttpException {
-        if(listFiles) {
-            DirectoryTrain train = new DirectoryTrain(tur, path);
-            train.startTour();
-        }
-        else {
-            throw new HttpException(HttpStatus.FORBIDDEN, "Directory scan is prohibited");
-        }
-
-
+        FileContentHandler handler = new FileContentHandler(tur, real, tur.res.charset(), fileStore, listFiles);
+        tur.req.setReqContentHandler(handler);
     }
 }
