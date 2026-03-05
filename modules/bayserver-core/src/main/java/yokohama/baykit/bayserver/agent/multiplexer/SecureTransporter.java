@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.rudder.Rudder;
@@ -20,6 +21,7 @@ import static javax.net.ssl.SSLEngineResult.HandshakeStatus.*;
  * Transporter for secure TCP/IP connection
  */
 public class SecureTransporter extends PlainTransporter {
+
 
     public enum HandshakeState {
         NeedRead,
@@ -194,6 +196,11 @@ public class SecureTransporter extends PlainTransporter {
             }
 
         } while (appOut.hasRemaining());
+    }
+
+    @Override
+    public void reqTransfer(Rudder rd, Rudder fileRd, int ofs, int len, DataConsumeListener listener) {
+        throw new Sink();
     }
 
     @Override

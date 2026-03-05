@@ -7,12 +7,20 @@ import yokohama.baykit.bayserver.common.*;
 import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.docker.base.PortBase;
+import yokohama.baykit.bayserver.rudder.AsynchronousFileChannelRudder;
+import yokohama.baykit.bayserver.rudder.ReadableByteChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.Pair;
 import yokohama.baykit.bayserver.util.RoughTime;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,6 +47,7 @@ public class GrandAgent extends Thread {
     public int selectTimeoutSec = SELECT_TIMEOUT_SEC;
     public final int agentId;
     public Multiplexer netMultiplexer;
+    public Multiplexer fileMultiplexer;
     public Multiplexer jobMultiplexer;
     public Multiplexer taxiMultiplexer;
     public SpinMultiplexer spinMultiplexer;
@@ -97,6 +106,31 @@ public class GrandAgent extends Thread {
             case Taxi:
             case Train:
                 throw new Sink("Multiplexer not supported: %s", Harbor.getMultiplexerTypeName(BayServer.harbor.netMultiplexer()));
+        }
+
+        switch (BayServer.harbor.fileMultiplexer()) {
+            case Spin: {
+                this.fileMultiplexer = spinMultiplexer;
+                break;
+            }
+
+            case Job: {
+                this.fileMultiplexer = jobMultiplexer;
+                break;
+            }
+
+            case Taxi: {
+                this.fileMultiplexer = taxiMultiplexer;
+                break;
+            }
+
+            case Pigeon: {
+                this.fileMultiplexer = pegionMultiplexer;
+                break;
+            }
+
+            default:
+                throw new Sink("Multiplexer not supported: %s", Harbor.getMultiplexerTypeName(BayServer.harbor.fileMultiplexer()));
         }
     }
 
@@ -448,7 +482,7 @@ public class GrandAgent extends Thread {
         while(true) {
             WriteUnit unit = st.writeQueue.get(0);
             //BayLog.debug("%s wrote buf=%s", this, unit.buf);
-            if (unit.buf.hasRemaining()) {
+            if (unit.hasRemaining()) {
                 BayLog.debug("Could not write enough data buf=%s", unit.buf);
                 writeMore = true;
                 break;

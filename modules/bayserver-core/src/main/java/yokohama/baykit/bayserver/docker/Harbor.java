@@ -81,15 +81,20 @@ public interface Harbor {
     /** Multi core flag */
     boolean multiCore();
 
-    /** True if cache is enabled */
-    boolean enableCache();
+    /**
+     * Whether to enable Direct Boarding (the sendfile API).
+     * This bypasses user-space formalities for efficient data transfer.
+     */
+    boolean directBoarding();
 
-    /** Lifespan seconds of cache */
+    /** The lifespan, in seconds, of a cached file descriptor. */
     int cacheLifespanSec();
 
-    /** Cache size */
-    int cacheSizeMb();
-
+    /**
+     * The maximum number of files (file descriptors) to be cached for Direct Boarding.
+     * When this limit is reached, the least recently used (LRU) items are evicted.
+     */
+    int maxDirectBoardingFileCount();
 
     static String getMultiplexerTypeName(MultiPlexerType type) {
         switch (type) {

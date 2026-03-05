@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.docker.fcgi;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.protocol.*;
+import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.common.InboundHandler;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
@@ -115,6 +116,11 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
     public void sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
         CmdStdOut cmd = new CmdStdOut(tur.req.key, bytes, ofs, len);
         protocolHandler.post(cmd, lis);
+    }
+
+    @Override
+    public void transferContent(Tour tur, Rudder fileRd, int ofs, int len, DataConsumeListener lis) {
+        throw new Sink();
     }
 
     @Override

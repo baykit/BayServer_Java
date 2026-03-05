@@ -86,6 +86,11 @@ public class TaxiMultiplexer extends MultiplexerBase {
     }
 
     @Override
+    public void reqTransfer(Rudder rd, Rudder fileRd, int ofs, int len, DataConsumeListener listener) throws IOException {
+        throw new Sink();
+    }
+
+    @Override
     public void reqEnd(Rudder rd) {
         throw new Sink();
     }
