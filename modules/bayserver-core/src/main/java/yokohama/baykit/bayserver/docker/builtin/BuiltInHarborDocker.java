@@ -36,7 +36,8 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     public static final String DEFAULT_PID_FILE = "bayserver.pid";
     public static boolean DEFAULT_DIRECT_BOARDING = false;
     public static int DEFAULT_CACHE_LIFESPAN_SEC = 60;
-    public static int DEFAULT_DIRECT_BOARDING_FILE_COUNT = 128;
+    public static int DEFAULT_DIRECT_BOARDINGS = 128;
+    private static final int DEFAULT_MAX_CARGO_SIZE_MB = 1;
 
     /** Default charset */
     String charset = DEFAULT_CHARSET;
@@ -114,8 +115,9 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
      * The maximum number of files (file descriptors) to be cached for Direct Boarding.
      * When this limit is reached, the least recently used (LRU) items are evicted.
      */
-    int maxDirectBoardingFileCount =DEFAULT_DIRECT_BOARDING_FILE_COUNT;
+    int maxDirectBoardings = DEFAULT_DIRECT_BOARDINGS;
 
+    int maxCargoSize = DEFAULT_MAX_CARGO_SIZE_MB;
 
     ///////////////////////////////////////////////////////////////////////
     // Implements Docker
@@ -361,8 +363,12 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                 cacheLifespanSec = Integer.parseInt(kv.value);
                 break;
 
-            case "maxdirectboardingfilecount":
-                maxDirectBoardingFileCount = Integer.parseInt(kv.value);
+            case "maxdirectboardings":
+                maxDirectBoardings = Integer.parseInt(kv.value);
+                break;
+
+            case "maxcargosize":
+                maxCargoSize = Integer.parseInt(kv.value);
                 break;
 
         }
@@ -490,7 +496,14 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     }
 
     @Override
-    public int maxDirectBoardingFileCount() {
-        return maxDirectBoardingFileCount;
+    public int maxDirectBoardings() {
+        return maxDirectBoardings;
     }
+    
+    @Override
+    public int maxCargoSize() {
+        return maxCargoSize;
+    }
+
+
 }

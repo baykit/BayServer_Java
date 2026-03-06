@@ -1,11 +1,10 @@
-package yokohama.baykit.bayserver.docker.file;
+package yokohama.baykit.bayserver.tour;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.common.Transporter;
 import yokohama.baykit.bayserver.common.ReadOnlyShip;
 import yokohama.baykit.bayserver.rudder.Rudder;
-import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.HttpStatus;
 
 import java.io.IOException;
