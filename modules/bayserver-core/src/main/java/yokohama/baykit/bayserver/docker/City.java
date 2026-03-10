@@ -9,38 +9,37 @@ public interface City {
 
     /**
      * City name (host name)
-     * @return
      */
     String name();
 
     /**
      * All clubs (not included in town) in this city
-     * @return
      */
     List<Club> clubs();
 
 
     /**
      * All towns in this city
-     * @return
      */
     List<Town> towns();
 
     /**
+     * Find barge by path
+     */
+    Barge findBarge(String path);
+
+    /**
      * Enter city
-     * @param tour
      */
     void enter(Tour tour) throws HttpException;
 
     /**
      * Get trouble docker
-     * @return
      */
     Trouble getTrouble();
 
     /**
      * Logging
-     * @param tour
      */
     void log(Tour tour);
 }

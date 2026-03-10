@@ -1,12 +1,21 @@
 package yokohama.baykit.bayserver.docker.builtin;
 
 import yokohama.baykit.bayserver.*;
+import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
+import yokohama.baykit.bayserver.common.Barges;
+import yokohama.baykit.bayserver.common.RudderState;
+import yokohama.baykit.bayserver.common.RudderStateStore;
 import yokohama.baykit.bayserver.docker.*;
 import yokohama.baykit.bayserver.docker.base.DockerBase;
 import yokohama.baykit.bayserver.docker.file.FileDocker;
+import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.tour.ContentConsumeListener;
+import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.HttpStatus;
+import yokohama.baykit.bayserver.util.Pair;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.URLDecoder;
 
@@ -26,6 +35,8 @@ public class BuiltInCityDocker extends DockerBase implements City {
     
     ArrayList<Log> logList = new ArrayList<>();
     ArrayList<Permission> permissionList = new ArrayList<>();
+    /** Barge dockers */
+    Barges barges = new Barges();
 
     Trouble trouble;
 
@@ -84,6 +95,8 @@ public class BuiltInCityDocker extends DockerBase implements City {
             permissionList.add((Permission) dkr);
         else if (dkr instanceof Trouble)
             trouble = (Trouble)dkr;
+        else if (dkr instanceof Barge)
+            barges.add((Barge)dkr);
         else
             return false;
         return true;
@@ -106,6 +119,11 @@ public class BuiltInCityDocker extends DockerBase implements City {
     @Override
     public List<Town> towns() {
         return townList;
+    }
+
+    @Override
+    public Barge findBarge(String path) {
+        return null;
     }
 
     @Override
@@ -165,6 +183,64 @@ public class BuiltInCityDocker extends DockerBase implements City {
             Club club = mInfo.clubMatch.club;
             tur.town = mInfo.town;
             tur.club = club;
+
+            Barge barge = findBarge(tur, mInfo.town);
+            if (barge != null) {
+                Pair<Barge.Cargo, Rudder> pir = barge.getCargo(tur);
+                Barge.Cargo cgo = pir.a;
+                Rudder rd = pir.b;
+
+                if(rd != null) {
+                    /** Cargo is loading */
+                    GrandAgent agt = GrandAgent.get(tur.ship.agentId);
+                    WaitCargoShip waitCargoShip = new WaitCargoShip();
+                    PlainTransporter tp = new PlainTransporter(
+                            agt.spiderMultiplexer,
+                            waitCargoShip,
+                            true,
+                            8192,
+                            false);
+
+                    waitCargoShip.init(rd, tp, tur, cgo, club);
+                    RudderState st = RudderStateStore.getStore(agt.agentId).rent();
+                    st.init(rd, tp);
+                    agt.spiderMultiplexer.addRudderState(rd, st);
+                    agt.spiderMultiplexer.reqRead(rd);
+                    return;
+                }
+                else if(cgo.onBarge()) {
+                    /** Cargo is ready (on cache) */
+                    tur.req.setReqContentHandler(new ReqContentHandler() {
+                        @Override
+                        public void onReadReqContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
+
+                        }
+
+                        @Override
+                        public void onEndReqContent(Tour tur) throws IOException, HttpException {
+                            cgo.headers().copyTo(tur.res.headers);
+                            tur.res.sendHeaders(Tour.TOUR_ID_NOCHECK);
+
+                            tur.res.setConsumeListener((len, resume) -> {
+                            });
+
+                            tur.res.sendResContent(Tour.TOUR_ID_NOCHECK, cgo.content(), 0, cgo.length());
+                            tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
+                        }
+
+                        @Override
+                        public boolean onAbortReq(Tour tur) {
+                            return false;
+                        }
+                    });
+                    return;
+                }
+                else {
+                    tur.cargo = cgo;
+                }
+            }
+
+
             club.arrive(tur);
         }
     }
@@ -320,5 +396,14 @@ public class BuiltInCityDocker extends DockerBase implements City {
         return null;
     }
 
-
+    private Barge findBarge(Tour tur, Town twn) {
+        Barge b = twn.findBarge(tur.req.uri);
+        if(b == null) {
+            b = barges.findBarge(tur.req.uri);
+            if (b == null) {
+                b = BayServer.harbor.findBarge(tur.req.uri);
+            }
+        }
+        return b;
+    }
 }

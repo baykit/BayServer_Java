@@ -6,6 +6,7 @@ import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.common.InboundShip;
+import yokohama.baykit.bayserver.docker.Barge;
 import yokohama.baykit.bayserver.docker.City;
 import yokohama.baykit.bayserver.docker.Club;
 import yokohama.baykit.bayserver.docker.Town;
@@ -43,6 +44,7 @@ public class Tour implements Reusable {
     public Town town;
     public City city;
     public Club club;
+    public Barge.Cargo cargo;
 
     public TourReq req = new TourReq(this);
     public TourRes res = new TourRes(this);
@@ -83,6 +85,7 @@ public class Tour implements Reusable {
         city = null;
         town = null;
         club = null;
+        cargo = null;
         errorHandling = false;
 
         changeState(Tour.TOUR_ID_NOCHECK, TourState.UNINITIALIZED);

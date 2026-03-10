@@ -46,6 +46,7 @@ public class TourRes implements Reusable {
     public ContentConsumeListener resConsumeListener;
     boolean canCompress;
     GzipCompressor compressor;
+    public boolean directBoarding;
 
     public TourRes(Tour tour) {
         this.tour = tour;
@@ -57,7 +58,7 @@ public class TourRes implements Reusable {
     }
 
     void init() {
-
+        directBoarding = BayServer.harbor.directBoarding();
     }
 
     @Override
@@ -73,6 +74,7 @@ public class TourRes implements Reusable {
         resConsumeListener = null;
         canCompress = false;
         compressor = null;
+        directBoarding = false;
     }
 
     public String charset() {
@@ -99,6 +101,10 @@ public class TourRes implements Reusable {
 
         if (headerSent())
             return;
+
+        if (tour.cargo != null) {
+            tour.cargo.saveHeaders(headers);
+        }
 
         this.bytesLimit = headers.contentLength();
         BayLog.debug("%s content length: %s", this, this.bytesLimit);
@@ -198,6 +204,10 @@ public class TourRes implements Reusable {
         //tour.checkTourId(checkId);
         BayLog.debug("%s send content: len=%d", this, len);
 
+        BayLog.debug("%s send content: len=%d cargo=%s", this, len, tour.cargo);
+        if (tour.cargo != null) {
+            tour.cargo.saveContent(buf, ofs, len);
+        }
 
         // New listener
         DataConsumeListener lis = () -> {
@@ -257,12 +267,10 @@ public class TourRes implements Reusable {
         FileStore.FileInfo info = null;
         Rudder rd = null;
         int fileSize = -1;
-        boolean directBoarding = false;
-
 
         if (tour.ship.portDocker().protocol().equals("h1") &&
                 !tour.ship.portDocker().secure() &&
-                BayServer.harbor.directBoarding()) {
+                directBoarding) {
             /**
              * Send via directBoarding if the protocol is HTTP/1.x and unencrypted.
              */
@@ -453,6 +461,10 @@ public class TourRes implements Reusable {
 
         if (!tour.isZombie() && tour.city != null)
             tour.city.log(tour);
+
+        if (tour.cargo != null) {
+            tour.cargo.endSave();
+        }
 
         // send end message
         if (canCompress) {
