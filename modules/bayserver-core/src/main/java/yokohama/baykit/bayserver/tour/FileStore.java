@@ -2,23 +2,15 @@ package yokohama.baykit.bayserver.tour;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
-import yokohama.baykit.bayserver.Sink;
-import yokohama.baykit.bayserver.rudder.AsynchronousFileChannelRudder;
 import yokohama.baykit.bayserver.rudder.ReadableByteChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.DirectoryException;
 import yokohama.baykit.bayserver.util.RoughTime;
 
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.channels.AsynchronousFileChannel;
-import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -119,7 +111,7 @@ public class FileStore {
     public static FileStore getFileStore() {
          if(fileStore == null)
              fileStore = new FileStore(
-                     BayServer.harbor.cacheLifespanSec(), 
+                     BayServer.harbor.cargoLifespanSec(),
                      BayServer.harbor.maxDirectBoardings(),
                      BayServer.harbor.maxCargoSize() * 1024 * 1024);
 

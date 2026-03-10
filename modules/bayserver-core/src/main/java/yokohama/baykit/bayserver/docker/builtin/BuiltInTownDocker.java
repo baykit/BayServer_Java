@@ -1,5 +1,6 @@
 package yokohama.baykit.bayserver.docker.builtin;
 
+import yokohama.baykit.bayserver.common.Barges;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
@@ -21,6 +22,10 @@ public final class BuiltInTownDocker extends DockerBase implements Town {
     ArrayList<Club> clubList = new ArrayList<>();
     ArrayList<Permission> permissionList = new ArrayList<>();
     ArrayList<Reroute> rerouteList = new ArrayList<>();
+
+    /** Barge dockers */
+    Barges barges = new Barges();
+
     City city;
     String name;
 
@@ -53,6 +58,9 @@ public final class BuiltInTownDocker extends DockerBase implements Town {
             permissionList.add((Permission) dkr);
         } else if (dkr instanceof Reroute) {
             rerouteList.add((Reroute) dkr);
+        }
+        else if (dkr instanceof Barge) {
+            barges.add((Barge)dkr);
         }
         else {
             return super.initDocker(dkr);
@@ -116,6 +124,11 @@ public final class BuiltInTownDocker extends DockerBase implements Town {
     @Override
     public ArrayList<Club> clubs() {
         return clubList;
+    }
+
+    @Override
+    public Barge findBarge(String path) {
+        return barges.findBarge(path);
     }
 
     @Override

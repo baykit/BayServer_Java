@@ -40,6 +40,11 @@ public interface Town {
     ArrayList<Club> clubs();
 
     /**
+     * Find barge by path
+     */
+    Barge findBarge(String path);
+
+    /**
      * Get rerouted uri
      * @return reroute list
      */

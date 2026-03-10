@@ -87,8 +87,10 @@ public interface Harbor {
      */
     boolean directBoarding();
 
-    /** The lifespan, in seconds, of a cached file descriptor. */
-    int cacheLifespanSec();
+    /**
+     * The lifespan, in seconds, of a cargo (cached file).
+     */
+    int cargoLifespanSec();
 
     /**
      * The maximum number of files (file descriptors) to be cached for Direct Boarding.
@@ -101,6 +103,12 @@ public interface Harbor {
      * Files exceeding this size will not be cached.
      */
     int maxCargoSize();
+
+    /**
+     * Find barge by path
+     */
+    Barge findBarge(String path);
+
 
     static String getMultiplexerTypeName(MultiPlexerType type) {
         switch (type) {
