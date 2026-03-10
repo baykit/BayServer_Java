@@ -384,6 +384,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
             }
             else {
                 try {
+                    BayLog.debug("%s register rudder: ch=%s ops=%d", this, ch, rd.pendingOps);
                     key = ch.register(selector, rd.pendingOps);
                     key.attach(rd);
                     st.selectionKey = key;

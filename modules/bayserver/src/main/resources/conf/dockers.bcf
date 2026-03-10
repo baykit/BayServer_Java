@@ -19,4 +19,5 @@ permission          yokohama.baykit.bayserver.docker.builtin.BuiltInPermissionDo
 secure              yokohama.baykit.bayserver.docker.builtin.BuiltInSecureDocker
 trouble             yokohama.baykit.bayserver.docker.builtin.BuiltInTroubleDocker
 reroute:wordpress   yokohama.baykit.bayserver.docker.wordpress.WordPressDocker
-
+barge               yokohama.baykit.bayserver.docker.barge.MemBargeDocker
+barge:memBarge      yokohama.baykit.bayserver.docker.barge.MemBargeDocker
