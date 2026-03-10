@@ -3,7 +3,9 @@ package yokohama.baykit.bayserver.docker.builtin;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
+import yokohama.baykit.bayserver.common.Barges;
 import yokohama.baykit.bayserver.common.Groups;
+import yokohama.baykit.bayserver.docker.Barge;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.Trouble;
@@ -35,9 +37,9 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     public static final boolean DEFAULT_GZIP_COMP = false;
     public static final String DEFAULT_PID_FILE = "bayserver.pid";
     public static boolean DEFAULT_DIRECT_BOARDING = false;
-    public static int DEFAULT_CACHE_LIFESPAN_SEC = 60;
+    public static int DEFAULT_CARGO_LIFESPAN_SEC = 60;
     public static int DEFAULT_DIRECT_BOARDINGS = 128;
-    private static final int DEFAULT_MAX_CARGO_SIZE_MB = 1;
+    private static final int DEFAULT_MAX_CARGO_SIZE = 1 * 1024 * 1024;
 
     /** Default charset */
     String charset = DEFAULT_CHARSET;
@@ -71,6 +73,9 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
 
     /** Trouble docker */
     Trouble trouble;
+
+    /** Barge dockers */
+    Barges barges = new Barges();
 
     /** File name to redirect stdout/stderr */
     String redirectFile;
@@ -108,8 +113,8 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
      */
     boolean directBoarding = DEFAULT_DIRECT_BOARDING;
 
-    /** Lifespan seconds of cache */
-    int cacheLifespanSec = DEFAULT_CACHE_LIFESPAN_SEC;
+    /** Lifespan seconds of cargo */
+    int cargoLifespanSec = DEFAULT_CARGO_LIFESPAN_SEC;
 
     /**
      * The maximum number of files (file descriptors) to be cached for Direct Boarding.
@@ -117,7 +122,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
      */
     int maxDirectBoardings = DEFAULT_DIRECT_BOARDINGS;
 
-    int maxCargoSize = DEFAULT_MAX_CARGO_SIZE_MB;
+    int maxCargoSize = DEFAULT_MAX_CARGO_SIZE;
 
     ///////////////////////////////////////////////////////////////////////
     // Implements Docker
@@ -212,6 +217,10 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     public boolean initDocker(Docker dkr) throws ConfigException {
         if (dkr instanceof Trouble) {
             trouble = (Trouble) dkr;
+            return true;
+        }
+        else if (dkr instanceof Barge) {
+            barges.add((Barge)dkr);
             return true;
         }
         else
@@ -359,8 +368,8 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                 directBoarding = StringUtil.parseBool(kv.value);
                 break;
 
-            case "cachelifespan":
-                cacheLifespanSec = Integer.parseInt(kv.value);
+            case "cargolifespan":
+                cargoLifespanSec = Integer.parseInt(kv.value);
                 break;
 
             case "maxdirectboardings":
@@ -368,7 +377,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                 break;
 
             case "maxcargosize":
-                maxCargoSize = Integer.parseInt(kv.value);
+                maxCargoSize = StringUtil.parseSize(kv.value);
                 break;
 
         }
@@ -491,8 +500,8 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     }
 
     @Override
-    public int cacheLifespanSec() {
-        return cacheLifespanSec;
+    public int cargoLifespanSec() {
+        return cargoLifespanSec;
     }
 
     @Override
@@ -505,5 +514,8 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
         return maxCargoSize;
     }
 
-
+    @Override
+    public Barge findBarge(String path) {
+        return barges.findBarge(path);
+    }
 }
