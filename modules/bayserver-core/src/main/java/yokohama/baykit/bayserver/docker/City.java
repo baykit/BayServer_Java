@@ -17,16 +17,10 @@ public interface City {
      */
     List<Club> clubs();
 
-
     /**
      * All towns in this city
      */
     List<Town> towns();
-
-    /**
-     * Find barge by path
-     */
-    Barge findBarge(String path);
 
     /**
      * Enter city
