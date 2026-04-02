@@ -5,7 +5,7 @@ import yokohama.baykit.bayserver.ConfigException;
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
-import yokohama.baykit.bayserver.tour.FileStore;
+import yokohama.baykit.bayserver.tour.DirectBoardingStore;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.docker.Docker;
@@ -20,7 +20,7 @@ public class FileDocker extends ClubBase {
 
     boolean listFiles = false;
 
-    private FileStore fileStore;
+    private DirectBoardingStore directBoardingStore;
 
     ///////////////////////////////////////////////////////////////////////
     // Implements Docker
