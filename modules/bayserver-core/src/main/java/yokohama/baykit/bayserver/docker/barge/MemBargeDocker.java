@@ -258,18 +258,26 @@ public class MemBargeDocker extends DockerBase implements Barge {
     // Private methods
     ////////////////////////////////////////////
 
+    /**
+     * Add the size of the newly loaded cargo to the total, then evict
+     * old entries (insertion order) until the total falls within capacity.
+     * Entries with active waiters are skipped to avoid disrupting
+     * in-progress cargo loads.
+     */
     private synchronized void addTotal(int len) {
         totalSize += len;
-        BayLog.debug("%s addTotal=%d", this, totalSize);
+        BayLog.trace("%s addTotal=%d", this, totalSize);
         Iterator<Map.Entry<String, MemCargo>> it = cargoMap.entrySet().iterator();
         while (totalSize > capacity && it.hasNext()) {
             Map.Entry<String, MemCargo> eldest = it.next();
-            BayLog.debug("%s Remove cargo: %s cur total=%d", this, eldest.getKey(), totalSize);
             if (eldest.getValue().waiters.isEmpty()) {
+                BayLog.trace("%s Evict cargo: %s len=%d total=%d", this, eldest.getKey(), eldest.getValue().length(), totalSize);
                 totalSize -= eldest.getValue().length();
                 it.remove();
             }
-            BayLog.debug("%s cargo removed: total=%d", this, totalSize);
+            else {
+                BayLog.trace("%s Skip cargo (has waiters): %s", this, eldest.getKey());
+            }
         }
     }
 }
