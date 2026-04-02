@@ -122,11 +122,6 @@ public class BuiltInCityDocker extends DockerBase implements City {
     }
 
     @Override
-    public Barge findBarge(String path) {
-        return null;
-    }
-
-    @Override
     public void enter(Tour tur) throws HttpException {
         BayLog.debug("%s City[%s] Request URI: %s", tur, name, tur.req.uri);
 
