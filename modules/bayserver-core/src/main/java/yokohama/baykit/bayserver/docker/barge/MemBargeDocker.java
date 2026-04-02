@@ -158,7 +158,7 @@ public class MemBargeDocker extends DockerBase implements Barge {
 
     // Enable "Access Order" (LRU) mode by setting the 3rd argument to true.
     // In this mode, the most recently accessed entry moves to the end of the list.
-    private final LinkedHashMap<String, MemCargo> cargoMap = new LinkedHashMap<>();
+    private final LinkedHashMap<String, MemCargo> cargoMap = new LinkedHashMap<>(16, 0.75f, true);
 
     @Override
     public String toString() {
