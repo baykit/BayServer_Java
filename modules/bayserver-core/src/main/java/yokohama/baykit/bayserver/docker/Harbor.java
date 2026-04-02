@@ -99,7 +99,7 @@ public interface Harbor {
     int maxDirectBoardings();
 
     /**
-     * The maximum file size, in mega-bytes, to be cached.
+     * The maximum file size, in bytes, to be cached.
      * Files exceeding this size will not be cached.
      */
     int maxCargoSize();
