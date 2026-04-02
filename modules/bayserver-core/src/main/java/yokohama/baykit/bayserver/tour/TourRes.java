@@ -264,7 +264,7 @@ public class TourRes implements Reusable {
     }
 
     public void sendFile(String path, String charset) throws IOException, HttpException {
-        FileStore.FileInfo info = null;
+        DirectBoardingStore.FileInfo info = null;
         Rudder rd = null;
         int fileSize = -1;
 
@@ -274,8 +274,7 @@ public class TourRes implements Reusable {
             /**
              * Send via directBoarding if the protocol is HTTP/1.x and unencrypted.
              */
-            FileStore st = FileStore.getFileStore();
-            info = st.get(path);
+            info = DirectBoardingStore.getFileInfo(path);
             rd = info.rudder;
             fileSize = info.fileLength;
             directBoarding = info.rudder != null;
