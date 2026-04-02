@@ -202,8 +202,6 @@ public class TourRes implements Reusable {
         if (buf == null)
             throw new NullPointerException();
         //tour.checkTourId(checkId);
-        BayLog.debug("%s send content: len=%d", this, len);
-
         BayLog.debug("%s send content: len=%d cargo=%s", this, len, tour.cargo);
         if (tour.cargo != null) {
             tour.cargo.saveContent(buf, ofs, len);
