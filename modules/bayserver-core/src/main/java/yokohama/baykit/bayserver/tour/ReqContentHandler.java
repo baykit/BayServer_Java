@@ -15,7 +15,7 @@ public interface ReqContentHandler {
     ReqContentHandler devNull = new ReqContentHandler() {
         @Override
         public void onReadReqContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
-
+            tur.req.consumed(Tour.TOUR_ID_NOCHECK, len, lis);
         }
 
         @Override
