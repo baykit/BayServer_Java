@@ -52,7 +52,7 @@ public class GrandAgent extends Thread {
     public Multiplexer taxiMultiplexer;
     public SpinMultiplexer spinMultiplexer;
     public Multiplexer spiderMultiplexer;
-    public Multiplexer pegionMultiplexer;
+    public Multiplexer pigeonMultiplexer;
     public Recipient recipient;
 
     public final int maxInboundShips;
@@ -76,7 +76,7 @@ public class GrandAgent extends Thread {
         this.jobMultiplexer = new JobMultiplexer(this, anchorable);
         this.taxiMultiplexer = new TaxiMultiplexer(this);
         this.spinMultiplexer = new SpinMultiplexer(this);
-        this.pegionMultiplexer = new PigeonMultiplexer(this, anchorable);
+        this.pigeonMultiplexer = new PigeonMultiplexer(this, anchorable);
         this.anchorable = anchorable;
 
         switch(BayServer.harbor.recipient()) {
@@ -99,7 +99,7 @@ public class GrandAgent extends Thread {
                 break;
 
             case Pigeon:
-                this.netMultiplexer = this.pegionMultiplexer;
+                this.netMultiplexer = this.pigeonMultiplexer;
                 break;
 
             case Spin:
@@ -125,7 +125,7 @@ public class GrandAgent extends Thread {
             }
 
             case Pigeon: {
-                this.fileMultiplexer = pegionMultiplexer;
+                this.fileMultiplexer = pigeonMultiplexer;
                 break;
             }
 
