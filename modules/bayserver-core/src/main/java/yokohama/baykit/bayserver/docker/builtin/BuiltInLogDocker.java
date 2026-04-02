@@ -65,7 +65,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
                                         StandardOpenOption.CREATE,
                                         StandardOpenOption.WRITE);
                         rd = new AsynchronousFileChannelRudder(ch);
-                        mpx = agt.pegionMultiplexer;
+                        mpx = agt.pigeonMultiplexer;
                         break;
                     }
                     case Spin: {
