@@ -363,7 +363,7 @@ public class TourRes implements Reusable {
                 }
 
                 case Pigeon: {
-                    mpx = agt.pegionMultiplexer;
+                    mpx = agt.pigeonMultiplexer;
                     break;
                 }
 
