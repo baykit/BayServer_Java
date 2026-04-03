@@ -17,7 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
-public class DirectoryTrain extends Train implements ReqContentHandler {
+public class DirectoryTrain extends Train {
 
     final Path path;
     Tour tour;
@@ -28,10 +28,6 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
         this.tour = tur;
         this.path = path;
         this.abortable = true;
-    }
-
-    public void startTour() throws HttpException {
-        tour.req.setReqContentHandler(this);
     }
 
     ///////////////////////////////////////////////////////////////////
@@ -61,11 +57,11 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
                 stream.forEach(f -> {
                     if(Files.isDirectory(f)) {
                         if(!f.getFileName().equals(".")) {
-                            printLink(w, f.getName(0) + "/");
+                            printLink(w, f.getFileName() + "/");
                         }
                     }
                     else {
-                        printLink(w, f.toFile().getName());
+                        printLink(w, f.getFileName().toString());
                     }
                 });
             } catch (IOException e) {
@@ -97,32 +93,6 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
     @Override
     protected void onTimer() {
 
-    }
-
-    ///////////////////////////////////////////////////////////////////
-    // implements Tour.ExtraData
-    ///////////////////////////////////////////////////////////////////
-
-    @Override
-    public void onReadReqContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
-        BayLog.debug("%s onReadContent(Ignore) len=%d", tur, len);
-        tur.req.consumed(tur.tourId, len, lis);
-    }
-
-    @Override
-    public void onEndReqContent(Tour tur) throws IOException, HttpException {
-        BayLog.debug("%s endContent", tur);
-        abortable = false;
-
-        if(!TrainRunner.post(tur.ship.agentId, this)) {
-            throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "TourRunner is busy");
-        }
-    }
-
-    @Override
-    public boolean onAbortReq(Tour tur) {
-        BayLog.debug("%s onAbort aborted=%s", tur, abortable);
-        return abortable;
     }
 
 
