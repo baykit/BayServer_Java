@@ -14,18 +14,48 @@ import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.tour.ContentConsumeListener;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
-import yokohama.baykit.bayserver.util.HttpStatus;
-import yokohama.baykit.bayserver.util.Pair;
-import yokohama.baykit.bayserver.util.StringUtil;
-import yokohama.baykit.bayserver.util.URLDecoder;
+import yokohama.baykit.bayserver.util.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class BuiltInCityDocker extends DockerBase implements City {
+
+    private static class FileExistenceCache {
+        private static final long TTL = 10_000; // 10sec
+        private final ConcurrentHashMap<String, Entry> map = new ConcurrentHashMap<>();
+
+        private static class Entry {
+            final boolean exists;
+            final long expireAt;
+
+            Entry(boolean exists) {
+                this.exists = exists;
+                this.expireAt = RoughTime.currentTimeMillis() + TTL;
+            }
+
+            boolean isExpired() {
+                return RoughTime.currentTimeMillis() > expireAt;
+            }
+        }
+
+        boolean isFile(File file) {
+            String key = file.getPath();
+            Entry entry = map.get(key);
+            if (entry != null && !entry.isExpired()) {
+                return entry.exists;
+            }
+            boolean exists = file.isFile();
+            map.put(key, new Entry(exists));
+            return exists;
+        }
+    }
+
+    private final FileExistenceCache fileExistenceCache = new FileExistenceCache();
 
     ArrayList<Town> townList = new ArrayList<>();
     Town defaultTown;
@@ -181,11 +211,13 @@ public class BuiltInCityDocker extends DockerBase implements City {
 
             Barge barge = findBarge(tur, mInfo.town);
             if (barge != null) {
+                //BayLog.debug("%s Barge[%s] is found", tur, barge);
                 Pair<Barge.Cargo, Rudder> pir = barge.getCargo(tur);
                 Barge.Cargo cgo = pir.a;
                 Rudder rd = pir.b;
 
                 if(rd != null) {
+                    //BayLog.debug("%s Cargo is loading: cgo=%s", tur, cgo);
                     /** Cargo is loading */
                     GrandAgent agt = GrandAgent.get(tur.ship.agentId);
                     WaitCargoShip waitCargoShip = new WaitCargoShip();
@@ -204,6 +236,7 @@ public class BuiltInCityDocker extends DockerBase implements City {
                     return;
                 }
                 else if(cgo.onBarge()) {
+                    //BayLog.debug("%s Cargo is ready (on barge): %s", tur, cgo);
                     /** Cargo is ready (on cache) */
                     tur.req.setReqContentHandler(new ReqContentHandler() {
                         @Override
@@ -366,7 +399,7 @@ public class BuiltInCityDocker extends DockerBase implements City {
                     String indexUri = uri + t.welcomeFile();
                     String relUri = rel + t.welcomeFile();
                     File indexLocation = new File(t.location(), relUri);
-                    if(indexLocation.isFile()) {
+                    if(fileExistenceCache.isFile(indexLocation)) {
                         if (mi.queryString != null)
                             indexUri += "?" + mi.queryString;
                         MatchInfo m2 = getTownAndClub(indexUri);
