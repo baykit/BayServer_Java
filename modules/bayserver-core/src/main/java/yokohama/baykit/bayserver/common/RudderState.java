@@ -32,7 +32,6 @@ public class RudderState implements Reusable {
     public boolean finale;
     public EOFChecker eofChecker;
     public int timeoutSec;
-    public boolean skipFormalities;
 
     public RudderState() {
 
@@ -93,7 +92,7 @@ public class RudderState implements Reusable {
         lastAccessTime = 0;
         closing = false;
         readBuf.clear();
-        writeQueue.clear();;
+        writeQueue.clear();
         selectionKey = null;
         bytesRead = 0;
         bytesWrote = 0;
