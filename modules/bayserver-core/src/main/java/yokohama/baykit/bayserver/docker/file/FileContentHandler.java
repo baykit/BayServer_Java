@@ -5,6 +5,7 @@ import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.tour.ContentConsumeListener;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
+import yokohama.baykit.bayserver.train.TrainRunner;
 import yokohama.baykit.bayserver.util.DirectoryException;
 import yokohama.baykit.bayserver.util.HttpStatus;
 
@@ -83,7 +84,9 @@ public class FileContentHandler implements ReqContentHandler {
     private void handleDirectory(Tour tur, Path path) throws HttpException {
         if(listFiles) {
             DirectoryTrain train = new DirectoryTrain(tur, path);
-            train.startTour();
+            if(!TrainRunner.post(tur.ship.agentId, train)) {
+                throw new HttpException(HttpStatus.SERVICE_UNAVAILABLE, "TourRunner is busy");
+            }
         }
         else {
             throw new HttpException(HttpStatus.FORBIDDEN, "Directory scan is prohibited");
