@@ -114,14 +114,4 @@ public class RudderState implements Reusable {
     public void end() {
         finale = true;
     }
-
-    public void checkStateId(int checkId) {
-        if(checkId == STATE_ID_NOCHECK)
-            return;
-
-        if(checkId != this.id) {
-            throw new Sink("%s Invalid state id : %d", this, checkId);
-        }
-    }
-
 }
