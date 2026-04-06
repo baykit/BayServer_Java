@@ -18,6 +18,19 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * PigeonMultiplexer is a reference implementation created for the Node.js version of BayServer,
+ * which uses an asynchronous I/O (completion-based) model.
+ *
+ * On Linux, Java NIO2's AsynchronousSocketChannel is internally implemented with a thread pool + epoll,
+ * resulting in significant overhead compared to SpiderMultiplexer (Selector/epoll).
+ * Using this multiplexer for network I/O in the Java version is not recommended.
+ * For network I/O on Linux/macOS, use SpiderMultiplexer instead.
+ *
+ * However, this multiplexer is suitable for file I/O, since FileChannel is not a SelectableChannel
+ * and cannot be registered with a Selector (i.e. SpiderMultiplexer cannot handle file I/O).
+ * AsynchronousFileChannel is available via NIO2, making PigeonMultiplexer the default for fileMultiplexer.
+ */
 public class PigeonMultiplexer extends JobMultiplexerBase {
 
     boolean accepting;
