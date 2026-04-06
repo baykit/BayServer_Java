@@ -70,9 +70,9 @@ public class BayServer {
     /** BayAgent */
     public static SignalAgent signalAgent;
 
-    public static final ArrayList<Pair<Rudder, Port>> anchorablePorts = new ArrayList<>();
+    public static final ArrayList<Pair<Channel, Port>> anchorablePorts = new ArrayList<>();
 
-    public static final ArrayList<Pair<Rudder, Port>> unanchorablePorts = new ArrayList<>();
+    public static final ArrayList<Pair<Channel, Port>> unanchorablePorts = new ArrayList<>();
 
     /**
      * Date format for debug
@@ -261,11 +261,11 @@ public class BayServer {
                 try {
                     if(ch != null) {
                         ch.bind(adr);
-                        anchorablePorts.add(new Pair<>(new ServerSocketChannelRudder(ch), portDkr));
+                        anchorablePorts.add(new Pair<>(ch, portDkr));
                     }
                     else {
                         ach.bind(adr);
-                        anchorablePorts.add(new Pair<>(new AsynchronousServerSocketChannelRudder(ach), portDkr));
+                        anchorablePorts.add(new Pair<>(ach, portDkr));
                     }
                 } catch (SocketException e) {
                     BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
@@ -281,7 +281,7 @@ public class BayServer {
                     BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
                     return;
                 }
-                unanchorablePorts.add(new Pair<>(new DatagramChannelRudder(ch), portDkr));
+                unanchorablePorts.add(new Pair<>(ch, portDkr));
             }
         }
 
@@ -327,9 +327,9 @@ public class BayServer {
     /**
      * Finds port docker from server socket rudder
      */
-    public static Port findAnchorablePort(Rudder rd) {
-        for(Pair<Rudder, Port> pair: anchorablePorts) {
-            if(pair.a == rd) {
+    public static Port findAnchorablePort(Channel ch) {
+        for(Pair<Channel, Port> pair: anchorablePorts) {
+            if(pair.a == ch) {
                 return pair.b;
             }
         }
