@@ -7,20 +7,13 @@ import yokohama.baykit.bayserver.common.*;
 import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.Port;
 import yokohama.baykit.bayserver.docker.base.PortBase;
-import yokohama.baykit.bayserver.rudder.AsynchronousFileChannelRudder;
-import yokohama.baykit.bayserver.rudder.ReadableByteChannelRudder;
-import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.rudder.*;
 import yokohama.baykit.bayserver.util.Pair;
 import yokohama.baykit.bayserver.util.RoughTime;
 
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.InetSocketAddress;
-import java.nio.channels.AsynchronousFileChannel;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.file.StandardOpenOption;
+import java.nio.channels.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -64,6 +57,8 @@ public class GrandAgent extends Thread {
     private long lastTimeoutCheck;
     private boolean busy;
 
+    private ArrayList<Rudder> anchorableRudders = new ArrayList<>();
+    private ArrayList<Rudder> unanchorableRudders = new ArrayList<>();
 
     public GrandAgent(
             int agentId,
@@ -154,32 +149,44 @@ public class GrandAgent extends Thread {
 
             if(anchorable) {
                 // Adds server socket channel of anchorable ports
-                for(Pair<Rudder, Port> pair: BayServer.anchorablePorts) {
+                for(Pair<Channel, Port> pair: BayServer.anchorablePorts) {
+                    Rudder rd;
+                    if(pair.a instanceof ServerSocketChannel) {
+                        rd = new ServerSocketChannelRudder((ServerSocketChannel)pair.a);
+                    }
+                    else {
+                        rd = new AsynchronousServerSocketChannelRudder((AsynchronousServerSocketChannel)pair.a);
+                    }
+                    anchorableRudders.add(rd);
+
                     if(netMultiplexer.isNonBlocking()) {
                         try {
-                            pair.a.setNonBlocking();
+                            rd.setNonBlocking();
                         }
                         catch(IOException e) {
                             BayLog.fatal(e);
                         }
                     }
                     RudderState st = RudderStateStore.getStore(agentId).rent();
-                    st.init(pair.a);
-                    netMultiplexer.addRudderState(pair.a, st);
+                    st.init(rd);
+                    netMultiplexer.addRudderState(rd, st);
                 }
             }
             else {
                 // Adds server socket  up unanchorable ports
-                for(Pair<Rudder, Port> pair: BayServer.unanchorablePorts) {
+                for(Pair<Channel, Port> pair: BayServer.unanchorablePorts) {
+                    Rudder rd = new DatagramChannelRudder((DatagramChannel)pair.a);
+                    unanchorableRudders.add(rd);
+
                     if(netMultiplexer.isNonBlocking()) {
                         try {
-                            pair.a.setNonBlocking();
+                            rd.setNonBlocking();
                         }
                         catch(IOException e) {
                             BayLog.fatal(e);
                         }
                     }
-                    pair.b.onConnected(agentId, pair.a);
+                    pair.b.onConnected(agentId, rd);
                 }
             }
 
@@ -215,12 +222,12 @@ public class GrandAgent extends Thread {
                         let = letterQueue.remove(0);
                     }
 
+                    checkRudderState(let.rudder);
                     RudderState st = let.multiplexer.getRudderState(let.rudder);
                     if(st == null) {
                         BayLog.debug("%s rudder is already returned: %s", this, let.rudder);
                         continue;
                     }
-                    st.checkStateId(let.stateId);
 
                     if(let instanceof AcceptedLetter) {
                         onAccepted((AcceptedLetter) let, st);
@@ -287,40 +294,40 @@ public class GrandAgent extends Thread {
         netMultiplexer.addRudderState(commandReceiver.rudder, st);
     }
 
-    public void sendAcceptedLetter(int stateId, Rudder rd, Multiplexer mpx, Rudder clientRd, boolean wakeup) {
+    public void sendAcceptedLetter(Rudder rd, Multiplexer mpx, Rudder clientRd, boolean wakeup) {
         if(rd == null)
             throw new NullPointerException();
-        sendLetter(new AcceptedLetter(stateId, rd, mpx, clientRd), wakeup);
+        sendLetter(new AcceptedLetter(rd, mpx, clientRd), wakeup);
     }
 
-    public void sendConnectedLetter(int stateId, Rudder rd, Multiplexer mpx, boolean wakeup) {
+    public void sendConnectedLetter(Rudder rd, Multiplexer mpx, boolean wakeup) {
         if(rd == null)
             throw new NullPointerException();
-        sendLetter(new ConnectedLetter(stateId, rd, mpx), wakeup);
+        sendLetter(new ConnectedLetter(rd, mpx), wakeup);
     }
 
-    public void sendReadLetter(int stateId, Rudder rd, Multiplexer mpx, int n, InetSocketAddress adr, boolean wakeup) {
+    public void sendReadLetter(Rudder rd, Multiplexer mpx, int n, InetSocketAddress adr, boolean wakeup) {
         if(rd == null)
             throw new NullPointerException();
-        sendLetter(new ReadLetter(stateId, rd, mpx, n, adr), wakeup);
+        sendLetter(new ReadLetter(rd, mpx, n, adr), wakeup);
     }
 
-    public void sendWroteLetter(int stateId, Rudder rd, Multiplexer mpx, int n, boolean wakeup) {
+    public void sendWroteLetter(Rudder rd, Multiplexer mpx, int n, boolean wakeup) {
         if(rd == null)
             throw new NullPointerException();
-        sendLetter(new WroteLetter(stateId, rd, mpx, n), wakeup);
+        sendLetter(new WroteLetter(rd, mpx, n), wakeup);
     }
 
-    public void sendClosedLetter(int stateId, Rudder rd, Multiplexer mpx, boolean wakeup) {
+    public void sendClosedLetter(Rudder rd, Multiplexer mpx, boolean wakeup) {
         if(rd == null)
             throw new NullPointerException();
-        sendLetter(new ClosedLetter(stateId, rd, mpx), wakeup);
+        sendLetter(new ClosedLetter(rd, mpx), wakeup);
     }
 
-    public void sendErrorLetter(int stateId, Rudder rd, Multiplexer mpx, Throwable e, boolean wakeup) {
+    public void sendErrorLetter(Rudder rd, Multiplexer mpx, Throwable e, boolean wakeup) {
         if(rd == null)
             throw new NullPointerException();
-        sendLetter(new ErrorLetter(stateId, rd, mpx, e), wakeup);
+        sendLetter(new ErrorLetter(rd, mpx, e), wakeup);
     }
 
     public void shutdown() {
@@ -344,7 +351,7 @@ public class GrandAgent extends Thread {
     }
 
     void reloadCert() {
-        for(Pair<Rudder, Port> pair : BayServer.anchorablePorts) {
+        for(Pair<Channel, Port> pair : BayServer.anchorablePorts) {
             if(pair.b.secure()) {
                 PortBase pbase = (PortBase)pair.b;
                 try {
@@ -388,6 +395,14 @@ public class GrandAgent extends Thread {
         }
     }
 
+    public ArrayList<Rudder> anchorableRudders() {
+        return anchorableRudders;
+    }
+
+    public ArrayList<Rudder> unanchorableRudders() {
+        return unanchorableRudders;
+    }
+
     ////////////////////////////////////////////
     // Private methods                        //
     ////////////////////////////////////////////
@@ -405,7 +420,7 @@ public class GrandAgent extends Thread {
         BayLog.debug("%s onAccepted rd=%s", this, st.rudder);
 
         try {
-            Port p = BayServer.findAnchorablePort(st.rudder);
+            Port p = BayServer.findAnchorablePort(ChannelRudder.getChannel(st.rudder));
             p.onConnected(agentId, let.clientRudder);
         }
         catch (HttpException e) {
@@ -637,4 +652,13 @@ public class GrandAgent extends Thread {
     /////////////////////////////////////////////////////////////////////////////
     // private methods                                                         //
     /////////////////////////////////////////////////////////////////////////////
+
+    private void checkRudderState(Rudder rd) {
+        if(rd instanceof ChannelRudder) {
+            RudderState st = (RudderState) ((ChannelRudder)rd).state;
+            if(st != null && st.rudder != rd) {
+                throw new Sink("%s Invalid rd=%s st=%s", this, rd, st);
+            }
+        }
+    }
 }

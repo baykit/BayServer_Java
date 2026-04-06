@@ -61,8 +61,8 @@ public abstract class JobMultiplexerBase extends MultiplexerBase implements Time
             return;
 
         if(anchorable) {
-            for (Pair<Rudder, Port> pair : BayServer.anchorablePorts) {
-                reqAccept(pair.a);
+            for (Rudder rd : agent.anchorableRudders()) {
+                reqAccept(rd);
             }
         }
     }
