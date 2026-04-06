@@ -20,7 +20,14 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 /**
- * The purpose of JobMultiplexer is handling sockets, pipes, or files by thread/fiber/goroutine.
+ * JobMultiplexer is a reference implementation created for the Go version of BayServer,
+ * which uses a goroutine-per-I/O model where blocking I/O is efficiently multiplexed by the Go runtime.
+ *
+ * In the Java version, each I/O operation spawns a new thread, leading to massive thread creation
+ * overhead and context switching under high concurrency. Using this multiplexer for network I/O
+ * in the Java version is not recommended.
+ *
+ * For network I/O on Linux/macOS, use SpiderMultiplexer instead.
  */
 public class JobMultiplexer extends JobMultiplexerBase {
 
