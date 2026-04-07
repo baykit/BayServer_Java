@@ -407,7 +407,12 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
             // Submit pending SQEs non-blocking if any, then process CQEs
             if (pending > 0)
                 ring.submit();
-            return processCompletions() > 0;
+            boolean result = processCompletions() > 0;
+            // Submit SQEs generated during completion processing (e.g. nextRead/nextWrite)
+            // so the kernel can start working on them while we process letters
+            if (ring.pendingSqeCount() > 0)
+                ring.submit();
+            return result;
         }
 
         // Slow path: no CQEs available, need io_uring_enter syscall
@@ -419,7 +424,11 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
                 ring.submit();
         }
 
-        return processCompletions() > 0;
+        boolean result = processCompletions() > 0;
+        // Submit SQEs generated during completion processing
+        if (ring.pendingSqeCount() > 0)
+            ring.submit();
+        return result;
     }
 
     private int processCompletions() {

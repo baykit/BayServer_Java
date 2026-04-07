@@ -123,6 +123,8 @@ public class IoUring implements AutoCloseable {
     private static final SymbolLookup LOOKUP = LINKER.defaultLookup();
 
     private static final MethodHandle syscall;
+    // errno-capture variant with 6 args (for timeout io_uring_enter error recovery)
+    private static final MethodHandle syscall6;
     // Lightweight syscall handle without errno capture (for hot-path io_uring_enter)
     private static final MethodHandle syscallFast;
     // 6-arg variant for IORING_ENTER_EXT_ARG (timeout support)
@@ -147,6 +149,20 @@ public class IoUring implements AutoCloseable {
                             ValueLayout.JAVA_LONG,  // arg3
                             ValueLayout.JAVA_LONG,  // arg4
                             ValueLayout.JAVA_LONG   // arg5
+                    ),
+                    Linker.Option.captureCallState("errno"));
+
+            // errno-capture variant with 6 args (for timeout io_uring_enter)
+            syscall6 = LINKER.downcallHandle(
+                    LOOKUP.find("syscall").orElseThrow(),
+                    FunctionDescriptor.of(ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,  // syscall number
+                            ValueLayout.JAVA_LONG,  // arg1
+                            ValueLayout.JAVA_LONG,  // arg2
+                            ValueLayout.JAVA_LONG,  // arg3
+                            ValueLayout.JAVA_LONG,  // arg4
+                            ValueLayout.JAVA_LONG,  // arg5
+                            ValueLayout.JAVA_LONG   // arg6
                     ),
                     Linker.Option.captureCallState("errno"));
 
@@ -452,7 +468,7 @@ public class IoUring implements AutoCloseable {
             );
             if (ret == -1) {
                 // ETIME is expected on timeout — not an error
-                long ret2 = (long) syscall.invoke(
+                long ret2 = (long) syscall6.invoke(
                         capturedState,
                         __NR_io_uring_enter,
                         (long) ringFd,
