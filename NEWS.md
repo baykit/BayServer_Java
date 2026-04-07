@@ -1,5 +1,9 @@
 # BayServer for Java
 
+# 3.3.2
+
+- [Core] Fixes memory leak.
+
 # 3.3.1
 
 - [Core] Fix issue where the system shuts down when an invalid URL-encoded string is provided in the path.
