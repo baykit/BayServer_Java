@@ -607,7 +607,6 @@ public class IoUring implements AutoCloseable {
      */
     public void releaseFdBuffers(int fd) {
         recvBufPool.remove(fd);
-        sendBufPool.remove(fd);
     }
 
     ////////////////////////////////////////////
@@ -620,9 +619,10 @@ public class IoUring implements AutoCloseable {
     // Reusable eventfd read buffer (only one eventfd read in-flight at a time)
     private final MemorySegment eventFdReadBuf;
 
-    // Per-fd buffer pools (only one recv/send in-flight per fd at a time)
+    // Per-fd recv buffer pool (only one recv in-flight per fd at a time)
     private final HashMap<Integer, MemorySegment> recvBufPool = new HashMap<>();
-    private final HashMap<Integer, MemorySegment> sendBufPool = new HashMap<>();
+    // Per-userData send buffer (multiple sends can be in-flight per fd)
+    private final HashMap<Long, MemorySegment> sendBufPool = new HashMap<>();
 
     // Per-server-fd accept buffer pool (sockaddr + addrlen)
     private final HashMap<Integer, MemorySegment> acceptSockaddrPool = new HashMap<>();
@@ -670,24 +670,30 @@ public class IoUring implements AutoCloseable {
 
     /**
      * Prepare a SEND operation, copying data from the ByteBuffer.
+     * Each send gets its own native buffer keyed by userData, allowing
+     * multiple sends to be in-flight for the same fd.
      */
     public void prepareSend(int fd, ByteBuffer srcBuf, long userData) throws IOException {
         MemorySegment sqe = getSqe();
 
         int remaining = srcBuf.remaining();
 
-        // Reuse send buffer per fd, grow if needed (only one send in-flight per fd)
-        MemorySegment buf = sendBufPool.get(fd);
-        if (buf == null || buf.byteSize() < remaining) {
-            buf = arena.allocate(remaining);
-            sendBufPool.put(fd, buf);
-        }
+        // Allocate per-send buffer (freed in completionSendDone)
+        MemorySegment buf = arena.allocate(remaining);
+        sendBufPool.put(userData, buf);
 
         // Bulk copy from ByteBuffer to native memory
         MemorySegment srcSeg = MemorySegment.ofBuffer(srcBuf);
         MemorySegment.copy(srcSeg, ValueLayout.JAVA_BYTE, srcBuf.position(), buf, ValueLayout.JAVA_BYTE, 0, remaining);
 
         IoUringSqe.prepSend(sqe, fd, buf, remaining, userData);
+    }
+
+    /**
+     * Clean up native send buffer after send completion.
+     */
+    public void completionSendDone(long userData) {
+        sendBufPool.remove(userData);
     }
 
     /**

@@ -455,7 +455,7 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
                 continue;
             }
 
-            dispatchCompletion(op, res);
+            dispatchCompletion(op, res, userData);
             releaseOp(op);
         }
         return count;
@@ -524,7 +524,7 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
         st.reading[0] = true;
     }
 
-    private void submitSend(Rudder rd, RudderState st)  throws IOException{
+    private void submitSend(Rudder rd, RudderState st) throws IOException {
         int fd = getFd(rd);
         WriteUnit wUnit;
         synchronized (st.writeQueue) {
@@ -543,7 +543,7 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
     // Private: CQE completion dispatch
     ////////////////////////////////////////////
 
-    private void dispatchCompletion(UringOp op, int res) {
+    private void dispatchCompletion(UringOp op, int res, long userData) {
         switch (op.opType) {
             case OP_ACCEPT:
                 onAcceptComplete(op, res);
@@ -555,7 +555,7 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
                 onRecvComplete(op, res);
                 break;
             case OP_SEND:
-                onSendComplete(op, res);
+                onSendComplete(op, res, userData);
                 break;
             case OP_CLOSE:
                 onCloseComplete(op, res);
@@ -637,7 +637,10 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
         }
     }
 
-    private void onSendComplete(UringOp op, int res) {
+    private void onSendComplete(UringOp op, int res, long userData) {
+        // Release native send buffer for this operation
+        ring.completionSendDone(userData);
+
         if (res < 0) {
             agent.sendErrorLetter(op.rudder, this, new IOException("send failed: errno=" + (-res)), false);
         }
