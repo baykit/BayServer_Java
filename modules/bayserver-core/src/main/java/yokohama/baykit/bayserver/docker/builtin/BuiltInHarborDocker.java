@@ -149,6 +149,12 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
             multiCore = true;
         }
 
+        if (netMultiplexer == MultiPlexerType.Rover && !SysUtil.supportIoUring()) {
+            BayLog.warn("io_uring not supported on this system, falling back to %s",
+                    Harbor.getMultiplexerTypeName(DEFAULT_NET_MULTIPLEXER));
+            netMultiplexer = DEFAULT_NET_MULTIPLEXER;
+        }
+
         if (netMultiplexer == MultiPlexerType.Taxi ||
                 netMultiplexer == MultiPlexerType.Train ||
                 netMultiplexer == MultiPlexerType.Spin) {
@@ -193,6 +199,17 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                     elm.fileName,
                     elm.lineNo));
             cgiMultiplexer = DEFAULT_CGI_MULTIPLEXER;
+        }
+
+        if (netMultiplexer == MultiPlexerType.Rover && directBoarding) {
+            BayLog.info("Rover net multiplexer does not support directBoarding (sendfile), disabling");
+            directBoarding = false;
+        }
+
+        if (netMultiplexer == MultiPlexerType.Rover &&
+            recipient != RecipientType.Rover) {
+            BayLog.info("Rover net multiplexer requires Rover recipient, overriding");
+            recipient = RecipientType.Rover;
         }
 
         if (netMultiplexer == MultiPlexerType.Spider &&

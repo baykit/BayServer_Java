@@ -82,6 +82,10 @@ public class GrandAgent extends Thread {
             case Pipe:
                 this.recipient = new PipeRecipient();
                 break;
+
+            case Rover:
+                // Recipient will be set when netMultiplexer is created below
+                break;
         }
 
         switch(BayServer.harbor.netMultiplexer()) {
@@ -95,6 +99,19 @@ public class GrandAgent extends Thread {
 
             case Pigeon:
                 this.netMultiplexer = this.pigeonMultiplexer;
+                break;
+
+            case Rover:
+                try {
+                    Class<?> roverClass = Class.forName("yokohama.baykit.bayserver.agent.multiplexer.RoverMultiplexer");
+                    Object roverMpx = roverClass.getConstructor(GrandAgent.class, boolean.class).newInstance(this, anchorable);
+                    this.netMultiplexer = (Multiplexer) roverMpx;
+                    this.recipient = (Recipient) roverMpx;
+                }
+                catch (Exception e) {
+                    BayLog.fatal(e, "Failed to create RoverMultiplexer");
+                    throw new Sink("Failed to create RoverMultiplexer: %s", e.getMessage());
+                }
                 break;
 
             case Spin:

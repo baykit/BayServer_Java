@@ -101,6 +101,11 @@ public abstract class MultiplexerBase implements Multiplexer {
     }
 
     @Override
+    public boolean useUringAPI() {
+        return false;
+    }
+
+    @Override
     public final boolean isBusy() {
         return channelCount >= agent.maxInboundShips;
     }

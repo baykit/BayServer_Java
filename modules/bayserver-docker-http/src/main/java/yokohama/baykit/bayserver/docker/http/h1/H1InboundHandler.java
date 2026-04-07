@@ -12,7 +12,7 @@ import yokohama.baykit.bayserver.docker.http.h1.command.CmdEndContent;
 import yokohama.baykit.bayserver.docker.http.h1.command.CmdHeader;
 import yokohama.baykit.bayserver.docker.http.h2.H2ProtocolHandler;
 import yokohama.baykit.bayserver.protocol.*;
-import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
+import yokohama.baykit.bayserver.rudder.NetworkRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
@@ -392,7 +392,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         }
         else {
             try {
-                NetworkChannelRudder nrd = (NetworkChannelRudder) ship().rudder;
+                NetworkRudder nrd = (NetworkRudder) ship().rudder;
                 tur.req.remotePort = nrd.getRemotePort();
                 tur.req.remoteAddress = nrd.getRemoteAddress().getHostAddress();
                 tur.req.serverAddress = nrd.getLocalAddress().getHostAddress();

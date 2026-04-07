@@ -72,6 +72,13 @@
       <version>${env.VERSION}</version>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>yokohama.baykit</groupId>
+      <artifactId>bayserver-uring</artifactId>
+      <version>${env.VERSION}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <scm>
