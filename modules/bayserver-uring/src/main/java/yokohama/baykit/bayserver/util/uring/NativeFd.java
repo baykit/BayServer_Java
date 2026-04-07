@@ -32,6 +32,7 @@ public final class NativeFd {
     private static final MethodHandle fcntlHandle;
     private static final MethodHandle getpeernameHandle;
     private static final MethodHandle getsocknameHandle;
+    private static final MethodHandle setsockoptHandle;
 
     static {
         try {
@@ -81,6 +82,16 @@ public final class NativeFd {
                             ValueLayout.JAVA_INT,   // sockfd
                             ValueLayout.ADDRESS,    // addr
                             ValueLayout.ADDRESS     // addrlen
+                    ));
+
+            setsockoptHandle = LINKER.downcallHandle(
+                    LOOKUP.find("setsockopt").orElseThrow(),
+                    FunctionDescriptor.of(ValueLayout.JAVA_INT,
+                            ValueLayout.JAVA_INT,   // sockfd
+                            ValueLayout.JAVA_INT,   // level
+                            ValueLayout.JAVA_INT,   // optname
+                            ValueLayout.ADDRESS,    // optval
+                            ValueLayout.JAVA_INT    // optlen
                     ));
         }
         catch (Throwable e) {
@@ -181,10 +192,33 @@ public final class NativeFd {
         }
     }
 
+    // Socket option constants
+    private static final int SOL_TCP = 6;       // IPPROTO_TCP
+    private static final int TCP_NODELAY = 1;
+
+    /**
+     * Set TCP_NODELAY on a socket fd (disable Nagle algorithm).
+     */
+    public static void setTcpNoDelay(int fd, boolean enable) throws IOException {
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment optval = arena.allocate(ValueLayout.JAVA_INT);
+            optval.set(ValueLayout.JAVA_INT, 0, enable ? 1 : 0);
+            int ret = (int) setsockoptHandle.invoke(fd, SOL_TCP, TCP_NODELAY, optval, 4);
+            if (ret < 0) {
+                throw new IOException("setsockopt TCP_NODELAY failed for fd=" + fd);
+            }
+        }
+        catch (IOException e) {
+            throw e;
+        }
+        catch (Throwable e) {
+            throw new IOException("setsockopt failed", e);
+        }
+    }
+
     /**
      * Set a file descriptor to non-blocking mode via fcntl.
      */
-
     public static void setNonBlocking(int fd) throws IOException {
         try {
             int flags = (int) fcntlHandle.invoke(fd, IoUringConstants.F_GETFL, 0);
