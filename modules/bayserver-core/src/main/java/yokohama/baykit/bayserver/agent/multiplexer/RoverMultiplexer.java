@@ -56,10 +56,12 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
     static class UringOp {
         int opType;
         Rudder rudder;
+        WriteUnit writeUnit;
 
-        UringOp set(int opType, Rudder rudder) {
+        UringOp set(int opType, Rudder rudder, WriteUnit writeUnit) {
             this.opType = opType;
             this.rudder = rudder;
+            this.writeUnit = writeUnit;
             return this;
         }
     }
@@ -208,18 +210,12 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
         }
 
         WriteUnit unt = new WriteUnit(buf, adr, tag, listener);
-        synchronized (st.writeQueue) {
-            st.writeQueue.add(unt);
-        }
+        st.writing[0] = true;
 
-        // Only submit the first send; nextWrite will handle subsequent units after completion
-        if (!st.writing[0]) {
-            st.writing[0] = true;
-            synchronized (pendingSubmissions) {
-                pendingSubmissions.add(() -> submitSend(rd, st));
-            }
-            wakeupRing();
+        synchronized (pendingSubmissions) {
+            pendingSubmissions.add(() -> submitSend(rd, unt));
         }
+        wakeupRing();
 
         st.access();
     }
@@ -312,17 +308,7 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
 
     @Override
     public void nextWrite(RudderState st) {
-        // Called from event loop thread — prepare SQE directly, no synchronization needed.
-        try {
-            submitSend(st.rudder, st);
-        }
-        catch (IOException e) {
-            BayLog.warn("%s SQ ring full on nextWrite, retrying: %s", this, e.getMessage());
-            synchronized (pendingSubmissions) {
-                pendingSubmissions.add(() -> submitSend(st.rudder, st));
-            }
-            wakeupRing();
-        }
+        throw new Sink("nextWrite should not be called on RoverMultiplexer");
     }
 
     @Override
@@ -345,14 +331,8 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
 
     @Override
     public boolean consumeOldestUnit(RudderState st) {
-        WriteUnit u;
-        synchronized (st.writeQueue) {
-            if (st.writeQueue.isEmpty())
-                return false;
-            u = st.writeQueue.remove(0);
-        }
-        u.done();
-        return true;
+        // WriteQueue is not used by RoverMultiplexer — listener is notified in onSendComplete
+        return false;
     }
 
     @Override
@@ -524,19 +504,13 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
         st.reading[0] = true;
     }
 
-    private void submitSend(Rudder rd, RudderState st) throws IOException {
+    private void submitSend(Rudder rd, WriteUnit wUnit) throws IOException {
         int fd = getFd(rd);
-        WriteUnit wUnit;
-        synchronized (st.writeQueue) {
-            if (st.writeQueue.isEmpty())
-                return;
-            wUnit = st.writeQueue.get(0);
-        }
 
         long ud = userDataSeq.getAndIncrement();
         ring.prepareSend(fd, wUnit.buf, ud);
 
-        pendingOps.put(ud, obtainOp(OP_SEND, rd));
+        pendingOps.put(ud, obtainOp(OP_SEND, rd, wUnit));
     }
 
     ////////////////////////////////////////////
@@ -645,23 +619,9 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
             agent.sendErrorLetter(op.rudder, this, new IOException("send failed: errno=" + (-res)), false);
         }
         else {
-            // Advance the WriteUnit's buffer position so hasRemaining() reflects progress
-            RudderState st = getRudderState(op.rudder);
-            if (st == null) {
-                BayLog.warn("%s onSendComplete: RudderState not found: %s", this, op.rudder);
-            }
-            else {
-                synchronized (st.writeQueue) {
-                    if (!st.writeQueue.isEmpty()) {
-                        WriteUnit wUnit = st.writeQueue.get(0);
-                        if (wUnit.buf != null) {
-                            int newPos = wUnit.buf.position() + res;
-                            if (newPos > wUnit.buf.limit())
-                                newPos = wUnit.buf.limit();
-                            wUnit.buf.position(newPos);
-                        }
-                    }
-                }
+            // Notify listener directly — no writeQueue involvement
+            if (op.writeUnit != null) {
+                op.writeUnit.done();
             }
             agent.sendWroteLetter(op.rudder, this, res, false);
         }
@@ -705,15 +665,20 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
     ////////////////////////////////////////////
 
     private UringOp obtainOp(int opType, Rudder rudder) {
+        return obtainOp(opType, rudder, null);
+    }
+
+    private UringOp obtainOp(int opType, Rudder rudder, WriteUnit writeUnit) {
         UringOp op = opPool.pollFirst();
         if (op == null) {
             op = new UringOp();
         }
-        return op.set(opType, rudder);
+        return op.set(opType, rudder, writeUnit);
     }
 
     private void releaseOp(UringOp op) {
-        op.rudder = null; // help GC
+        op.rudder = null;
+        op.writeUnit = null;
         opPool.offerFirst(op);
     }
 
