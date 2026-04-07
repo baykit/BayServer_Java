@@ -11,6 +11,7 @@ import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.RoughTime;
 import yokohama.baykit.bayserver.util.uring.IoUring;
+import yokohama.baykit.bayserver.util.uring.NativeFd;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -575,9 +576,10 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
             NetworkFdRudder clientRd = new NetworkFdRudder(clientFd);
             try {
                 clientRd.setNonBlocking();
+                NativeFd.setTcpNoDelay(clientFd, true);
             }
             catch (IOException e) {
-                BayLog.error(e, "%s Failed to set non-blocking on accepted fd", this);
+                BayLog.error(e, "%s Failed to configure accepted fd", this);
                 try { clientRd.close(); } catch (IOException e2) { BayLog.warn("%s close failed: %s", this, e2.getMessage()); }
                 return;
             }
