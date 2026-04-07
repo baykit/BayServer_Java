@@ -30,6 +30,13 @@
       <version>4.11</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>yokohama.baykit</groupId>
+      <artifactId>bayserver-uring</artifactId>
+      <version>${env.VERSION}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <developers>

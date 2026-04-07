@@ -12,7 +12,7 @@ import yokohama.baykit.bayserver.docker.*;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
 import yokohama.baykit.bayserver.rudder.ChannelRudder;
-import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
+import yokohama.baykit.bayserver.rudder.NetworkRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.StringUtil;
 import yokohama.baykit.bayserver.util.SysUtil;
@@ -221,7 +221,7 @@ public abstract class PortBase extends DockerBase implements Port {
     @Override
     public void onConnected(int agentId, Rudder rd) throws HttpException {
 
-        checkAdmitted((NetworkChannelRudder) rd);
+        checkAdmitted((NetworkRudder) rd);
 
         InboundShip sip = getShipStore(agentId).rent();
         Transporter tp;
@@ -233,7 +233,7 @@ public abstract class PortBase extends DockerBase implements Port {
         else {
             if(socketBufferSize < 0) {
                 try {
-                    socketBufferSize = ((NetworkChannelRudder)rd).getSocketReceiveBufferSize();
+                    socketBufferSize = ((NetworkRudder)rd).getSocketReceiveBufferSize();
                 }
                 catch(IOException e) {
                     socketBufferSize = 8192;
@@ -273,7 +273,7 @@ public abstract class PortBase extends DockerBase implements Port {
     ///////////////////////////////////////////////////////////////////////
     // private methods
     ///////////////////////////////////////////////////////////////////////
-    private void checkAdmitted(NetworkChannelRudder rd) throws HttpException {
+    private void checkAdmitted(NetworkRudder rd) throws HttpException {
         for(Permission p : permissionList) {
             p.socketAdmitted(rd);
         }

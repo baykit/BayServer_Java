@@ -1,23 +1,12 @@
 package yokohama.baykit.bayserver.rudder;
 
-import java.io.IOException;
-import java.net.InetAddress;
 import java.nio.channels.NetworkChannel;
 
-public abstract class NetworkChannelRudder extends ChannelRudder {
+public abstract class NetworkChannelRudder extends ChannelRudder implements NetworkRudder {
 
     public NetworkChannelRudder(NetworkChannel ch) {
         super(ch);
     }
-
-    ////////////////////////////////////////////
-    // Abstract methods
-    ////////////////////////////////////////////
-
-    public abstract int getRemotePort() throws IOException;
-    public abstract InetAddress getRemoteAddress() throws IOException;
-    public abstract InetAddress getLocalAddress() throws IOException;
-    public abstract int getSocketReceiveBufferSize() throws IOException;
 
     ////////////////////////////////////////////
     // Static methods

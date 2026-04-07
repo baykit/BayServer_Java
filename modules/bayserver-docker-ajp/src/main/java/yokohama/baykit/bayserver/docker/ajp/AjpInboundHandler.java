@@ -7,7 +7,7 @@ import yokohama.baykit.bayserver.common.InboundHandler;
 import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.docker.ajp.command.*;
 import yokohama.baykit.bayserver.protocol.*;
-import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
+import yokohama.baykit.bayserver.rudder.NetworkRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
@@ -340,7 +340,7 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
         tur.req.remoteAddress = reqCommand.remoteAddr;
         tur.req.remoteHostFunc = () ->  reqCommand.remoteHost;
 
-        NetworkChannelRudder nrd = (NetworkChannelRudder) ship().rudder;
+        NetworkRudder nrd = (NetworkRudder) ship().rudder;
         try {
             tur.req.serverAddress = nrd.getLocalAddress().getHostAddress();
         } catch (IOException e) {

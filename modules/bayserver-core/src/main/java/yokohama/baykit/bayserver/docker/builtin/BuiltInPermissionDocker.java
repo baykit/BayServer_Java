@@ -10,7 +10,7 @@ import yokohama.baykit.bayserver.common.Groups;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.Permission;
 import yokohama.baykit.bayserver.docker.base.DockerBase;
-import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
+import yokohama.baykit.bayserver.rudder.NetworkRudder;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.Headers;
 import yokohama.baykit.bayserver.util.HostMatcher;
@@ -39,7 +39,7 @@ public class BuiltInPermissionDocker extends DockerBase implements Permission {
             this.admit = admit;
         }
 
-        public boolean admitted(NetworkChannelRudder rd) {
+        public boolean admitted(NetworkRudder rd) {
             return matcher.match(rd) == admit;
         }
 
@@ -49,7 +49,7 @@ public class BuiltInPermissionDocker extends DockerBase implements Permission {
     }
     
     private interface PermissionMatcher {
-        boolean match(NetworkChannelRudder rd);
+        boolean match(NetworkRudder rd);
         boolean match(Tour tour);
     }
     
@@ -61,7 +61,7 @@ public class BuiltInPermissionDocker extends DockerBase implements Permission {
             this.mch = new HostMatcher(hostPtn);
         }
 
-        public boolean match(NetworkChannelRudder rd)  {
+        public boolean match(NetworkRudder rd)  {
             try {
                 return mch.match(rd.getRemoteAddress().getHostName());
             }
@@ -84,7 +84,7 @@ public class BuiltInPermissionDocker extends DockerBase implements Permission {
             this.mch = new IpMatcher(ipDesc);
         }
 
-        public boolean match(NetworkChannelRudder rd)  {
+        public boolean match(NetworkRudder rd)  {
             try {
                 return mch.match(rd.getRemoteAddress());
             }
@@ -110,7 +110,7 @@ public class BuiltInPermissionDocker extends DockerBase implements Permission {
     // Override methods
     /////////////////////////////////////////////////////////////////
     @Override
-    public void socketAdmitted(NetworkChannelRudder ch) throws HttpException {
+    public void socketAdmitted(NetworkRudder ch) throws HttpException {
         // Check remote host
         boolean isOk = true;
         for (CheckItem chk : checkList) {

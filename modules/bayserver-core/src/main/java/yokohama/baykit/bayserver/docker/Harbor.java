@@ -11,11 +11,13 @@ public interface Harbor {
         Job,
         Taxi,
         Train,
+        Rover,
     }
 
     enum RecipientType {
         Spider,
-        Pipe
+        Pipe,
+        Rover,
     }
 
     /** Default charset */
@@ -124,6 +126,8 @@ public interface Harbor {
                 return "taxi";
             case Train:
                 return "train";
+            case Rover:
+                return "rover";
             default:
                 return null;
         }
@@ -145,6 +149,8 @@ public interface Harbor {
                 return MultiPlexerType.Taxi;
             case "train":
                 return MultiPlexerType.Train;
+            case "rover":
+                return MultiPlexerType.Rover;
             default:
                 throw new IllegalArgumentException();
         }
@@ -157,6 +163,9 @@ public interface Harbor {
 
             case Pipe:
                 return "pipe";
+
+            case Rover:
+                return "rover";
 
             default:
                 return null;
@@ -171,6 +180,8 @@ public interface Harbor {
                 return RecipientType.Spider;
             case "pipe":
                 return RecipientType.Pipe;
+            case "rover":
+                return RecipientType.Rover;
             default:
                 throw new IllegalArgumentException();
         }

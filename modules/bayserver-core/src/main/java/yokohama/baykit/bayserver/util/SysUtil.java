@@ -40,6 +40,22 @@ public class SysUtil {
         return System.getProperty("os.name").toLowerCase().startsWith("win");
     }
 
+    public static boolean supportIoUring() {
+        if (runOnWindows())
+            return false;
+        if (!System.getProperty("os.name").toLowerCase().contains("linux"))
+            return false;
+        try {
+            Class<?> ioUringClass = Class.forName("yokohama.baykit.bayserver.util.uring.IoUring");
+            Method m = ioUringClass.getMethod("isSupported");
+            return (boolean) m.invoke(null);
+        }
+        catch (Throwable e) {
+            BayLog.debug(e, "io_uring not available: %s", e);
+            return false;
+        }
+    }
+
     public static long pid() {
         long pid = -1;
         try {

@@ -48,6 +48,7 @@ public interface Multiplexer {
 
     boolean isNonBlocking();
     boolean useAsyncAPI();
+    boolean useUringAPI();
 
     boolean consumeOldestUnit(RudderState st);
     void closeRudder(Rudder rd);
