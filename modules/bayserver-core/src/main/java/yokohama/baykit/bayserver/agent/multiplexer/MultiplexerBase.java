@@ -19,7 +19,7 @@ public abstract class MultiplexerBase implements Multiplexer {
     int channelCount;
     protected final GrandAgent agent;
 
-    protected final HashSet<ChannelRudder> rudders = new HashSet<>();
+    protected final ArrayList<Rudder> rudders = new ArrayList<>();
 
     public MultiplexerBase(GrandAgent agt) {
         this.agent = agt;
@@ -39,6 +39,10 @@ public abstract class MultiplexerBase implements Multiplexer {
         st.multiplexer = this;
         ((ChannelRudder)rd).state = st;
         channelCount++;
+
+        synchronized (rudders) {
+            rudders.add(rd);
+        }
 
         st.access();
     }
@@ -114,26 +118,29 @@ public abstract class MultiplexerBase implements Multiplexer {
 
         long now = RoughTime.currentTimeMillis();
 
-        for (Iterator<ChannelRudder> it = rudders.iterator(); it.hasNext(); ) {
-            ChannelRudder rd = it.next();
-            if(rd.closed())
-                it.remove();
-
-            RudderState st = (RudderState)rd.state;
-            if(st.transporter != null) {
-                if (st.transporter.checkTimeout(rd, (int) (now - st.lastAccessTime) / 1000)) {
-                    BayLog.debug("%s timeout: rd=%s", agent, rd);
-                    reqClose(rd);
+        synchronized (rudders) {
+            for (Iterator<Rudder> it = rudders.iterator(); it.hasNext(); ) {
+                Rudder rd = it.next();
+                if(rd.closed())
                     it.remove();
+
+                RudderState st = (RudderState)((ChannelRudder)rd).state;
+                if(st != null && st.transporter != null) {
+                    if (st.transporter.checkTimeout(rd, (int) (now - st.lastAccessTime) / 1000)) {
+                        BayLog.debug("%s timeout: rd=%s", agent, rd);
+                        reqClose(rd);
+                        it.remove();
+                    }
                 }
             }
+
         }
     }
 
     protected final void closeAll() {
         // Use copied ArrayList to avoid ConcurrentModificationException
-        for (Iterator<ChannelRudder> it = rudders.iterator(); it.hasNext(); ) {
-            ChannelRudder rd = it.next();
+        for (Iterator<Rudder> it = rudders.iterator(); it.hasNext(); ) {
+            Rudder rd = it.next();
             if(rd != agent.commandReceiver.rudder) {
                 closeRudder(rd);
                 it.remove();

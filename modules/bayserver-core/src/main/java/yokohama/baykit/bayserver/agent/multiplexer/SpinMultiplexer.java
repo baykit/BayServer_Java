@@ -273,9 +273,9 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
         ArrayList<Object> removeList = new ArrayList<>();;
         synchronized (rudders) {
             long now = RoughTime.currentTimeMillis();
-            for (Iterator<ChannelRudder> it = rudders.iterator(); it.hasNext(); ) {
-                ChannelRudder rd = it.next();
-                RudderState st = (RudderState)rd.state;
+            for (Iterator<Rudder> it = rudders.iterator(); it.hasNext(); ) {
+                Rudder rd = it.next();
+                RudderState st = (RudderState)((ChannelRudder)rd).state;
                 if (st.transporter != null && st.transporter.checkTimeout(st.rudder, (int) (now - st.lastAccessTime) / 1000)) {
                     closeRudder(st.rudder);
                     it.remove();
