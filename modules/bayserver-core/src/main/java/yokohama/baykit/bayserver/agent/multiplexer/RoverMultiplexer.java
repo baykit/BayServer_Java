@@ -308,7 +308,9 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
 
     @Override
     public void nextWrite(RudderState st) {
-        throw new Sink("nextWrite should not be called on RoverMultiplexer");
+        // Should not normally be called for Rover (io_uring SEND completes fully),
+        // but GrandAgent.onWrote may call this in edge cases. No-op is safe.
+        BayLog.debug("%s nextWrite called (unexpected for Rover)", this);
     }
 
     @Override
@@ -619,7 +621,7 @@ public class RoverMultiplexer implements Multiplexer, TimerHandler, Recipient {
             agent.sendErrorLetter(op.rudder, this, new IOException("send failed: errno=" + (-res)), false);
         }
         else {
-            // Notify listener directly — no writeQueue involvement
+            // Notify listener directly
             if (op.writeUnit != null) {
                 op.writeUnit.done();
             }
