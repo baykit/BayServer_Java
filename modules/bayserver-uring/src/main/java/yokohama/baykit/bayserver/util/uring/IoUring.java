@@ -416,7 +416,11 @@ public class IoUring implements AutoCloseable {
                         (long) flags,
                         0L
                 );
-                int errno = (ret2 == -1) ? (int) ERRNO_HANDLE.get(capturedState, 0L) : 0;
+                if (ret2 >= 0) {
+                    // Retry succeeded — transient error
+                    return (int) ret2;
+                }
+                int errno = (int) ERRNO_HANDLE.get(capturedState, 0L);
                 throw new IOException("io_uring_enter failed: errno=" + errno
                         + " (fd=" + ringFd + " toSubmit=" + toSubmit
                         + " minComplete=" + minComplete + " flags=0x" + Integer.toHexString(flags) + ")");
@@ -478,7 +482,10 @@ public class IoUring implements AutoCloseable {
                         geteventsArg.address(),
                         24L
                 );
-                int errno = (ret2 == -1) ? (int) ERRNO_HANDLE.get(capturedState, 0L) : 0;
+                if (ret2 >= 0) {
+                    return (int) ret2;
+                }
+                int errno = (int) ERRNO_HANDLE.get(capturedState, 0L);
                 if (errno == 62) {  // ETIME
                     return 0;
                 }
