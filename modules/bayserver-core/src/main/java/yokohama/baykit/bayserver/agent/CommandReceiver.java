@@ -124,7 +124,7 @@ public class CommandReceiver extends Ship {
             }
         }
         else {
-            agt.netMultiplexer.reqWrite(rudder, buf, null, null, null);
+            agt.netMultiplexer.reqWrite(rudder, buf, null, null, true, null);
         }
     }
 

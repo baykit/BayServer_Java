@@ -109,13 +109,13 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
         HttpUtil.sendNewLine(hout);
         byte[] data = hout.toByteArray();
         FcgCommand cmd = new CmdStdOut(tur.req.key, data, 0, data.length);
-        protocolHandler.post(cmd);
+        protocolHandler.post(cmd, true);
     }
 
     @Override
     public void sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
         CmdStdOut cmd = new CmdStdOut(tur.req.key, bytes, ofs, len);
-        protocolHandler.post(cmd, lis);
+        protocolHandler.post(cmd, true, lis);
     }
 
     @Override
@@ -130,7 +130,7 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
 
         // Send empty stdout command
         FcgCommand cmd = new CmdStdOut(tur.req.key);
-        protocolHandler.post(cmd);
+        protocolHandler.post(cmd, true);
 
         // Send end request command
         cmd = new CmdEndRequest(tur.req.key);
@@ -141,7 +141,7 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
         };
 
         try {
-            protocolHandler.post(cmd, () -> {
+            protocolHandler.post(cmd, true, () -> {
                 BayLog.debug("%s call back in sendEndTour: tur=%s", ship(), tur);
                 ensureFunc.run();
                 lis.dataConsumed();

@@ -287,7 +287,7 @@ public final class WarpShip extends Ship {
             if(cmd == null)
                 listener.dataConsumed();
             else
-                protocolHandler.post(cmd, listener);
+                protocolHandler.post(cmd, true, listener);
         }
     }
 
@@ -297,7 +297,7 @@ public final class WarpShip extends Ship {
             if(cmdAndLis.a == null)
                 cmdAndLis.b.dataConsumed();
             else
-                protocolHandler.post(cmdAndLis.a, cmdAndLis.b);
+                protocolHandler.post(cmdAndLis.a, true, cmdAndLis.b);
         }
         cmdBuf.clear();
     }

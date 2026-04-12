@@ -14,7 +14,7 @@ public class PacketPacker<P extends Packet> implements Reusable {
 
     }
 
-    public synchronized void post(Ship sip, P pkt, DataConsumeListener listener) throws IOException {
+    public synchronized void post(Ship sip, P pkt, boolean flush, DataConsumeListener listener) throws IOException {
         if(listener == null)
             throw new NullPointerException();
 
@@ -22,6 +22,6 @@ public class PacketPacker<P extends Packet> implements Reusable {
                 sip.rudder,
                 ByteBuffer.wrap(pkt.buf, 0, pkt.bufLen),
                 null,
-                pkt, () -> listener.dataConsumed());
+                pkt, flush, () -> listener.dataConsumed());
     }
 }

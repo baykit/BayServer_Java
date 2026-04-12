@@ -130,11 +130,12 @@ public class PlainTransporter implements Transporter, Reusable {
             ByteBuffer buf,
             InetSocketAddress adr,
             Object tag,
+            boolean flush,
             DataConsumeListener listener)
             throws IOException {
 
         BayLog.trace("%s reqWrite: %s", buf, tag);
-        multiplexer.reqWrite(rd, buf, adr, tag, listener);
+        multiplexer.reqWrite(rd, buf, adr, tag, flush, listener);
     }
 
     @Override

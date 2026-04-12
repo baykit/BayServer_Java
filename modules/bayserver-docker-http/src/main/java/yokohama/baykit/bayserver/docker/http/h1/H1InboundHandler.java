@@ -130,13 +130,13 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         }
 
         CmdHeader cmd = CmdHeader.newResHeader(tur.res.headers, tur.req.protocol);
-        protocolHandler.post(cmd);
+        protocolHandler.post(cmd, true);
     }
 
     @Override
     public void sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
         CmdContent cmd = new CmdContent(bytes, ofs, len);
-        protocolHandler.post(cmd, lis);
+        protocolHandler.post(cmd, true, lis);
     }
 
     @Override
@@ -164,7 +164,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         };
 
         try {
-            protocolHandler.post(cmd, () -> {
+            protocolHandler.post(cmd, true, () -> {
                 BayLog.debug("%s call back of end content command: tur=%s", ship, tur);
                 ensureFunc.run();
                 lis.dataConsumed();
