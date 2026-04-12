@@ -133,7 +133,7 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
     public NextSocketAction handleSettings(CmdSettings cmd) throws IOException {
         if(!cmd.flags.ack()){
             CmdSettings res = new CmdSettings(0, new H2Flags(H2Flags.FLAGS_ACK));
-            protocolHandler.post(res);
+            protocolHandler.post(res, true);
         }
         return NextSocketAction.Continue;
     }
@@ -154,7 +154,7 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
     @Override
     public NextSocketAction handlePing(CmdPing cmd) throws IOException {
         CmdPing res = new CmdPing(cmd.streamId, new H2Flags(H2Flags.FLAGS_ACK), cmd.opaqueData);
-        protocolHandler.post(res);
+        protocolHandler.post(res, true);
         return NextSocketAction.Continue;
     }
 

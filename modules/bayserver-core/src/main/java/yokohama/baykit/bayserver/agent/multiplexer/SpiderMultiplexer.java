@@ -106,7 +106,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
     }
 
     @Override
-    public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) {
+    public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, boolean flush, DataConsumeListener listener) {
         if(rd == null)
             throw new NullPointerException();
 
@@ -123,7 +123,10 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         synchronized (st.writeQueue) {
             st.writeQueue.add(unt);
         }
-        addOperation(rd, OP_WRITE);
+
+        if(flush || st.remaining() >= st.bufsize) {
+            addOperation(rd, OP_WRITE);
+        }
 
         st.access();
     }

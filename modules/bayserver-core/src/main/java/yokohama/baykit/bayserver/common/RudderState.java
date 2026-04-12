@@ -32,6 +32,7 @@ public class RudderState implements Reusable {
     public boolean finale;
     public EOFChecker eofChecker;
     public int timeoutSec;
+    public int bufsize;
 
     public RudderState() {
 
@@ -53,12 +54,11 @@ public class RudderState implements Reusable {
         this.transporter = tp;
         this.timeoutSec = timeoutSec;
 
-        int bufsize;
         if(tp != null) {
-            bufsize = tp.getReadBufferSize();
+            this.bufsize = tp.getReadBufferSize();
         }
         else {
-            bufsize = 8192;
+            this.bufsize = 8192;
         }
 
         boolean alloc = true;
@@ -109,6 +109,14 @@ public class RudderState implements Reusable {
 
     public void access() {
         lastAccessTime = RoughTime.currentTimeMillis();
+    }
+
+    public int remaining() {
+        int total = 0;
+        for (WriteUnit unit : writeQueue) {
+            total += unit.remaining();
+        }
+        return total;
     }
 
     public void end() {

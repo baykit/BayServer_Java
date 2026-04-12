@@ -145,7 +145,7 @@ public final class QicTransporter implements Transporter {
     }
 
     @Override
-    public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) throws IOException {
+    public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, boolean flush, DataConsumeListener listener) throws IOException {
         multiplexer.reqWrite(rd, buf, adr, tag, listener);
     }
 

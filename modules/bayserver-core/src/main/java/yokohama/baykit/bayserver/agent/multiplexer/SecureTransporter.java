@@ -153,6 +153,7 @@ public class SecureTransporter extends PlainTransporter {
             ByteBuffer appOut,
             InetSocketAddress adr,
             Object tag,
+            boolean flush,
             DataConsumeListener listener)
             throws IOException {
 
@@ -184,12 +185,12 @@ public class SecureTransporter extends PlainTransporter {
 
             netOut.buffer.flip();
             if(appOut.hasRemaining()) {
-                super.reqWrite(rd, netOut.buffer, adr, tag, () -> {
+                super.reqWrite(rd, netOut.buffer, adr, tag, flush, () -> {
                     netOutStore.Return(netOut);
                 });
             }
             else {
-                super.reqWrite(rd, netOut.buffer, adr, tag, () -> {
+                super.reqWrite(rd, netOut.buffer, adr, tag, flush, () -> {
                     netOutStore.Return(netOut);
                     listener.dataConsumed();
                 });

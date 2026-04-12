@@ -80,11 +80,11 @@ public abstract class ProtocolHandler<C extends Command<C, P, ?>, P extends Pack
         return packetUnpacker.bytesReceived(buf);
     }
 
-    public final void post(C cmd) throws IOException {
-        post(cmd, null);
+    public final void post(C cmd, boolean flush) throws IOException {
+        post(cmd, flush, null);
     }
 
-    public void post(C cmd, DataConsumeListener listener) throws IOException {
-        commandPacker.post(ship, cmd, listener);
+    public void post(C cmd, boolean flush, DataConsumeListener listener) throws IOException {
+        commandPacker.post(ship, cmd, flush, listener);
     }
 }
