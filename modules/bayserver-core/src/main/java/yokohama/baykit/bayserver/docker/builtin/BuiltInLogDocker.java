@@ -237,7 +237,7 @@ public class BuiltInLogDocker extends DockerBase implements Log {
             }
             byte[] bytes = StringUtil.toBytes(sb.toString() + CharUtil.LF);
             ByteBuffer buf = ByteBuffer.wrap(bytes, 0, bytes.length);
-            info.multiplexer.reqWrite(info.rudder, buf, null, "log", null);
+            info.multiplexer.reqWrite(info.rudder, buf, null, "log", true, null);
         }
     }
 

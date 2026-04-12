@@ -26,16 +26,16 @@ public class CommandPacker<C extends Command<C, P, H>, P extends Packet, H exten
     public void reset() {
     }
 
-    public void post(Ship sip, C cmd) throws IOException {
-        post(sip, cmd, null);
+    public void post(Ship sip, C cmd, boolean flush) throws IOException {
+        post(sip, cmd, flush, null);
     }
 
-    public void post(Ship sip, C cmd, DataConsumeListener listener) throws IOException {
+    public void post(Ship sip, C cmd, boolean flush, DataConsumeListener listener) throws IOException {
         P pkt = pktStore.rent(cmd.type);
 
         try {
             cmd.pack(pkt);
-            pktPacker.post(sip, pkt, () -> {
+            pktPacker.post(sip, pkt, flush, () -> {
                 pktStore.Return(pkt);
                 if (listener != null)
                     listener.dataConsumed();
