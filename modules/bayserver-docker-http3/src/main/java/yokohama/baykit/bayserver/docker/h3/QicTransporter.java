@@ -146,7 +146,7 @@ public final class QicTransporter implements Transporter {
 
     @Override
     public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, boolean flush, DataConsumeListener listener) throws IOException {
-        multiplexer.reqWrite(rd, buf, adr, tag, listener);
+        multiplexer.reqWrite(rd, buf, adr, tag, flush, listener);
     }
 
     @Override
@@ -345,7 +345,7 @@ public final class QicTransporter implements Transporter {
 
         // Check packets held in data listener
         if(tmpPostPacket != null) {
-            multiplexer.reqWrite(rudder, tmpPostPacket.asBuffer(), tmpPostAddress, tmpPostPacket, null);
+            multiplexer.reqWrite(rudder, tmpPostPacket.asBuffer(), tmpPostAddress, tmpPostPacket, true, null);
             tmpPostPacket = null;
             tmpPostAddress = null;
             posted = true;

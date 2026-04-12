@@ -376,7 +376,7 @@ public class QicProtocolHandler
 
             //BayLog.debug("%s post packet len=%d addr=%s", this, len, addr[0]);
             pkt.bufLen = len;
-            multiplexer.reqWrite(ship.rudder, pkt.asBuffer(), addr[0], pkt, null);
+            multiplexer.reqWrite(ship.rudder, pkt.asBuffer(), addr[0], pkt, true, null);
             posted = true;
         }
         return posted;
