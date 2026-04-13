@@ -35,6 +35,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
     private Selector selector;
 
     final ArrayList<ChannelRudder> ruddersToRegister = new ArrayList<>(16384);
+    final ArrayList<RudderState> tryWriteList = new ArrayList<>();
 
     public SpiderMultiplexer(GrandAgent agent, boolean anchorable) {
         super(agent);
@@ -124,8 +125,16 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
             st.writeQueue.add(unt);
         }
 
-        if(flush || st.remaining() >= st.bufsize) {
-            addOperation(rd, OP_WRITE);
+        // Flush the write queue if explicitly requested or if the buffered data
+        // has reached the buffer size threshold. When neither condition is met,
+        // the data stays in the write queue to be batched with subsequent writes,
+        // reducing the number of syscalls (e.g., headers and body are combined
+        // into a single writev call).
+        if(st.remaining() > 0 && (flush || st.remaining() >= st.bufsize)) {
+            synchronized (tryWriteList) {
+                tryWriteList.add(st);
+            }
+            selector.wakeup();
         }
 
         st.access();
@@ -318,6 +327,32 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
             SelectionKey key = it.next();
             it.remove();
             handleChannel(key);
+        }
+
+        // Shortcut for write: instead of registering OP_WRITE with the selector
+        // and waiting for the next select() cycle to detect writability, we attempt
+        // to write directly here. This avoids two epoll_ctl syscalls per request
+        // (one for registering OP_WRITE and one for removing it after write completes).
+        // If the direct write only partially succeeds, the normal selector-based
+        // write path (via OP_WRITE registration) will handle the remainder.
+        while(true) {
+            RudderState st;
+            synchronized (tryWriteList) {
+                if(tryWriteList.isEmpty())
+                    break;
+                st = tryWriteList.remove(0);
+            }
+            try {
+                onWritable(st);
+            } catch (Throwable e) {
+                if(e instanceof Sink) {
+                    throw (Sink)e;
+                }
+                else {
+                    BayLog.error(e, "%s Unhandled error on deferred write: %s (rd=%s)", agent, e, st.rudder);
+                    throw new Sink("Unhandled error: %s", e);
+                }
+            }
         }
 
         return count > 0;
