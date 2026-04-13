@@ -109,13 +109,13 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
         HttpUtil.sendNewLine(hout);
         byte[] data = hout.toByteArray();
         FcgCommand cmd = new CmdStdOut(tur.req.key, data, 0, data.length);
-        protocolHandler.post(cmd, true);
+        protocolHandler.post(cmd, false);
     }
 
     @Override
     public void sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
         CmdStdOut cmd = new CmdStdOut(tur.req.key, bytes, ofs, len);
-        protocolHandler.post(cmd, true, lis);
+        protocolHandler.post(cmd, false, lis);
     }
 
     @Override
