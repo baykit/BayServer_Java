@@ -2,7 +2,7 @@
 version=`cat VERSION`
 export VERSION=$version
 
-mvn_cmd=$HOME/git/maven/bin/mvn
+mvn_cmd=mvn
 
 version_file=modules/bayserver-core/src/main/java/yokohama/baykit/bayserver/Version.java
 temp_version_file=/tmp/Version.java
