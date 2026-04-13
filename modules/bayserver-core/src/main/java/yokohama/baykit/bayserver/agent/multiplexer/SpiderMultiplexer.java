@@ -589,7 +589,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
             }
 
             Channel ch = ChannelRudder.getChannel(st.rudder);
-            if (ch instanceof GatheringByteChannel) {
+            if (ch instanceof GatheringByteChannel && !st.writeQueue.get(0).skipFormalities()) {
                 // GatheringByteChannel.write(ByteBuffer[]) issues writev() syscall,
                 // which sends multiple buffers in a single kernel call. We need to
                 // build the ByteBuffer array from the write queue before calling writev().

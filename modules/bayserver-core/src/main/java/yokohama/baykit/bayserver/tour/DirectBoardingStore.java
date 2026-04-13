@@ -110,7 +110,8 @@ public class DirectBoardingStore {
             }
 
             long size = Files.size(Path.of(path));
-            if (size > BayServer.harbor.maxCargoSize()) {
+            int maxSize = BayServer.harbor.maxDirectBoardingSize();
+            if (maxSize >= 0 && size > maxSize) {
                 info = new DirectBoardingStore.FileInfo(path, null, (int) size);
             }
             else {
