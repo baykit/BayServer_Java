@@ -95,7 +95,7 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
             }
         }
         cmd.setStatus(tur.res.headers.status());
-        protocolHandler.post(cmd, true);
+        protocolHandler.post(cmd, false);
 
         //BayLog.debug(this + " send header: content-length=" + tour.resHeaders.getContentLength());
     }
@@ -103,7 +103,7 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
     @Override
     public void sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
         CmdSendBodyChunk cmd = new CmdSendBodyChunk(bytes, ofs, len);
-        protocolHandler.post(cmd, true, lis);
+        protocolHandler.post(cmd, false, lis);
     }
 
     @Override

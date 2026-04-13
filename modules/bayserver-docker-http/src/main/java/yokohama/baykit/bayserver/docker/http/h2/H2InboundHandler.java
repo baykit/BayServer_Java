@@ -141,7 +141,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
                 cmd.flags.setEndHeaders(true);
             }
 
-            protocolHandler.post(cmd, true);
+            protocolHandler.post(cmd, false);
         }
 
     }
@@ -149,7 +149,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
     @Override
     public void sendContent(Tour tur, byte[] bytes, int ofs, final int len, DataConsumeListener lis) throws IOException {
         CmdData cmd = new CmdData(tur.req.key, null, bytes, ofs, len);
-        protocolHandler.post(cmd, true, lis);
+        protocolHandler.post(cmd, false, lis);
     }
 
     @Override
@@ -259,7 +259,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
                                         CmdWindowUpdate upd2 = new CmdWindowUpdate(0);
                                         upd2.windowSizeIncrement = len;
                                         try {
-                                            protocolHandler.post(upd, true);
+                                            protocolHandler.post(upd, false);
                                             protocolHandler.post(upd2, true);
                                         }
                                         catch(IOException e) {
