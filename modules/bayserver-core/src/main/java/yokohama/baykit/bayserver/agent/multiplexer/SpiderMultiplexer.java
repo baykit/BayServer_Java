@@ -602,6 +602,15 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
                 int totalLen = 0;
                 for (int i = 0; i < bufs.length; i++) {
                     WriteUnit wUnit = st.writeQueue.get(i);
+                    if (wUnit.skipFormalities()) {
+                        // Transfer WriteUnit (sendfile) cannot be included in writev.
+                        // Truncate the array here; it will be processed in the next
+                        // onWritable call after the preceding buffer units are consumed.
+                        ByteBuffer limited[] = new ByteBuffer[i];
+                        System.arraycopy(bufs, 0, limited, 0, i);
+                        bufs = limited;
+                        break;
+                    }
                     bufs[i] = wUnit.buf;
                     totalLen += wUnit.remaining();
                     if(totalLen >= st.bufsize) {
