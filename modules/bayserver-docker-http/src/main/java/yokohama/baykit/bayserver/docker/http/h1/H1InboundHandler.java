@@ -130,13 +130,13 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         }
 
         CmdHeader cmd = CmdHeader.newResHeader(tur.res.headers, tur.req.protocol);
-        protocolHandler.post(cmd, true);
+        protocolHandler.post(cmd, false);
     }
 
     @Override
     public void sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
         CmdContent cmd = new CmdContent(bytes, ofs, len);
-        protocolHandler.post(cmd, true, lis);
+        protocolHandler.post(cmd, false, lis);
     }
 
     @Override
