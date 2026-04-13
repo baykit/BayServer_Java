@@ -15,6 +15,7 @@ import yokohama.baykit.bayserver.rudder.SocketChannelRudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -35,7 +36,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
     private Selector selector;
 
     final ArrayList<ChannelRudder> ruddersToRegister = new ArrayList<>(16384);
-    final ArrayList<RudderState> tryWriteList = new ArrayList<>();
+    final HashSet<RudderState> tryWriteList = new HashSet<>();
 
     public SpiderMultiplexer(GrandAgent agent, boolean anchorable) {
         super(agent);
@@ -335,13 +336,12 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         // (one for registering OP_WRITE and one for removing it after write completes).
         // If the direct write only partially succeeds, the normal selector-based
         // write path (via OP_WRITE registration) will handle the remainder.
-        while(true) {
-            RudderState st;
-            synchronized (tryWriteList) {
-                if(tryWriteList.isEmpty())
-                    break;
-                st = tryWriteList.remove(0);
-            }
+        RudderState[] writeTargets;
+        synchronized (tryWriteList) {
+            writeTargets = tryWriteList.toArray(new RudderState[0]);
+            tryWriteList.clear();
+        }
+        for(RudderState st : writeTargets) {
             try {
                 onWritable(st);
             } catch (Throwable e) {
@@ -590,12 +590,26 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
 
             Channel ch = ChannelRudder.getChannel(st.rudder);
             if (ch instanceof GatheringByteChannel) {
-                // Channel supports writev()
+                // GatheringByteChannel.write(ByteBuffer[]) issues writev() syscall,
+                // which sends multiple buffers in a single kernel call. We need to
+                // build the ByteBuffer array from the write queue before calling writev().
+                //
+                // If the total data size exceeds the socket send buffer size (bufsize),
+                // the kernel cannot accept all the data at once and writev() would return
+                // a partial write. To avoid wasting effort on data that won't be sent,
+                // we rebuild the array with only the buffers that fit within bufsize.
                 ByteBuffer bufs[] = new ByteBuffer[st.writeQueue.size()];
-                int i;
-                for (i = 0; i < st.writeQueue.size(); i++) {
+                int totalLen = 0;
+                for (int i = 0; i < bufs.length; i++) {
                     WriteUnit wUnit = st.writeQueue.get(i);
                     bufs[i] = wUnit.buf;
+                    totalLen += wUnit.remaining();
+                    if(totalLen >= st.bufsize) {
+                        ByteBuffer limited[] = new ByteBuffer[i + 1];
+                        System.arraycopy(bufs, 0, limited, 0, i + 1);
+                        bufs = limited;
+                        break;
+                    }
                 }
 
                 int n = (int)((GatheringByteChannel)ch).write(bufs);
