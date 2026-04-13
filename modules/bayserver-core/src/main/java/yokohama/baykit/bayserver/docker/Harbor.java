@@ -105,6 +105,12 @@ public interface Harbor {
     int maxCargoSize();
 
     /**
+     * The maximum file size, in bytes, for Direct Boarding (sendfile/transferTo).
+     * Files exceeding this size will not use the sendfile API.
+     */
+    int maxDirectBoardingSize();
+
+    /**
      * Find barge by path
      */
     Barge findBarge(String path);

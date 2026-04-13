@@ -123,6 +123,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     int maxDirectBoardings = DEFAULT_DIRECT_BOARDINGS;
 
     int maxCargoSize = DEFAULT_MAX_CARGO_SIZE;
+    int maxDirectBoardingSize = -1;  // -1 means no limit
 
     ///////////////////////////////////////////////////////////////////////
     // Implements Docker
@@ -380,6 +381,10 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                 maxCargoSize = StringUtil.parseSize(kv.value);
                 break;
 
+            case "maxdirectboardingsize":
+                maxDirectBoardingSize = StringUtil.parseSize(kv.value);
+                break;
+
         }
         return true;
     }
@@ -512,6 +517,11 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     @Override
     public int maxCargoSize() {
         return maxCargoSize;
+    }
+
+    @Override
+    public int maxDirectBoardingSize() {
+        return maxDirectBoardingSize;
     }
 
     @Override
