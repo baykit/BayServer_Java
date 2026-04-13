@@ -247,7 +247,11 @@ public class MemBargeDocker extends DockerBase implements Barge {
 
             }
             else {
-                tour.res.directBoarding = false; // Don't use OS cache (sendfile API)
+                // Cargo exceeds cache limit — follow harbor's directBoarding setting
+                // (sendfile for zero-copy transfer instead of byte-copy through protocol stack).
+                // Cargo fits in cache — disable directBoarding so content flows through
+                // userspace for in-memory serving.
+                tour.res.directBoarding = cgo.exceeded() && BayServer.harbor.directBoarding();
             }
         }
         cgo.access();
