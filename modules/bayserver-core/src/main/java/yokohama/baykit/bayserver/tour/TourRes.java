@@ -222,6 +222,7 @@ public class TourRes implements Reusable {
             throw new Sink("Header not sent");
 
         bytesPosted += len;
+        tour.ship.postResBytes(len);
         BayLog.debug("%s posted res content len=%d posted=%d limit=%d consumed=%d",
                 tour, len, bytesPosted, bytesLimit, bytesConsumed);
 
@@ -658,22 +659,19 @@ public class TourRes implements Reusable {
         BayLog.debug("%s resConsumed: len=%d posted=%d consumed=%d limit=%d",
                 tour, length, bytesPosted, bytesConsumed, bytesLimit);
 
-        boolean resume = false;
         boolean oldAvailable = available;
         if(bufferAvailable())
             available = true;
         if(!oldAvailable && available) {
             BayLog.debug("%s response available (^o^): posted=%d consumed=%d", this,  bytesPosted, bytesConsumed);
-            resume = true;
         }
 
-        if(tour.isRunning()) {
-            resConsumeListener.contentConsumed(length, resume);
-        }
+        // Ship-level buffer tracking and resume (notifies all suspended tours)
+        tour.ship.consumeResBytes(length);
     }
 
     private boolean bufferAvailable() {
-        return bytesPosted - bytesConsumed < BayServer.harbor.tourBufferSize();
+        return tour.ship.resBufferAvailable();
     }
 
 }

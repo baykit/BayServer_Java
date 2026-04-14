@@ -25,7 +25,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     public static final int DEFAULT_TAXI_RUNNERS = 8;
     public static final int DEFAULT_SOCKET_TIMEOUT_SEC = 300;
     public static final int DEFAULT_KEEP_TIMEOUT_SEC = 20;
-    public static final int DEFAULT_TOUR_BUFFER_SIZE = 1024 * 1024;  // 1M
+    public static final int DEFAULT_SHIP_BUFFER_SIZE = 1024 * 1024;  // 1M
     public static final String DEFAULT_CHARSET = "UTF-8";
     public static final int DEFAULT_CONTROL_PORT = -1;
     public static final MultiPlexerType DEFAULT_NET_MULTIPLEXER = MultiPlexerType.Spider;
@@ -70,7 +70,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     int keepTimeoutSec = DEFAULT_KEEP_TIMEOUT_SEC;
 
     /** Internal buffer size of Tour */
-    int tourBufferSize = DEFAULT_TOUR_BUFFER_SIZE;
+    int shipBufferSize = DEFAULT_SHIP_BUFFER_SIZE;
 
     /** Trace req/res header flag */
     boolean traceHeader = false;
@@ -292,8 +292,9 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                 this.keepTimeoutSec = Integer.parseInt(kv.value);
                 break;
 
+            case "shipbuffersize":
             case "tourbuffersize":
-                this.tourBufferSize = StringUtil.parseSize(kv.value);
+                this.shipBufferSize = StringUtil.parseSize(kv.value);
                 break;
 
             case "traceheader":
@@ -458,8 +459,8 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     }
 
     @Override
-    public int tourBufferSize() {
-        return tourBufferSize;
+    public int shipBufferSize() {
+        return shipBufferSize;
     }
 
     @Override

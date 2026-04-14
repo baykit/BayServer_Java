@@ -33,7 +33,7 @@ class ServletTrain extends Train implements ReqContentHandler {
         this.chain = chain;
         this.pipeOut = new PipedOutputStream();
         try {
-            this.pipeIn = new PipedInputStream(pipeOut, BayServer.harbor.tourBufferSize());
+            this.pipeIn = new PipedInputStream(pipeOut, BayServer.harbor.shipBufferSize());
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
