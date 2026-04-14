@@ -1,12 +1,11 @@
 package yokohama.baykit.bayserver.docker.file;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.ConfigException;
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
-import yokohama.baykit.bayserver.docker.Port;
+import yokohama.baykit.bayserver.tour.FileStore;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.docker.Docker;
@@ -56,15 +55,6 @@ public class FileDocker extends ClubBase {
     @Override
     public void arrive(Tour tur) throws HttpException {
 
-        // Setup FileStore if HTTP/1.x
-        Port portDkr = tur.ship.portDocker();
-        if(portDkr.protocol().equals("h1")
-                && !portDkr.secure()
-                && BayServer.harbor.directBoarding()
-                && fileStore == null) {
-            fileStore = new FileStore(BayServer.harbor.cacheLifespanSec(), BayServer.harbor.maxDirectBoardingFileCount() * 1024 * 1024);
-        }
-
         String relPath = tur.req.rewrittenURI != null ? tur.req.rewrittenURI : tur.req.uri;
         if(!StringUtil.empty(tur.town.name()))
             relPath = relPath.substring(tur.town.name().length());
@@ -81,7 +71,7 @@ public class FileDocker extends ClubBase {
 
         Path real = Paths.get(tur.town.location(), relPath);
 
-        FileContentHandler handler = new FileContentHandler(tur, real, tur.res.charset(), fileStore, listFiles);
+        FileContentHandler handler = new FileContentHandler(tur, real, tur.res.charset(), listFiles);
         tur.req.setReqContentHandler(handler);
     }
 }
