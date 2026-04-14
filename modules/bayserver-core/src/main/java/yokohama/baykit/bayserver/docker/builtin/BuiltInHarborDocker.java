@@ -40,6 +40,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     public static int DEFAULT_CARGO_LIFESPAN_SEC = 60;
     public static int DEFAULT_DIRECT_BOARDINGS = 128;
     private static final int DEFAULT_MAX_CARGO_SIZE = 1 * 1024 * 1024;
+    public static final int DEFAULT_MAX_TOURS_PER_SHIP = 128;
 
     /** Default charset */
     String charset = DEFAULT_CHARSET;
@@ -58,6 +59,9 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
 
     /** Max count of ships */
     int maxShips = DEFAULT_MAX_SHIPS;
+
+    /** Max count of tours per ship */
+    int maxToursPerShip = DEFAULT_MAX_TOURS_PER_SHIP;
 
     /** Socket timeout in seconds */
     int socketTimeoutSec = DEFAULT_SOCKET_TIMEOUT_SEC;
@@ -276,6 +280,10 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                 this.maxShips = Integer.parseInt(kv.value);
                 break;
 
+            case "maxtourspership":
+                this.maxToursPerShip = Integer.parseInt(kv.value);
+                break;
+
             case "timeout":
                 this.socketTimeoutSec = Integer.parseInt(kv.value);
                 break;
@@ -421,6 +429,11 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     @Override
     public int maxShips() {
         return maxShips;
+    }
+
+    @Override
+    public int maxToursPerShip() {
+        return maxToursPerShip;
     }
 
     @Override
