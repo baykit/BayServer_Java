@@ -277,6 +277,9 @@ public class TourRes implements Reusable {
             fileSize = info.fileLength;
             directBoarding = info.rudder != null;
         }
+        else {
+            directBoarding = false;
+        }
 
         if (rd == null) {
             if (Files.isDirectory(Path.of(path))) {
