@@ -32,6 +32,7 @@ public class RudderState implements Reusable {
     public boolean finale;
     public EOFChecker eofChecker;
     public int timeoutSec;
+    public boolean skipFormalities;
 
     public RudderState() {
 

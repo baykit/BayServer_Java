@@ -11,9 +11,7 @@ import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.common.RudderStateStore;
 import yokohama.baykit.bayserver.rudder.AsynchronousFileChannelRudder;
 import yokohama.baykit.bayserver.rudder.ReadableByteChannelRudder;
-import yokohama.baykit.bayserver.rudder.SelectableChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
-import yokohama.baykit.bayserver.rudder.WritableByteChannelRudder;
 import yokohama.baykit.bayserver.tour.ContentConsumeListener;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
@@ -21,43 +19,49 @@ import yokohama.baykit.bayserver.util.HttpStatus;
 import yokohama.baykit.bayserver.util.Mimes;
 
 import java.io.*;
-import java.nio.channels.AsynchronousFileChannel;
-import java.nio.channels.Channels;
-import java.nio.channels.Pipe;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.nio.channels.*;
+import java.nio.file.*;
 
 public class FileContentHandler implements ReqContentHandler {
 
     final Tour tour;
-    final File path;
+    final Path path;
     final String charset;
-    String mimeType;
+    final String mimeType;
+    final boolean directBoarding;
+    final FileStore fileStore;
+    final boolean listFiles;
     boolean abortable;
-    FileContent fileContent;
-    FileStore.FileContentStatus status;
 
-    public FileContentHandler(Tour tur, File path, FileStore.FileContentStatus status, String charset) {
+    public FileContentHandler(
+            Tour tur,
+            Path path,
+            String charset,
+            FileStore st,
+            boolean listFiles) {
         this.tour = tur;
         this.path = path;
-        this.status = status;
         this.charset = charset;
         this.abortable = true;
+        this.fileStore = st;
+        this.listFiles = listFiles;
+        this.directBoarding = st != null;
 
 
-        String rname = path.getName();
+        String mtype = null;
+        String rname = path.getFileName().toString();
         int pos = rname.lastIndexOf('.');
         if (pos >= 0) {
             String ext = rname.substring(pos + 1).toLowerCase();
-            mimeType = Mimes.getType(ext);
+            mtype = Mimes.getType(ext);
         }
 
-        if (mimeType == null)
-            mimeType = "application/octet-stream";
+        if (mtype == null)
+            mtype = "application/octet-stream";
 
-        if (mimeType.startsWith("text/") && charset != null)
-            mimeType = mimeType + "; charset=" + charset;
+        if (mtype.startsWith("text/") && charset != null)
+            mtype = mtype + "; charset=" + charset;
+        mimeType = mtype;
     }
 
     ///////////////////////////////////////////////////////////////////////
@@ -89,107 +93,84 @@ public class FileContentHandler implements ReqContentHandler {
     ////////////////////////////////////////////////////////////////////////////////
 
     public synchronized void reqStartTour() throws HttpException {
-        fileContent = status.fileContent;
+        BayLog.debug("%s reqStartTour", tour);
 
-        BayLog.debug("%s file content status: %d", tour, status.status);
-        switch (status.status) {
-            case FileStore.FileContentStatus.STARTED:
-            case FileStore.FileContentStatus.EXCEEDED:
-                sendFileAsync();
-                break;
+        FileSendInfo f = null;
+        if(fileStore != null) {
+            f = fileStore.get(path);
+        }
 
-            case FileStore.FileContentStatus.READING: {
-                // Wait file loaded
-                BayLog.debug("%s Cannot start tour (file reading)", tour);
-
-                GrandAgent agt = GrandAgent.get(tour.ship.agentId);
-                WaitFileShip waitFileShip = new WaitFileShip();
-                PlainTransporter tp = new PlainTransporter(
-                        agt.spiderMultiplexer,
-                        waitFileShip,
-                        true,
-                        8192,
-                        false);
-
-                Rudder sourceRd;
-                Rudder waitRd;
+        if(f == null) {
+            if (!Files.isDirectory(path)) {
                 try {
-                    Pipe pipe = Pipe.open();
-                    sourceRd = new SelectableChannelRudder(pipe.source());
-                    sourceRd.setNonBlocking();
-                    waitRd = new WritableByteChannelRudder(pipe.sink());
+                    f = getFileSendInfo(path, fileStore != null);
+                    if(fileStore != null) {
+                        fileStore.put(path, f);
+                    }
                 }
-                catch (IOException e) {
-                    throw new Sink("Fatal error: %s", e);
+                catch (FileNotFoundException | NoSuchFileException e) {
+                    throw new HttpException(HttpStatus.NOT_FOUND, path.toString());
                 }
-                waitFileShip.init(sourceRd, tp, tour, fileContent, this);
-                tour.res.setConsumeListener(ContentConsumeListener.devNull);
-
-                RudderState st = RudderStateStore.getStore(agt.agentId).rent();
-                st.init(sourceRd, tp);
-                agt.spiderMultiplexer.addRudderState(sourceRd, st);
-                agt.spiderMultiplexer.reqRead(sourceRd);
-
-                fileContent.addWaiter(waitRd);
-                break;
+                catch (Exception e) {
+                    BayLog.error(e);
+                    throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, path.toString());
+                }
             }
+        }
 
-            case FileStore.FileContentStatus.COMPLETED: {
-                sendFileFromCache();
-                break;
-            }
-
-            default:
-                throw new Sink();
+        if(f == null) {
+            handleDirectory(tour, path);
+        }
+        else if(directBoarding) {
+            skipFormalitiesAndTransmit(f);
+        }
+        else {
+            transmitWithFormalities(f);
         }
     }
 
-    public void sendFileAsync() throws HttpException {
-        //resHeaders.setStatus(HttpStatus.OK);
-        tour.res.headers.setContentType(mimeType);
-        tour.res.headers.setContentLength(path.length());
+
+    private void handleDirectory(Tour tur, Path path) throws HttpException {
+        if(listFiles) {
+            DirectoryTrain train = new DirectoryTrain(tur, path);
+            train.startTour();
+        }
+        else {
+            throw new HttpException(HttpStatus.FORBIDDEN, "Directory scan is prohibited");
+        }
+    }
+
+
+    private void transmitWithFormalities(FileSendInfo file) throws HttpException {
+
         try {
+            tour.res.headers.setContentType(mimeType);
+            tour.res.headers.setContentLength(Files.size(path));
+
             tour.res.sendHeaders(Tour.TOUR_ID_NOCHECK);
 
             int bufsize = tour.ship.protocolHandler.maxResPacketDataSize();
             GrandAgent agt = GrandAgent.get(tour.ship.agentId);
-            Multiplexer mpx = null;
-            Rudder rd = null;
+            Multiplexer mpx;
 
             switch (BayServer.harbor.fileMultiplexer()) {
                 case Spin: {
-                    AsynchronousFileChannel ch =
-                            AsynchronousFileChannel.open(Paths.get(path.getPath()), StandardOpenOption.READ);
-                    rd = new AsynchronousFileChannelRudder(ch);
                     mpx = agt.spinMultiplexer;
-
                     break;
                 }
 
                 case Job: {
-                    InputStream in = new FileInputStream(path);
-                    ReadableByteChannel ch = Channels.newChannel(in);
-                    rd = new ReadableByteChannelRudder(ch);
                     mpx = agt.jobMultiplexer;
-
                     break;
                 }
 
                 case Taxi: {
-                    InputStream in = new FileInputStream(path);
-                    ReadableByteChannel ch = Channels.newChannel(in);
-                    rd = new ReadableByteChannelRudder(ch);
                     mpx = agt.taxiMultiplexer;
-
                     break;
                 }
 
                 case Pigeon: {
-                    AsynchronousFileChannel ch =
-                            AsynchronousFileChannel.open(Paths.get(path.getPath()), StandardOpenOption.READ);
-                    rd = new AsynchronousFileChannelRudder(ch);
                     mpx = agt.pegionMultiplexer;
-
                     break;
                 }
 
@@ -205,7 +186,7 @@ public class FileContentHandler implements ReqContentHandler {
                     8192,
                     false);
 
-            sendFileShip.init(rd, tp, tour, fileContent);
+            sendFileShip.init(file.rudder, tp, tour);
             int sid = sendFileShip.id();
             tour.res.setConsumeListener((len, resume) -> {
                 if (resume) {
@@ -214,33 +195,78 @@ public class FileContentHandler implements ReqContentHandler {
             });
 
             RudderState st = RudderStateStore.getStore(agt.agentId).rent();
-            st.init(rd, tp);
-            mpx.addRudderState(rd, st);
-            mpx.reqRead(rd);
+            st.init(file.rudder, tp);
+            mpx.addRudderState(file.rudder, st);
+            mpx.reqRead(file.rudder);
 
         }
         catch (FileNotFoundException e) {
-            throw new HttpException(HttpStatus.NOT_FOUND, path.getPath());
+            throw new HttpException(HttpStatus.NOT_FOUND, path.toString());
         }
         catch (Exception e) {
             BayLog.error(e);
-            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, path.getPath());
+            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, path.toString());
         }
     }
 
-    public void sendFileFromCache() throws HttpException {
-        tour.res.setConsumeListener(ContentConsumeListener.devNull);
+    private void skipFormalitiesAndTransmit(FileSendInfo file) throws HttpException {
+        int turId = tour.id();
+        tour.res.setConsumeListener(new ContentConsumeListener() {
+            @Override
+            public void contentConsumed(int len, boolean resume) {
+                try {
+                    tour.res.endResContent(turId);
+                }
+                catch(IOException e) {
+                    BayLog.debug(e);
+                }
+            }
+        });
         tour.res.headers.setContentType(mimeType);
-        tour.res.headers.setContentLength(fileContent.content.array().length);
+        tour.res.headers.setContentLength(file.length);
         try {
             tour.res.sendHeaders(Tour.TOUR_ID_NOCHECK);
-            tour.res.sendResContent(Tour.TOUR_ID_NOCHECK, fileContent.content.array(), 0, fileContent.content.array().length);
-            tour.res.endResContent(Tour.TOUR_ID_NOCHECK);
-
+            tour.res.transferContent(Tour.TOUR_ID_NOCHECK, file.rudder, 0, file.length);
+            //tour.res.endResContent(Tour.TOUR_ID_NOCHECK);
         } catch (IOException e) {
             BayLog.error(e);
-            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, fileContent.path.getPath());
+            throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, path.toString());
         }
+    }
+
+    private FileSendInfo getFileSendInfo(Path path, boolean skipFormalities) throws IOException {
+        Rudder rd;
+
+        //BayLog.info("open file: %s", path.toString());
+
+        if(skipFormalities) {
+            FileChannel ch = FileChannel.open(path);
+            rd = new ReadableByteChannelRudder(ch);
+        }
+        else {
+            switch (BayServer.harbor.fileMultiplexer()) {
+                case Spin:
+                case Pigeon: {
+                    AsynchronousFileChannel ch =
+                            AsynchronousFileChannel.open(path, StandardOpenOption.READ);
+                    rd = new AsynchronousFileChannelRudder(ch);
+                    break;
+                }
+
+                case Job:
+                case Taxi: {
+                    InputStream in = new FileInputStream(path.toFile());
+                    ReadableByteChannel ch = Channels.newChannel(in);
+                    rd = new ReadableByteChannelRudder(ch);
+                    break;
+                }
+
+                default:
+                    throw new Sink();
+            }
+        }
+
+        return new FileSendInfo(rd, (int)Files.size(path));
     }
 
 }

@@ -8,6 +8,7 @@ import yokohama.baykit.bayserver.common.InboundShip;
 import yokohama.baykit.bayserver.docker.ajp.command.*;
 import yokohama.baykit.bayserver.protocol.*;
 import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
+import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
@@ -103,6 +104,11 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
     public void sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
         CmdSendBodyChunk cmd = new CmdSendBodyChunk(bytes, ofs, len);
         protocolHandler.post(cmd, lis);
+    }
+
+    @Override
+    public void transferContent(Tour tur, Rudder fileRd, int ofs, int len, DataConsumeListener lis) {
+        throw new Sink();
     }
 
     @Override

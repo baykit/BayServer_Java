@@ -17,6 +17,7 @@ import yokohama.baykit.bayserver.util.DataConsumeListener;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -215,6 +216,13 @@ public class InboundShip extends Ship {
         }
     }
 
+
+    public void transferResContent(int chkId, Tour tur, Rudder fileRd, int ofs, int len, DataConsumeListener lis) throws IOException {
+        checkShipId(chkId);
+
+        tourHandler().transferContent(tur, fileRd, ofs, len, lis);
+    }
+
     public void sendEndTour(int chkId, Tour tur, DataConsumeListener lis) throws IOException {
         checkShipId(chkId);
 
@@ -283,5 +291,6 @@ public class InboundShip extends Ship {
             }
         }
     }
+
 }
 
