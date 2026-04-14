@@ -94,7 +94,13 @@ public interface Harbor {
      * The maximum number of files (file descriptors) to be cached for Direct Boarding.
      * When this limit is reached, the least recently used (LRU) items are evicted.
      */
-    int maxDirectBoardingFileCount();
+    int maxDirectBoardings();
+
+    /**
+     * The maximum file size, in mega-bytes, to be cached.
+     * Files exceeding this size will not be cached.
+     */
+    int maxCargoSize();
 
     static String getMultiplexerTypeName(MultiPlexerType type) {
         switch (type) {
