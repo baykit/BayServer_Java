@@ -150,6 +150,11 @@ public final class QicTransporter implements Transporter {
     }
 
     @Override
+    public void reqTransfer(Rudder rd, Rudder fileRd, int ofs, int len, DataConsumeListener listener) throws IOException {
+        throw new Sink();
+    }
+
+    @Override
     public void reqClose(Rudder rd) {
         multiplexer.reqClose(rd);
     }

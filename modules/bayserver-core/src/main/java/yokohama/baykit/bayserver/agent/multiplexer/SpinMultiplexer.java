@@ -117,6 +117,11 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
     }
 
     @Override
+    public void reqTransfer(Rudder rd, Rudder fileRd, int ofs, int len, DataConsumeListener listener) {
+        throw new Sink();
+    }
+
+    @Override
     public void reqEnd(Rudder rd) {
         RudderState st = getRudderState(rd);
         st.finale = true;

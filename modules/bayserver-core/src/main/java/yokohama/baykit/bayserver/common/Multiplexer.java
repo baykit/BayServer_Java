@@ -30,6 +30,8 @@ public interface Multiplexer {
 
     void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) throws IOException;
 
+    void reqTransfer(Rudder rd, Rudder fileRd, int ofs, int len, DataConsumeListener listener) throws IOException;
+
     void reqEnd(Rudder rd);
 
     void reqClose(Rudder rd);

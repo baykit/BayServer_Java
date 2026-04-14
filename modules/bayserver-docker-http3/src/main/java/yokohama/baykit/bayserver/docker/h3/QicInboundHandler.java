@@ -10,6 +10,7 @@ import yokohama.baykit.bayserver.docker.h3.command.CmdFinished;
 import yokohama.baykit.bayserver.docker.h3.command.CmdHeader;
 import yokohama.baykit.bayserver.protocol.CommandHandler;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
+import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.tour.ReqContentHandler;
 import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.tour.TourReq;
@@ -161,6 +162,11 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
         }
 
         protocolHandler.postPackets();
+    }
+
+    @Override
+    public void transferContent(Tour tur, Rudder fileRd, int ofs, int len, DataConsumeListener lis) {
+        throw new Sink();
     }
 
     @Override

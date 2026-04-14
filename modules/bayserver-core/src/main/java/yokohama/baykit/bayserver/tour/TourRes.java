@@ -5,9 +5,11 @@ import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.docker.Trouble;
+import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.*;
 
 import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.util.StringTokenizer;
 
 public class TourRes implements Reusable {
@@ -235,6 +237,50 @@ public class TourRes implements Reusable {
             BayLog.debug("%s response unavailable (_ _): posted=%d consumed=%d", this,  bytesPosted, bytesConsumed);
 
         return available;
+    }
+
+
+    public void transferContent(int checkId, Rudder fileRd, int ofs, int len) throws IOException {
+
+        BayLog.debug("%s transfer content: ofs=%d len=%d", this, ofs, len);
+
+
+        // New listener
+        DataConsumeListener lis = () -> {
+            tour.checkTourId(checkId);
+            resConsumeListener.contentConsumed(len, false);
+        };
+
+        if (tour.isZombie()) {
+            BayLog.debug("%s zombie tour. return", this);
+            lis.dataConsumed();
+            return;
+        }
+
+        if (!headerSent)
+            throw new Sink("Header not sent");
+
+        bytesPosted += len;
+        BayLog.debug("%s posted res content len=%d posted=%d limit=%d consumed=%d",
+                tour, len, bytesPosted, bytesLimit, bytesConsumed);
+
+        if(tour.isAborted()) {
+            // Don't send peer any data. Do nothing
+            BayLog.debug("%s Aborted tour. do nothing: %s state=%s", this, tour, tour.state);
+            tour.changeState(checkId, Tour.TourState.ENDED);
+            lis.dataConsumed();
+        }
+        else {
+            try {
+                tour.ship.transferResContent(tour.shipId, tour, fileRd, ofs, len, lis);
+            }
+            catch(IOException e) {
+                BayLog.debug("%s error on sending resContent: %s", this, e);
+                lis.dataConsumed();
+                tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
+                throw e;
+            }
+        }
     }
 
     public boolean headerSent() {

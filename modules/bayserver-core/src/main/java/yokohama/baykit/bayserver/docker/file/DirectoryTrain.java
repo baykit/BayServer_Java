@@ -13,15 +13,18 @@ import yokohama.baykit.bayserver.util.HttpStatus;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.stream.Stream;
 
 public class DirectoryTrain extends Train implements ReqContentHandler {
 
-    final File path;
+    final Path path;
     Tour tour;
     boolean available;
     boolean abortable;
 
-    public DirectoryTrain(Tour tur, File path) {
+    public DirectoryTrain(Tour tur, Path path) {
         this.tour = tur;
         this.path = path;
         this.abortable = true;
@@ -50,22 +53,25 @@ public class DirectoryTrain extends Train implements ReqContentHandler {
 
             StringWriter w = new StringWriter();
             w.write("<html><body><br>");
-            File[] files = path.listFiles();
+
             if(!tour.req.uri.equals("/")) {
                 printLink(w, "../");
             }
-            if(files != null) {
-                for (File f : files) {
-                    if(f.isDirectory()) {
-                        if(!f.getName().equals(".")) {
-                            printLink(w, f.getName() + "/");
+            try (Stream<Path> stream = Files.list(path)) {
+                stream.forEach(f -> {
+                    if(Files.isDirectory(f)) {
+                        if(!f.getFileName().equals(".")) {
+                            printLink(w, f.getName(0) + "/");
                         }
                     }
                     else {
-                        printLink(w, f.getName());
+                        printLink(w, f.toFile().getName());
                     }
-                }
+                });
+            } catch (IOException e) {
+                throw e;
             }
+
             w.write("</body></html>");
             String s = w.toString();
 
