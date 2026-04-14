@@ -36,6 +36,9 @@ public interface Harbor {
     /** Max count of ships */
     int maxShips();
 
+    /** Max count of tours per ship (limits H2 concurrent streams per connection) */
+    int maxToursPerShip();
+
     /** Trouble docker */
     Trouble trouble();
 
