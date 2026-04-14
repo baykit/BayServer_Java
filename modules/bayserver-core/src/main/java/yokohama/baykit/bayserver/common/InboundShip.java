@@ -38,6 +38,11 @@ public class InboundShip extends Ship {
     TourStore tourStore;
     List<Tour> activeTours = new ArrayList<>();
 
+    /** Ship-level response buffer tracking */
+    int resBytesPosted;
+    int resBytesConsumed;
+    boolean resAvailable = true;
+
     public void initInbound(
             Rudder rd,
             int agentId,
@@ -72,6 +77,9 @@ public class InboundShip extends Ship {
         }
         needEnd = false;
         protocolHandler = null;
+        resBytesPosted = 0;
+        resBytesConsumed = 0;
+        resAvailable = true;
     }
 
     /////////////////////////////////////
@@ -238,6 +246,30 @@ public class InboundShip extends Ship {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // Custom methods
     ///////////////////////////////////////////////////////////////////////////////////////////////
+
+    public void postResBytes(int len) {
+        resBytesPosted += len;
+        if (!resBufferAvailable()) {
+            resAvailable = false;
+        }
+    }
+
+    public void consumeResBytes(int len) {
+        resBytesConsumed += len;
+        if (!resAvailable && resBufferAvailable()) {
+            resAvailable = true;
+            // Resume all suspended tours on this ship
+            for (Tour tur : activeTours) {
+                if (tur.isRunning() && tur.res.resConsumeListener != null) {
+                    tur.res.resConsumeListener.contentConsumed(0, true);
+                }
+            }
+        }
+    }
+
+    public boolean resBufferAvailable() {
+        return resBytesPosted - resBytesConsumed < BayServer.harbor.shipBufferSize();
+    }
 
     void endShip() {
         BayLog.debug("%s endShip", this);

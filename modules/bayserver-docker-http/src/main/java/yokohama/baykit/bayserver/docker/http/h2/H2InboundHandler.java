@@ -45,7 +45,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
 
     int reqContLen;
     int reqContRead;
-    int windowSize = BayServer.harbor.tourBufferSize();
+    int windowSize = BayServer.harbor.shipBufferSize();
     final H2Settings settings = new H2Settings();
     final HeaderBlockAnalyzer analyzer = new HeaderBlockAnalyzer();
     public final HeaderTable reqHeaderTbl = HeaderTable.createDynamicTable();
