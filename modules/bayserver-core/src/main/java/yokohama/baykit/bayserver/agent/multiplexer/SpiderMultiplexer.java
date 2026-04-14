@@ -109,8 +109,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
     }
 
     @Override
-    public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener)
-        throws IOException {
+    public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) {
         if(rd == null)
             throw new NullPointerException();
 
@@ -124,6 +123,29 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         }
 
         WriteUnit unt = new WriteUnit(buf, adr, tag, listener);
+        synchronized (st.writeQueue) {
+            st.writeQueue.add(unt);
+        }
+        addOperation(rd, OP_WRITE);
+
+        st.access();
+    }
+
+    @Override
+    public void reqTransfer(Rudder rd, Rudder fileRd, int ofs, int len, DataConsumeListener listener) {
+        if(rd == null)
+            throw new NullPointerException();
+
+        //BayLog.debug("askToWrite");
+        RudderState st = getRudderState(rd);
+        BayLog.debug("%s reqTransfer chState=%s ofs=%d len=%d", agent, st, ofs, len);
+        if(st == null) {
+            BayLog.warn("%s Channel is closed: %s", agent, rd);
+            listener.dataConsumed();
+            return;
+        }
+
+        WriteUnit unt = new WriteUnit(fileRd, ofs, len, listener);
         synchronized (st.writeQueue) {
             st.writeQueue.add(unt);
         }
@@ -197,7 +219,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         try {
             int op = key.interestOps();
             if((op & OP_WRITE) == 0) {
-                BayLog.warn( "%s do nothing: %s", agent, key);
+                BayLog.debug( "%s do nothing: %s", agent, key);
             }
             else {
                 int newOp = op & ~OP_WRITE;
@@ -531,41 +553,36 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
                 return;
             }
 
-            Channel ch = ChannelRudder.getChannel(st.rudder);
-            if (ch instanceof GatheringByteChannel) {
-                ByteBuffer bufs[] = new ByteBuffer[st.writeQueue.size()];
-                int i;
-                for (i = 0; i < st.writeQueue.size(); i++) {
-                    WriteUnit wUnit = st.writeQueue.get(i);
-                    bufs[i] = wUnit.buf;
+            int i;
+            for (i = 0; i < st.writeQueue.size(); i++) {
+                WriteUnit wUnit = st.writeQueue.get(i);
+
+                BayLog.debug("%s Try to write: pkt=%s pos=%d len=%d adr=%s",
+                        this, wUnit.tag, wUnit.position(), wUnit.remaining(), wUnit.adr);
+                //BayLog.debug(this + " " + new String(wUnit.buf.array(), 0, wUnit.buf.limit()));
+
+                int tryLen = wUnit.remaining();
+                int n;
+                if (wUnit.skipFormalities()) {
+                    n = (int)((FileChannel)ChannelRudder.getChannel(wUnit.file)).transferTo(
+                            wUnit.position(),
+                            tryLen,
+                            (WritableByteChannel) ChannelRudder.getChannel(st.rudder));
+
+                    BayLog.debug("%s Wrote %d/%d bytes", this, n, tryLen);
+                    wUnit.forward(n);
+                }
+                else if (st.rudder instanceof DatagramChannelRudder) {
+                    n = DatagramChannelRudder.getDataGramChannel(st.rudder).send(wUnit.buf, wUnit.adr);
+                }
+                else {
+                    n = st.rudder.write(wUnit.buf);
                 }
 
-                int n = (int)((GatheringByteChannel)ch).write(bufs);
                 agent.sendWroteLetter(st.id, st.rudder, this, n, false);
-            }
-            else {
-                int i;
-                for (i = 0; i < st.writeQueue.size(); i++) {
-                    WriteUnit wUnit = st.writeQueue.get(i);
-
-                    BayLog.debug("%s Try to write: pkt=%s pos=%d len=%d adr=%s",
-                            this, wUnit.tag, wUnit.buf.position(), wUnit.buf.remaining(), wUnit.adr);
-                    //BayLog.debug(this + " " + new String(wUnit.buf.array(), 0, wUnit.buf.limit()));
-
-                    int remain = wUnit.buf.remaining();
-                    int n;
-                    if (st.rudder instanceof DatagramChannelRudder) {
-                        n = DatagramChannelRudder.getDataGramChannel(st.rudder).send(wUnit.buf, wUnit.adr);
-                    }
-                    else {
-                        n = st.rudder.write(wUnit.buf);
-                    }
-
-                    agent.sendWroteLetter(st.id, st.rudder, this, n, false);
-                    if (n < remain) {
-                        BayLog.debug("%s Wrote %d bytes (Data remains)", this, n);
-                        break;
-                    }
+                if (n < tryLen) {
+                    BayLog.debug("%s Wrote %d bytes (Data remains)", this, n);
+                    break;
                 }
             }
         }

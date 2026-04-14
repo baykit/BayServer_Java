@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.common.RudderState;
 import yokohama.baykit.bayserver.common.WriteUnit;
@@ -148,6 +149,11 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
         }
 
         state.access();
+    }
+
+    @Override
+    public void reqTransfer(Rudder rd, Rudder fileRd, int ofs, int len, DataConsumeListener listener) {
+        throw new Sink();
     }
 
     @Override

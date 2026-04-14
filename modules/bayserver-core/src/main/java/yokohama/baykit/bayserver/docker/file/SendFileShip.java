@@ -15,15 +15,13 @@ public class SendFileShip extends ReadOnlyShip {
 
     int fileWroteLen;
 
-    FileContent fileContent;
     Tour tour;
     int tourId;
 
-    public void init(Rudder rd, Transporter tp, Tour tur, FileContent fileContent) {
+    public void init(Rudder rd, Transporter tp, Tour tur) {
         super.init(tur.ship.agentId, rd, tp);
         this.tour = tur;
         this.tourId = tur.tourId;
-        this.fileContent = fileContent;
     }
 
     @Override
@@ -55,12 +53,6 @@ public class SendFileShip extends ReadOnlyShip {
 
         try {
             boolean available = tour.res.sendResContent(tourId, buf.array(), 0, buf.limit());
-
-            if(fileContent != null) {
-		BayLog.debug("buf=%s target=%s", buf, fileContent.content);
-                fileContent.content.put(buf.array(), 0, buf.limit());
-            }
-
             buf.position(buf.limit());
 
             if(available) {
@@ -90,10 +82,6 @@ public class SendFileShip extends ReadOnlyShip {
     @Override
     public NextSocketAction notifyEof() {
         BayLog.debug("%s EOF", this);
-
-        if(fileContent != null) {
-            fileContent.complete();
-        }
 
         try {
             tour.res.endResContent(tourId);

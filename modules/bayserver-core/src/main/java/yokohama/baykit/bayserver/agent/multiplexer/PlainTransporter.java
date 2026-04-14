@@ -133,8 +133,18 @@ public class PlainTransporter implements Transporter, Reusable {
             DataConsumeListener listener)
             throws IOException {
 
-        BayLog.trace("%s reqWrite: %s", buf);
+        BayLog.trace("%s reqWrite: %s", buf, tag);
         multiplexer.reqWrite(rd, buf, adr, tag, listener);
+    }
+
+    @Override
+    public void reqTransfer(
+            Rudder rd,
+            Rudder fileRd,
+            int ofs,
+            int len,
+            DataConsumeListener listener) throws IOException {
+        multiplexer.reqTransfer(rd, fileRd, ofs, len, listener);
     }
 
     @Override

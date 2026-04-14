@@ -3,119 +3,57 @@ package yokohama.baykit.bayserver.docker.file;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.util.RoughTime;
 
-import java.io.File;
-import java.util.Iterator;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class FileStore {
 
-    public static class FileContentStatus {
-        static final int STARTED = 1;
-        static final int READING = 2;
-        static final int COMPLETED = 3;
-        static final int EXCEEDED = 4;
+    // Enable "Access Order" (LRU) mode by setting the 3rd argument to true.
+    // In this mode, the most recently accessed entry moves to the end of the list.
+    private final LinkedHashMap<Path, FileSendInfo> files = new LinkedHashMap<Path, FileSendInfo>(
+            16, 0.75f, true) {
 
-        public FileContent fileContent;
-        public int status;
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Path, FileSendInfo> eldest) {
+            // Determine if the cache has exceeded its maximum allowed capacity.
+            boolean shouldRemove = size() > maxFiles;
 
-        FileContentStatus(FileContent fileContent, int status) {
-            this.fileContent = fileContent;
-            this.status = status;
+            if (shouldRemove) {
+                // Evict the least recently used (LRU) file descriptor and ensure it's closed.
+                // This prevents resource leaks by releasing the OS-level file descriptor.
+                eldest.getValue().close();
+            }
+            return shouldRemove;
         }
-    }
+    };
 
-    private final LinkedHashMap<String, FileContent> contents = new LinkedHashMap<>();
-    public final long limitBytes;
-    private long totalBytes = 0;
+    public final long maxFiles;
     private final int lifespanMilliSec;
 
-    public FileStore(int timeoutSec, long limitBytes) {
+    public FileStore(int timeoutSec, int maxFiles) {
         this.lifespanMilliSec = timeoutSec * 1000;
-        this.limitBytes = limitBytes;
+        this.maxFiles = maxFiles;
     }
 
-    public synchronized FileContentStatus get(File file, boolean[] reading) {
-        String path = file.getPath();
-        int status = 0;
-        FileContent fileContent = contents.get(path);
-
-        if (fileContent != null) {
-            long now =  RoughTime.currentTimeMillis();
-            if (fileContent.loadedTime + lifespanMilliSec < now) {
-                // Cached file expired
-                totalBytes -= fileContent.content.capacity();
-                BayLog.debug("Remove expired content: %s", path);
-                contents.remove(path);
-                fileContent = null;
-            }
-            else {
-                if(fileContent.isLoaded()) {
-                    status = FileContentStatus.COMPLETED;
-                }
-                else {
-                    status = FileContentStatus.READING;
-                }
-            }
+    public FileSendInfo get(Path path) {
+        FileSendInfo f = files.get(path);
+        if(f != null && RoughTime.currentTimeMillis() > f.lasstAccessTime + lifespanMilliSec) {
+            BayLog.info("%d %d %d %d", f.lasstAccessTime, lifespanMilliSec, f.lasstAccessTime + lifespanMilliSec, RoughTime.currentTimeMillis());
+            f.close();
+            files.remove(path);
+            f = null;
         }
-
-        if(fileContent == null) {
-            if(file.isDirectory()) {
-                return null;
-            }
-
-            long len = file.length();
-            boolean exceeded = false;
-            if (len <= limitBytes) {
-                if(totalBytes + len > limitBytes) {
-                    if(!evict()) {
-                        exceeded = true;
-                    }
-                }
-            }
-            else {
-                exceeded = true;
-            }
-
-            if(exceeded) {
-                status = FileContentStatus.EXCEEDED;
-            }
-            else {
-                fileContent = new FileContent(file, (int)len);
-                contents.put(path, fileContent);
-                totalBytes += len;
-                status = FileContentStatus.STARTED;
-            }
-        }
-        return new FileContentStatus(fileContent, status);
-    }
-
-    boolean evict() {
-        Iterator<Map.Entry<String, FileContent>> iterator = contents.entrySet().iterator();
-
-        boolean evicted = false;
-        while (iterator.hasNext()) {
-            Map.Entry<String, FileContent> entry = iterator.next();
-
-            if(!entry.getValue().isLoaded()) {
-                continue;
-            }
-
-            if (entry.getValue().loadedTime + lifespanMilliSec < RoughTime.currentTimeMillis()) {
-                // Timed out content
-                BayLog.debug("Remove expired content: %s", entry.getKey());
-                totalBytes -= entry.getValue().content.capacity();
-                iterator.remove();
-                evicted = true;
-            }
-            else {
-                break;
-            }
-        }
-        return evicted;
+        if(f != null)
+            f.access();
+        return f;
     }
 
 
-
-
+    public void put(Path real, FileSendInfo f) {
+        files.put(real, f);
+    }
 }

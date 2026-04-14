@@ -1,10 +1,12 @@
 package yokohama.baykit.bayserver.tour;
 
 import yokohama.baykit.bayserver.protocol.ProtocolException;
+import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Reusable;
 
 import java.io.IOException;
+import java.nio.channels.FileChannel;
 
 public interface TourHandler extends Reusable {
 
@@ -25,6 +27,8 @@ public interface TourHandler extends Reusable {
      */
     void sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException;
 
+    void transferContent(Tour tur, Rudder fileRd, int ofs, int len, DataConsumeListener lis) throws IOException;
+
     /**
      * Send end of contents to client.
      * @param tur
@@ -40,4 +44,5 @@ public interface TourHandler extends Reusable {
      * @throws IOException
      */
     boolean onProtocolError(ProtocolException e) throws IOException;
+
 }
