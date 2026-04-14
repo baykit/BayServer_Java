@@ -4,12 +4,26 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.HttpException;
 import yokohama.baykit.bayserver.Sink;
+import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
+import yokohama.baykit.bayserver.common.Multiplexer;
+import yokohama.baykit.bayserver.common.RudderState;
+import yokohama.baykit.bayserver.common.RudderStateStore;
 import yokohama.baykit.bayserver.docker.Trouble;
+import yokohama.baykit.bayserver.rudder.AsynchronousFileChannelRudder;
+import yokohama.baykit.bayserver.rudder.ReadableByteChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.*;
 
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.channels.FileChannel;
+import java.io.InputStream;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.StringTokenizer;
 
 public class TourRes implements Reusable {
@@ -239,6 +253,141 @@ public class TourRes implements Reusable {
         return available;
     }
 
+    public void sendFile(String path, String charset) throws IOException, HttpException {
+        FileStore.FileInfo info = null;
+        Rudder rd = null;
+        int fileSize = -1;
+        boolean directBoarding = false;
+
+
+        if (tour.ship.portDocker().protocol().equals("h1") &&
+                !tour.ship.portDocker().secure() &&
+                BayServer.harbor.directBoarding()) {
+            /**
+             * Send via directBoarding if the protocol is HTTP/1.x and unencrypted.
+             */
+            FileStore st = FileStore.getFileStore();
+            info = st.get(path);
+            rd = info.rudder;
+            fileSize = info.fileLength;
+            directBoarding = info.rudder != null;
+        }
+
+        if (rd == null) {
+            if (Files.isDirectory(Path.of(path))) {
+                throw new DirectoryException();
+            }
+            else {
+                switch (BayServer.harbor.fileMultiplexer()) {
+                    case Spin:
+                    case Pigeon: {
+                        AsynchronousFileChannel ch =
+                                AsynchronousFileChannel.open(Path.of(path), StandardOpenOption.READ);
+                        rd = new AsynchronousFileChannelRudder(ch);
+                        break;
+                    }
+
+                    case Job:
+                    case Taxi: {
+                        InputStream in = new FileInputStream(path);
+                        ReadableByteChannel ch = Channels.newChannel(in);
+                        rd = new ReadableByteChannelRudder(ch);
+                        break;
+                    }
+
+                    default:
+                        throw new Sink();
+                }
+                fileSize = (int)Files.size(Path.of(path));
+            }
+        }
+
+
+        String mtype = null;
+        int pos = path.lastIndexOf('.');
+        if (pos >= 0) {
+            String ext = path.substring(pos + 1).toLowerCase();
+            mtype = Mimes.getType(ext);
+        }
+
+        if (mtype == null)
+            mtype = "application/octet-stream";
+
+        if (mtype.startsWith("text/") && charset != null)
+            mtype = mtype + "; charset=" + charset;
+
+
+        tour.res.headers.setContentType(mtype);
+        tour.res.headers.setContentLength(fileSize);
+        tour.res.sendHeaders(Tour.TOUR_ID_NOCHECK);
+
+        if (directBoarding) {
+            int turId = tour.id();
+            tour.res.setConsumeListener(new ContentConsumeListener() {
+                @Override
+                public void contentConsumed(int len, boolean resume) {
+                    try {
+                        tour.res.endResContent(turId);
+                    }
+                    catch(IOException e) {
+                        BayLog.debug(e);
+                    }
+                }
+            });
+            transferContent(Tour.TOUR_ID_NOCHECK, rd, 0, info.fileLength);
+        }
+        else {
+            int bufsize = tour.ship.protocolHandler.maxResPacketDataSize();
+            GrandAgent agt = GrandAgent.get(tour.ship.agentId);
+            Multiplexer mpx;
+
+            switch (BayServer.harbor.fileMultiplexer()) {
+                case Spin: {
+                    mpx = agt.spinMultiplexer;
+                    break;
+                }
+
+                case Job: {
+                    mpx = agt.jobMultiplexer;
+                    break;
+                }
+
+                case Taxi: {
+                    mpx = agt.taxiMultiplexer;
+                    break;
+                }
+
+                case Pigeon: {
+                    mpx = agt.pegionMultiplexer;
+                    break;
+                }
+
+                default:
+                    throw new Sink();
+            }
+
+            final SendFileShip sendFileShip = new SendFileShip();
+            PlainTransporter tp = new PlainTransporter(
+                    mpx,
+                    sendFileShip,
+                    true,
+                    bufsize,
+                    false);
+
+            sendFileShip.init(rd, tp, tour);
+            int sid = sendFileShip.id();
+            tour.res.setConsumeListener((len, resume) -> {
+                if (resume) {
+                    sendFileShip.resumeRead(sid);
+                }
+            });
+
+            RudderState st = RudderStateStore.getStore(agt.agentId).rent();
+            st.init(rd, tp);
+            mpx.addRudderState(rd, st);
+            mpx.reqRead(rd);
+        }
+    }
 
     public void transferContent(int checkId, Rudder fileRd, int ofs, int len) throws IOException {
 
