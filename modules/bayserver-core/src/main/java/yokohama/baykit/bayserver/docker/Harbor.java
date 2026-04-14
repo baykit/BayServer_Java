@@ -52,7 +52,7 @@ public interface Harbor {
     boolean traceHeader();
 
     /** Internal buffer size of Tour */
-    int tourBufferSize();
+    int shipBufferSize();
 
     /** File name to redirect stdout/stderr */
     String redirectFile();

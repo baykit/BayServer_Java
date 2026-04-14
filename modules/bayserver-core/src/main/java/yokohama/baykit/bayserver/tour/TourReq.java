@@ -328,6 +328,6 @@ public class TourReq implements Reusable {
 
 
     private boolean bufferAvailable() {
-        return bytesPosted - bytesConsumed < BayServer.harbor.tourBufferSize();
+        return bytesPosted - bytesConsumed < BayServer.harbor.shipBufferSize();
     }
 }
