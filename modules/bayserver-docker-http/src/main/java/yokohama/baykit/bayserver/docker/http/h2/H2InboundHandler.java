@@ -198,7 +198,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
 
         CmdSettings set = new CmdSettings(H2ProtocolHandler.CTL_STREAM_ID);
         set.streamId = 0;
-        set.items.add(new CmdSettings.Item(CmdSettings.MAX_CONCURRENT_STREAMS, TourStore.MAX_TOURS));
+        set.items.add(new CmdSettings.Item(CmdSettings.MAX_CONCURRENT_STREAMS, BayServer.harbor.maxToursPerShip()));
         set.items.add(new CmdSettings.Item(CmdSettings.INITIAL_WINDOW_SIZE, windowSize));
         protocolHandler.post(set, true);
 
