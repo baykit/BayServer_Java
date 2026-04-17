@@ -39,9 +39,7 @@ public class TourRes implements Reusable {
     /**
      * Response content info
      */
-    public boolean available;
     public int bytesPosted;
-    public int bytesConsumed;
     public int bytesLimit;
     public ContentConsumeListener resConsumeListener;
     boolean canCompress;
@@ -65,12 +63,10 @@ public class TourRes implements Reusable {
     public void reset() {
         headers.clear();
         bytesPosted = 0;
-        bytesConsumed = 0;
         bytesLimit = 0;
 
         charset = null;
         headerSent = false;
-        available = false;
         resConsumeListener = null;
         canCompress = false;
         compressor = null;
@@ -189,16 +185,14 @@ public class TourRes implements Reusable {
 
     public void setConsumeListener(ContentConsumeListener listener) {
         this.resConsumeListener = listener;
-        this.bytesConsumed = 0;
         this.bytesPosted = 0;
-        this.available = true;
     }
 
     /**
      * This method sends a part of the response content to the client.
      * Whether this process is synchronous or asynchronous is uncertain
      */
-    public synchronized boolean sendResContent(int checkId, byte[] buf, int ofs, int len) throws IOException {
+    public boolean sendResContent(int checkId, byte[] buf, int ofs, int len) throws IOException {
         if (buf == null)
             throw new NullPointerException();
         //tour.checkTourId(checkId);
@@ -223,8 +217,8 @@ public class TourRes implements Reusable {
 
         bytesPosted += len;
         tour.ship.postResBytes(len);
-        BayLog.debug("%s posted res content len=%d posted=%d limit=%d consumed=%d",
-                tour, len, bytesPosted, bytesLimit, bytesConsumed);
+        BayLog.debug("%s posted res content len=%d posted=%d limit=%d",
+                tour, len, bytesPosted, bytesLimit);
 
         if(tour.isAborted()) {
             // Don't send peer any data. Do nothing
@@ -253,13 +247,7 @@ public class TourRes implements Reusable {
             throw new IOException("Post data exceed content-length: " + bytesPosted + "/" + bytesLimit);
         }
 
-        boolean oldAvailable = available;
-        if(!bufferAvailable())
-            available = false;
-        if(oldAvailable && !available)
-            BayLog.debug("%s response unavailable (_ _): posted=%d consumed=%d", this,  bytesPosted, bytesConsumed);
-
-        return available;
+        return tour.ship.resBufferAvailable();
     }
 
     public void sendFile(String path, String charset) throws IOException, HttpException {
@@ -419,8 +407,8 @@ public class TourRes implements Reusable {
             throw new Sink("Header not sent");
 
         bytesPosted += len;
-        BayLog.debug("%s posted res content len=%d posted=%d limit=%d consumed=%d",
-                tour, len, bytesPosted, bytesLimit, bytesConsumed);
+        BayLog.debug("%s posted res content len=%d posted=%d limit=%d",
+                tour, len, bytesPosted, bytesLimit);
 
         if(tour.isAborted()) {
             // Don't send peer any data. Do nothing
@@ -451,7 +439,7 @@ public class TourRes implements Reusable {
      * Whether this process is synchronous or asynchronous is uncertain.
      * If it occurs synchronously, the tour instance will be disposed, and no further processing on the tour will be allowed
      */
-    public synchronized void endResContent(int checkId) throws IOException {
+    public void endResContent(int checkId) throws IOException {
         //tour.checkTourId(checkId);
 
         BayLog.debug("%s end ResContent", this);
@@ -650,28 +638,15 @@ public class TourRes implements Reusable {
      * This method is called back when a part of the response data is actually sent to the client.
      * In this method, the internal buffer space is increased
      */
-    private synchronized void consumed(int checkId, int length) {
+    private void consumed(int checkId, int length) {
         tour.checkTourId(checkId);
         if(resConsumeListener == null)
             throw new Sink("Consume listener is null");
 
-        bytesConsumed += length;
-        BayLog.debug("%s resConsumed: len=%d posted=%d consumed=%d limit=%d",
-                tour, length, bytesPosted, bytesConsumed, bytesLimit);
-
-        boolean oldAvailable = available;
-        if(bufferAvailable())
-            available = true;
-        if(!oldAvailable && available) {
-            BayLog.debug("%s response available (^o^): posted=%d consumed=%d", this,  bytesPosted, bytesConsumed);
-        }
+        BayLog.debug("%s resConsumed: len=%d", tour, length);
 
         // Ship-level buffer tracking and resume (notifies all suspended tours)
         tour.ship.consumeResBytes(length);
-    }
-
-    private boolean bufferAvailable() {
-        return tour.ship.resBufferAvailable();
     }
 
 }
