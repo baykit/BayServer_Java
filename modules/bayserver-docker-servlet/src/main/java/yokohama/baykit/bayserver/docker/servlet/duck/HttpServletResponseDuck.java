@@ -420,7 +420,7 @@ public abstract class HttpServletResponseDuck {
 
     public void sendContent(byte[] b, int off, int len) throws IOException {
         tour.res.sendResContent(tourId, b, off, len);
-        while(!tour.res.available) {
+        while(!tour.ship.resBufferAvailable()) {
             try {
                 Thread.sleep(100);
             }
