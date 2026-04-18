@@ -55,6 +55,45 @@ public class BuiltInCityDocker extends DockerBase implements City {
         }
     }
 
+    /**
+     * Sends cached content in chunks with backpressure.
+     * When the write buffer is full, sending pauses automatically.
+     * The ContentConsumeListener resumes sending when buffer space is available.
+     */
+    private static void sendCachedContentChunked(Tour tur, Barge.Cargo cgo) throws IOException {
+        int turId = tur.id();
+        int chunkSize = tur.ship.protocolHandler.maxResPacketDataSize();
+        int[] pos = {0};
+
+        tur.res.setConsumeListener((len, resume) -> {
+            if (resume) {
+                try {
+                    sendChunks(tur, turId, cgo, pos, chunkSize);
+                } catch (IOException e) {
+                    BayLog.error(e);
+                }
+            }
+        });
+
+        sendChunks(tur, turId, cgo, pos, chunkSize);
+    }
+
+    private static void sendChunks(Tour tur, int turId, Barge.Cargo cgo, int[] pos, int chunkSize) throws IOException {
+        boolean available = true;
+        while (pos[0] < cgo.length() && available) {
+            int len = chunkSize;
+            if (len > cgo.length() - pos[0]) {
+                len = cgo.length() - pos[0];
+            }
+            available = tur.res.sendResContent(turId, cgo.content(), pos[0], len);
+            pos[0] += len;
+        }
+
+        if (pos[0] >= cgo.length()) {
+            tur.res.endResContent(turId);
+        }
+    }
+
     private final FileExistenceCache fileExistenceCache = new FileExistenceCache();
 
     ArrayList<Town> townList = new ArrayList<>();
@@ -249,11 +288,15 @@ public class BuiltInCityDocker extends DockerBase implements City {
                             cgo.headers().copyTo(tur.res.headers);
                             tur.res.sendHeaders(Tour.TOUR_ID_NOCHECK);
 
-                            tur.res.setConsumeListener((len, resume) -> {
-                            });
-
-                            tur.res.sendResContent(Tour.TOUR_ID_NOCHECK, cgo.content(), 0, cgo.length());
-                            tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
+                            if(cgo.length() <= BayServer.harbor.shipBufferSize()) {
+                                tur.res.setConsumeListener((len, resume) -> {
+                                });
+                                tur.res.sendResContent(Tour.TOUR_ID_NOCHECK, cgo.content(), 0, cgo.length());
+                                tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
+                            }
+                            else {
+                                sendCachedContentChunked(tur, cgo);
+                            }
                         }
 
                         @Override

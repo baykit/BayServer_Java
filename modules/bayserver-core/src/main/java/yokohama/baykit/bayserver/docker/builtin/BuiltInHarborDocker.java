@@ -25,7 +25,7 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     public static final int DEFAULT_TAXI_RUNNERS = 8;
     public static final int DEFAULT_SOCKET_TIMEOUT_SEC = 300;
     public static final int DEFAULT_KEEP_TIMEOUT_SEC = 20;
-    public static final int DEFAULT_SHIP_BUFFER_SIZE = 1024 * 1024;  // 1M
+    public static final int DEFAULT_SHIP_BUFFER_SIZE = 64 * 1024;  // 1M
     public static final String DEFAULT_CHARSET = "UTF-8";
     public static final int DEFAULT_CONTROL_PORT = -1;
     public static final MultiPlexerType DEFAULT_NET_MULTIPLEXER = MultiPlexerType.Spider;
