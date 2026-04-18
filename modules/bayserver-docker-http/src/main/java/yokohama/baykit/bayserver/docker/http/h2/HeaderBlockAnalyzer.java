@@ -8,17 +8,25 @@ import static yokohama.baykit.bayserver.docker.http.h2.HeaderBlock.HeaderOp.Over
 public class HeaderBlockAnalyzer {
 
     String name, value;
+    // The original header name before any renaming (e.g. :authority -> host).
+    // Needed by pseudo-header validation that must distinguish :authority
+    // from a literal "host" header the client might also send.
+    String rawName;
     String method, path;
     String scheme;
     String status;
+    // True iff rawName started with ':' (i.e. this was a pseudo-header).
+    boolean pseudo;
 
     public void clear() {
         name = null;
         value = null;
+        rawName = null;
         method = null;
         path = null;
         scheme = null;
         status = null;
+        pseudo = false;
     }
 
     public void analyzeHeaderBlock(HeaderBlock blk, HeaderTable tbl) throws ProtocolException {
@@ -79,7 +87,10 @@ public class HeaderBlockAnalyzer {
                 throw new IllegalStateException();
         }
 
-        if(name != null && name.charAt(0) == ':') {
+        rawName = name;
+        pseudo = name != null && !name.isEmpty() && name.charAt(0) == ':';
+
+        if(pseudo) {
             switch(name) {
                 case HeaderTable.PSEUDO_HEADER_AUTHORITY:
                     name = "host";
