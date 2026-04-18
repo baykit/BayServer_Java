@@ -129,7 +129,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
     }
 
     @Override
-    public synchronized void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, boolean flush, DataConsumeListener listener)
+    public synchronized boolean reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, boolean flush, DataConsumeListener listener)
         throws IOException {
         if(rd == null)
             throw new NullPointerException();
@@ -160,6 +160,7 @@ public class PigeonMultiplexer extends JobMultiplexerBase {
         }
 
         state.access();
+        return state.bufferAvailable();
     }
 
     @Override

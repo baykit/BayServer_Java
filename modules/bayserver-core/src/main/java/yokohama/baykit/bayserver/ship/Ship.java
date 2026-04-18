@@ -3,7 +3,9 @@ package yokohama.baykit.bayserver.ship;
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.common.RudderState;
 import yokohama.baykit.bayserver.common.Transporter;
+import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.util.Counter;
@@ -72,6 +74,17 @@ public abstract class Ship implements Reusable {
 
     public final int id() {
         return shipId;
+    }
+
+    /**
+     * Returns whether the multiplexer's internal write buffer for this ship
+     * still has room. Delegates to the underlying RudderState.
+     */
+    public boolean bufferAvailable() {
+        if (!(rudder instanceof ChannelRudder))
+            return true;
+        RudderState st = (RudderState) ((ChannelRudder) rudder).state;
+        return st == null || st.bufferAvailable();
     }
 
     public final void checkShipId(int shipId) {
