@@ -174,8 +174,13 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
         cmd.errorCode = H2ErrorCode.PROTOCOL_ERROR;
         cmd.debugData = "Thank you!".getBytes(StandardCharsets.UTF_8);
         try {
-            protocolHandler.post(cmd, true);
-            protocolHandler.ship.postClose();
+            // Defer the close until the GOAWAY frame has actually been written.
+            // Calling postClose() synchronously would often close the socket
+            // before the GOAWAY reaches the peer (h2spec would see
+            // "unexpected EOF" instead of the GOAWAY frame).
+            protocolHandler.post(cmd, true, avail -> {
+                protocolHandler.ship.postClose();
+            });
         }
         catch(IOException ex) {
             BayLog.error(ex);
@@ -370,7 +375,13 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
     @Override
     public NextSocketAction handlePing(CmdPing cmd) throws IOException {
         InboundShip sip = ship();
-        BayLog.debug("%s handle_ping: stm=%d", sip, cmd.streamId);
+        BayLog.debug("%s handle_ping: stm=%d ack=%b", sip, cmd.streamId, cmd.flags.ack());
+
+        // RFC 7540 § 6.7: a PING frame with the ACK flag is a response to a
+        // PING the endpoint sent; we never send PINGs, and in any case an
+        // endpoint MUST NOT respond to PING with ACK set.
+        if (cmd.flags.ack())
+            return NextSocketAction.Continue;
 
         CmdPing res = new CmdPing(cmd.streamId, new H2Flags(H2Flags.FLAGS_ACK), cmd.opaqueData);
         protocolHandler.post(res, true);
@@ -456,7 +467,16 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
 
     NextSocketAction onEndHeader(Tour tur, byte[] buf, int start, int len) throws IOException {
 
-        ArrayList<HeaderBlock> headerBlocks = new HeaderBlockParser(buf, start, len).parseHeaderBlocks();
+        ArrayList<HeaderBlock> headerBlocks;
+        try {
+            headerBlocks = new HeaderBlockParser(buf, start, len).parseHeaderBlocks();
+        } catch (RuntimeException e) {
+            // Truncated/corrupt HPACK input can surface as ArrayIndexOutOfBoundsException
+            // (short frame) or IllegalArgumentException (other decode errors). Convert
+            // those to a protocol-level COMPRESSION_ERROR per RFC 7541 § 2.3.3 so the
+            // connection is closed with a proper GOAWAY instead of a fatal agent crash.
+            throw new ProtocolException("HPACK decode failed: " + e.getMessage());
+        }
 
         for(HeaderBlock blk : headerBlocks) {
             if(blk.op == HeaderBlock.HeaderOp.UpdateDynamicTableSize) {

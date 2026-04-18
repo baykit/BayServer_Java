@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.docker.http.h2.command;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.http.h2.*;
 import yokohama.baykit.bayserver.protocol.PacketPartAccessor;
+import yokohama.baykit.bayserver.protocol.ProtocolException;
 
 import java.io.IOException;
 
@@ -40,9 +41,19 @@ public class CmdData extends H2Command {
     @Override
     public void unpack(H2Packet pkt) throws IOException {
         super.unpack(pkt);
+        PacketPartAccessor acc = pkt.newDataAccessor();
+
+        int padLength = 0;
+        if (pkt.flags.padded())
+            padLength = acc.getByte();
+
         this.data = pkt.buf;
-        this.start = pkt.headerLen;
-        this.length = pkt.dataLen();
+        this.start = pkt.headerLen + acc.pos;
+        this.length = pkt.dataLen() - acc.pos - padLength;
+
+        // RFC 7540 § 6.1: padding length must leave at least one octet of data.
+        if (this.length < 0)
+            throw new ProtocolException("DATA pad length exceeds payload: pad=" + padLength);
     }
 
     @Override

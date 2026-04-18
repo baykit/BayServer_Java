@@ -2,6 +2,7 @@ package yokohama.baykit.bayserver.docker.http.h2;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.docker.http.h2.huffman.HTree;
+import yokohama.baykit.bayserver.protocol.ProtocolException;
 
 import java.util.ArrayList;
 
@@ -12,6 +13,10 @@ import java.util.ArrayList;
  *
  */
 public class HeaderBlockParser {
+
+    // RFC 7541 default for SETTINGS_HEADER_TABLE_SIZE; BayServer does not
+    // currently advertise a different value in its initial SETTINGS frame.
+    private static final int MAX_DYNAMIC_TABLE_SIZE = 4096;
 
     byte[] buf;
     int start;
@@ -26,12 +31,23 @@ public class HeaderBlockParser {
     }
 
 
-    public ArrayList<HeaderBlock> parseHeaderBlocks() {
+    public ArrayList<HeaderBlock> parseHeaderBlocks() throws ProtocolException {
 
         ArrayList<HeaderBlock> headerBlocks = new ArrayList<>();
+        // RFC 7541 § 4.2: dynamic-table size updates must appear at the very
+        // start of a header block. Once we see any other representation, any
+        // later size update is a decoding error.
+        boolean seenNonSizeUpdate = false;
 
         while(pos < len) {
             HeaderBlock blk = parseHeaderBlock();
+            if (blk.op == HeaderBlock.HeaderOp.UpdateDynamicTableSize) {
+                if (seenNonSizeUpdate)
+                    throw new ProtocolException(
+                            "Dynamic table size update must appear at the start of a header block");
+            } else {
+                seenNonSizeUpdate = true;
+            }
             if(BayLog.isTraceMode())
                 BayLog.trace("h2: header block read: " + blk);
             headerBlocks.add(blk);
@@ -41,7 +57,7 @@ public class HeaderBlockParser {
     }
 
 
-    private HeaderBlock parseHeaderBlock()  {
+    private HeaderBlock parseHeaderBlock() throws ProtocolException {
 
         HeaderBlock blk = new HeaderBlock();
 
@@ -58,6 +74,9 @@ public class HeaderBlockParser {
              */
             blk.op = HeaderBlock.HeaderOp.Index;
             blk.index = index & 0x7F;
+            // RFC 7541 § 6.1: index 0 is not used and MUST be treated as a decoding error.
+            if (blk.index == 0)
+                throw new ProtocolException("Indexed header field with index 0");
         }
         else {
             // literal header field
@@ -119,6 +138,14 @@ public class HeaderBlockParser {
                     if(size == 0x1f) {
                         size = size + getHPackIntRest();
                     }
+                    // RFC 7541 § 6.3: the dynamic table size update must not exceed
+                    // the maximum advertised in SETTINGS_HEADER_TABLE_SIZE. BayServer
+                    // never advertises a value other than the RFC default (4096),
+                    // so any larger update is a decoding error.
+                    if (size > MAX_DYNAMIC_TABLE_SIZE)
+                        throw new ProtocolException(
+                                "Dynamic table size update " + size
+                                        + " exceeds SETTINGS_HEADER_TABLE_SIZE " + MAX_DYNAMIC_TABLE_SIZE);
                     blk.op = HeaderBlock.HeaderOp.UpdateDynamicTableSize;
                     blk.size = size;
                 }
@@ -223,19 +250,12 @@ public class HeaderBlockParser {
         return rest;
     }
 
-    private String getHPackString()  {
+    private String getHPackString() throws ProtocolException {
         int isHuffman[] = new int[1];
         int len = getHPackInt(7, isHuffman);
         byte[] data = new byte[len];
         getBytes(data);
         if(isHuffman[0] == 1) {
-            // Huffman
-            /*
-            for(int i = 0; i < data.length; i++) {
-                String bits = "00000000" + Integer.toString(data[i] & 0xFF, 2);
-                BayServer.debug(bits.substring(bits.length() - 8));
-            }
-            */
             return HTree.decode(data);
         }
         else {
