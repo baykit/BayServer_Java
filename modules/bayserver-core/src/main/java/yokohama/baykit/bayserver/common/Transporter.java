@@ -26,7 +26,7 @@ public interface Transporter extends Reusable {
 
     void reqRead(Rudder rd);
 
-    void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, boolean flush, DataConsumeListener listener) throws IOException;
+    boolean reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, boolean flush, DataConsumeListener listener) throws IOException;
 
     public void reqTransfer(
             Rudder rd,
