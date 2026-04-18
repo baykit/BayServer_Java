@@ -108,7 +108,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
     }
 
     @Override
-    public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, boolean flush, DataConsumeListener listener) {
+    public boolean reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, boolean flush, DataConsumeListener listener) {
         if(rd == null)
             throw new NullPointerException();
 
@@ -117,8 +117,8 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         BayLog.debug("%s reqWrite chState=%s tag=%s len=%d", agent, st, tag, buf.remaining());
         if(st == null) {
             BayLog.warn("%s Channel is closed: %s", agent, rd);
-            listener.dataConsumed();
-            return;
+            listener.dataConsumed(true);
+            return true;
         }
 
         WriteUnit unt = new WriteUnit(buf, adr, tag, listener);
@@ -139,6 +139,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         }
 
         st.access();
+        return st.bufferAvailable();
     }
 
     @Override
@@ -151,7 +152,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         BayLog.debug("%s reqTransfer chState=%s ofs=%d len=%d", agent, st, ofs, len);
         if(st == null) {
             BayLog.warn("%s Channel is closed: %s", agent, rd);
-            listener.dataConsumed();
+            listener.dataConsumed(true);
             return;
         }
 

@@ -148,7 +148,7 @@ public class SecureTransporter extends PlainTransporter {
     }
 
     @Override
-    public void reqWrite(
+    public boolean reqWrite(
             Rudder rd,
             ByteBuffer appOut,
             InetSocketAddress adr,
@@ -174,6 +174,7 @@ public class SecureTransporter extends PlainTransporter {
         }
 
         // Encrypt data and request to write it
+        boolean hasRoom = true;
         do {
             ReusableByteBuffer netOut = netOutStore.rent();
             SSLEngineResult.HandshakeStatus hstatus = sslWrapper.wrap(appOut, netOut.buffer);
@@ -185,18 +186,19 @@ public class SecureTransporter extends PlainTransporter {
 
             netOut.buffer.flip();
             if(appOut.hasRemaining()) {
-                super.reqWrite(rd, netOut.buffer, adr, tag, flush, () -> {
+                hasRoom = super.reqWrite(rd, netOut.buffer, adr, tag, flush, avail -> {
                     netOutStore.Return(netOut);
                 });
             }
             else {
-                super.reqWrite(rd, netOut.buffer, adr, tag, flush, () -> {
+                hasRoom = super.reqWrite(rd, netOut.buffer, adr, tag, flush, avail -> {
                     netOutStore.Return(netOut);
-                    listener.dataConsumed();
+                    listener.dataConsumed(avail);
                 });
             }
 
         } while (appOut.hasRemaining());
+        return hasRoom;
     }
 
     @Override

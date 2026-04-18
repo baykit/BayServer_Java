@@ -28,7 +28,18 @@ public interface Multiplexer {
 
     void reqRead(Rudder rd);
 
-    void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, boolean flush, DataConsumeListener listener) throws IOException;
+    /**
+     * Request to write data to the rudder.
+     *
+     * Returns whether the internal write buffer still has room. The buffer
+     * capacity is the shipBufferSize parameter (configured on the Harbor docker);
+     * the return value is true when the pending data in the write queue is
+     * less than or equal to shipBufferSize, and false once it exceeds that
+     * threshold. When false is returned, the caller should stop submitting
+     * further writes and wait until the internal buffer has room again before
+     * resuming.
+     */
+    boolean reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, boolean flush, DataConsumeListener listener) throws IOException;
 
     void reqTransfer(Rudder rd, Rudder fileRd, int ofs, int len, DataConsumeListener listener) throws IOException;
 

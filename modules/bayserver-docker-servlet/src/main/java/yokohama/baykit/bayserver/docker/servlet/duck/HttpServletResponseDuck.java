@@ -419,14 +419,15 @@ public abstract class HttpServletResponseDuck {
     }
 
     public void sendContent(byte[] b, int off, int len) throws IOException {
-        tour.res.sendResContent(tourId, b, off, len);
-        while(!tour.ship.resBufferAvailable()) {
+        boolean available = tour.res.sendResContent(tourId, b, off, len);
+        while(!available) {
             try {
                 Thread.sleep(100);
             }
             catch(InterruptedException e) {
                 throw new IOException(e);
             }
+            available = tour.ship.bufferAvailable();
         }
     }
 }

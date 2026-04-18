@@ -18,14 +18,19 @@ public interface TourHandler extends Reusable {
     void sendHeaders(Tour tur) throws IOException;
 
     /**
-     * Send Contents to client
+     * Send Contents to client.
+     *
+     * Returns whether the internal write buffer still has room. When false
+     * is returned, the caller should stop submitting further content and
+     * wait until the internal buffer has room again before resuming.
+     *
      * @param tur
      * @param bytes
      * @param ofs
      * @param len
      * @throws IOException
      */
-    void sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException;
+    boolean sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException;
 
     void transferContent(Tour tur, Rudder fileRd, int ofs, int len, DataConsumeListener lis) throws IOException;
 

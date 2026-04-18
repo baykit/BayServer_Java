@@ -285,7 +285,7 @@ public final class WarpShip extends Ship {
         }
         else {
             if(cmd == null)
-                listener.dataConsumed();
+                listener.dataConsumed(true);
             else
                 protocolHandler.post(cmd, true, listener);
         }
@@ -295,7 +295,7 @@ public final class WarpShip extends Ship {
         BayLog.debug("%s flush", this);
         for(Pair<Command, DataConsumeListener> cmdAndLis: cmdBuf) {
             if(cmdAndLis.a == null)
-                cmdAndLis.b.dataConsumed();
+                cmdAndLis.b.dataConsumed(true);
             else
                 protocolHandler.post(cmdAndLis.a, true, cmdAndLis.b);
         }

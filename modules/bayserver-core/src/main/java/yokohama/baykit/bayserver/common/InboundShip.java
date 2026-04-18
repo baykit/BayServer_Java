@@ -38,11 +38,6 @@ public class InboundShip extends Ship {
     TourStore tourStore;
     List<Tour> activeTours = new ArrayList<>();
 
-    /** Ship-level response buffer tracking */
-    int resBytesPosted;
-    int resBytesConsumed;
-    boolean resAvailable = true;
-
     public void initInbound(
             Rudder rd,
             int agentId,
@@ -77,9 +72,6 @@ public class InboundShip extends Ship {
         }
         needEnd = false;
         protocolHandler = null;
-        resBytesPosted = 0;
-        resBytesConsumed = 0;
-        resAvailable = true;
     }
 
     /////////////////////////////////////
@@ -211,16 +203,16 @@ public class InboundShip extends Ship {
         tourHandler().sendHeaders(tur);
     }
 
-    public void sendResContent(int chkId, Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
+    public boolean sendResContent(int chkId, Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
         checkShipId(chkId);
 
         int maxLen = protocolHandler.maxResPacketDataSize();
         if(len > maxLen) {
             sendResContent(Tour.TOUR_ID_NOCHECK, tur, bytes, ofs, maxLen, null);
-            sendResContent(Tour.TOUR_ID_NOCHECK, tur, bytes, ofs + maxLen, len - maxLen, lis);
+            return sendResContent(Tour.TOUR_ID_NOCHECK, tur, bytes, ofs + maxLen, len - maxLen, lis);
         }
         else {
-            tourHandler().sendContent(tur, bytes, ofs, len, lis);
+            return tourHandler().sendContent(tur, bytes, ofs, len, lis);
         }
     }
 
@@ -246,30 +238,6 @@ public class InboundShip extends Ship {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // Custom methods
     ///////////////////////////////////////////////////////////////////////////////////////////////
-
-    public void postResBytes(int len) {
-        resBytesPosted += len;
-        if (!resBufferAvailable()) {
-            resAvailable = false;
-        }
-    }
-
-    public void consumeResBytes(int len) {
-        resBytesConsumed += len;
-        if (!resAvailable && resBufferAvailable()) {
-            resAvailable = true;
-            // Resume all suspended tours on this ship
-            for (Tour tur : activeTours) {
-                if (tur.isRunning() && tur.res.resConsumeListener != null) {
-                    tur.res.resConsumeListener.contentConsumed(0, true);
-                }
-            }
-        }
-    }
-
-    public boolean resBufferAvailable() {
-        return resBytesPosted - resBytesConsumed < BayServer.harbor.shipBufferSize();
-    }
 
     void endShip() {
         BayLog.debug("%s endShip", this);

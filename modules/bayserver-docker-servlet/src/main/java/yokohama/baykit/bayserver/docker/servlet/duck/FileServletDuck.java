@@ -107,7 +107,7 @@ public class FileServletDuck {
                     break;
                 }
                 out.write(buf, 0, c);
-                while (!tour.ship.resBufferAvailable()) {
+                while (!tour.ship.bufferAvailable()) {
                     try {
                         Thread.sleep(100);
                     } catch (InterruptedException e) {

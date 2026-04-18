@@ -147,9 +147,9 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
     }
 
     @Override
-    public void sendContent(Tour tur, byte[] bytes, int ofs, final int len, DataConsumeListener lis) throws IOException {
+    public boolean sendContent(Tour tur, byte[] bytes, int ofs, final int len, DataConsumeListener lis) throws IOException {
         CmdData cmd = new CmdData(tur.req.key, null, bytes, ofs, len);
-        protocolHandler.post(cmd, false, lis);
+        return protocolHandler.post(cmd, false, lis);
     }
 
     @Override

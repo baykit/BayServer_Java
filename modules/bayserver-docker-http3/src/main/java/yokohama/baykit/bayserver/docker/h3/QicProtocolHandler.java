@@ -348,7 +348,7 @@ public class QicProtocolHandler
 
 
         if(listeners != null)
-            listeners.forEach(lis -> lis.dataConsumed());
+            listeners.forEach(lis -> lis.dataConsumed(true));
 
 
         if(parts.isEmpty()) {

@@ -59,7 +59,7 @@ public class TaxiMultiplexer extends MultiplexerBase {
     }
 
     @Override
-    public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, boolean flush, DataConsumeListener listener) throws IOException {
+    public boolean reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, boolean flush, DataConsumeListener listener) throws IOException {
         BayLog.debug("%s TaxiMpx reqWrite rd=%s buf=%s", this, rd, buf);
         RudderState st = getRudderState(rd);
         if(st == null) {
@@ -83,6 +83,7 @@ public class TaxiMultiplexer extends MultiplexerBase {
         }
 
         st.access();
+        return st.bufferAvailable();
     }
 
     @Override

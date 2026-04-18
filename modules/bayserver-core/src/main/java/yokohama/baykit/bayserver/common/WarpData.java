@@ -56,7 +56,7 @@ public class WarpData implements ReqContentHandler {
                     buf,
                     start + pos,
                     postLen,
-                    () -> tur.req.consumed(turId, len, lis));
+                    avail -> tur.req.consumed(turId, len, lis));
         }
     }
 
@@ -64,7 +64,7 @@ public class WarpData implements ReqContentHandler {
     public synchronized final void onEndReqContent(Tour tur) throws IOException {
         BayLog.debug("%s endReqContent tur=%s", warpShip, tur);
         warpShip.checkShipId(warpShipId);
-        warpShip.warpHandler().sendEndReq(tur, false, () -> {
+        warpShip.warpHandler().sendEndReq(tur, false, avail -> {
             GrandAgent agt = GrandAgent.get(warpShip.agentId);
             agt.netMultiplexer.reqRead(warpShip.rudder);
         });

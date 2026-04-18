@@ -34,9 +34,9 @@ public class WriteUnit {
         this.listener = listener;
     }
 
-    public void done() {
+    public void done(boolean bufferAvailable) {
         if (listener != null)
-            listener.dataConsumed();
+            listener.dataConsumed(bufferAvailable);
     }
 
     public boolean skipFormalities() {

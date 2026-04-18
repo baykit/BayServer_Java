@@ -125,7 +125,7 @@ public class PlainTransporter implements Transporter, Reusable {
     }
 
     @Override
-    public void reqWrite(
+    public boolean reqWrite(
             Rudder rd,
             ByteBuffer buf,
             InetSocketAddress adr,
@@ -135,7 +135,7 @@ public class PlainTransporter implements Transporter, Reusable {
             throws IOException {
 
         BayLog.trace("%s reqWrite: %s", buf, tag);
-        multiplexer.reqWrite(rd, buf, adr, tag, flush, listener);
+        return multiplexer.reqWrite(rd, buf, adr, tag, flush, listener);
     }
 
     @Override
