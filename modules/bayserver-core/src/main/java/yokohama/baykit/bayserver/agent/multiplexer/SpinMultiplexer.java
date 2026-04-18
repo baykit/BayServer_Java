@@ -92,7 +92,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
     }
 
     @Override
-    public void reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, boolean flush, DataConsumeListener listener) throws IOException {
+    public boolean reqWrite(Rudder rd, ByteBuffer buf, InetSocketAddress adr, Object tag, boolean flush, DataConsumeListener listener) throws IOException {
         RudderState st = getRudderState(rd);
         if(st == null)
             throw new IOException("Invalid rudder");
@@ -114,6 +114,7 @@ public class SpinMultiplexer extends MultiplexerBase implements TimerHandler {
         if(needWrite) {
             nextWrite(st);
         }
+        return st.bufferAvailable();
     }
 
     @Override

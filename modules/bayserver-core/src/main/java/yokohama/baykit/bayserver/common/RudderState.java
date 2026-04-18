@@ -1,5 +1,6 @@
 package yokohama.baykit.bayserver.common;
 
+import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.rudder.Rudder;
 import yokohama.baykit.bayserver.util.Counter;
@@ -117,6 +118,17 @@ public class RudderState implements Reusable {
             total += unit.remaining();
         }
         return total;
+    }
+
+    /**
+     * Returns whether the internal write buffer still has room.
+     *
+     * The buffer capacity is the shipBufferSize parameter configured on the
+     * Harbor docker; this returns true when the pending data in the write
+     * queue is less than or equal to shipBufferSize.
+     */
+    public boolean bufferAvailable() {
+        return remaining() <= BayServer.harbor.shipBufferSize();
     }
 
     public void end() {

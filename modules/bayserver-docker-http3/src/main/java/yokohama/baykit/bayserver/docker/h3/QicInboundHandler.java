@@ -85,7 +85,7 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
     }
 
     @Override
-    public void sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
+    public boolean sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
 
         long stmId = tur.req.key;
         BayLog.debug("%s stm#%d sendResContent len=%d posted=%d/%d", tur, stmId, len, tur.res.bytesPosted, tur.res.headers.contentLength());
@@ -158,10 +158,11 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
         }
         else {
             if (lis != null)
-                lis.dataConsumed();
+                lis.dataConsumed(true);
         }
 
         protocolHandler.postPackets();
+        return true;
     }
 
     @Override
@@ -238,7 +239,7 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
             protocolHandler.addPartialResponse(stmId, new QicProtocolHandler.PartialResponse(true, lis));
         }
         else if (lis != null) {
-            lis.dataConsumed();
+            lis.dataConsumed(true);
         }
 
         protocolHandler.postPackets();

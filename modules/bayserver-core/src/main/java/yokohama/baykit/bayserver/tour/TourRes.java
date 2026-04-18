@@ -202,13 +202,13 @@ public class TourRes implements Reusable {
         }
 
         // New listener
-        DataConsumeListener lis = () -> {
-            consumed(checkId, len);
+        DataConsumeListener lis = avail -> {
+            consumed(checkId, len, avail);
         };
 
         if (tour.isZombie()) {
             BayLog.debug("%s zombie tour. return", this);
-            lis.dataConsumed();
+            lis.dataConsumed(true);
             return true;
         }
 
@@ -216,15 +216,15 @@ public class TourRes implements Reusable {
             throw new Sink("Header not sent");
 
         bytesPosted += len;
-        tour.ship.postResBytes(len);
         BayLog.debug("%s posted res content len=%d posted=%d limit=%d",
                 tour, len, bytesPosted, bytesLimit);
 
+        boolean available = true;
         if(tour.isAborted()) {
             // Don't send peer any data. Do nothing
             BayLog.debug("%s Aborted tour. do nothing: %s state=%s", this, tour, tour.state);
             tour.changeState(checkId, Tour.TourState.ENDED);
-            lis.dataConsumed();
+            lis.dataConsumed(true);
         }
         else {
             if (canCompress) {
@@ -232,11 +232,11 @@ public class TourRes implements Reusable {
             }
             else {
                 try {
-                    tour.ship.sendResContent(tour.shipId, tour, buf, ofs, len, lis);
+                    available = tour.ship.sendResContent(tour.shipId, tour, buf, ofs, len, lis);
                 }
                 catch(IOException e) {
                     BayLog.debug("%s error on sending resContent: %s", this, e);
-                    lis.dataConsumed();
+                    lis.dataConsumed(true);
                     tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
                     throw e;
                 }
@@ -247,7 +247,7 @@ public class TourRes implements Reusable {
             throw new IOException("Post data exceed content-length: " + bytesPosted + "/" + bytesLimit);
         }
 
-        return tour.ship.resBufferAvailable();
+        return available;
     }
 
     public void sendFile(String path, String charset) throws IOException, HttpException {
@@ -392,14 +392,14 @@ public class TourRes implements Reusable {
 
 
         // New listener
-        DataConsumeListener lis = () -> {
+        DataConsumeListener lis = avail -> {
             tour.checkTourId(checkId);
-            resConsumeListener.contentConsumed(len, false);
+            resConsumeListener.contentConsumed(len, avail);
         };
 
         if (tour.isZombie()) {
             BayLog.debug("%s zombie tour. return", this);
-            lis.dataConsumed();
+            lis.dataConsumed(true);
             return;
         }
 
@@ -414,7 +414,7 @@ public class TourRes implements Reusable {
             // Don't send peer any data. Do nothing
             BayLog.debug("%s Aborted tour. do nothing: %s state=%s", this, tour, tour.state);
             tour.changeState(checkId, Tour.TourState.ENDED);
-            lis.dataConsumed();
+            lis.dataConsumed(true);
         }
         else {
             try {
@@ -422,7 +422,7 @@ public class TourRes implements Reusable {
             }
             catch(IOException e) {
                 BayLog.debug("%s error on sending resContent: %s", this, e);
-                lis.dataConsumed();
+                lis.dataConsumed(true);
                 tour.changeState(Tour.TOUR_ID_NOCHECK, Tour.TourState.ABORTED);
                 throw e;
             }
@@ -461,7 +461,7 @@ public class TourRes implements Reusable {
         }
 
         final boolean tourReturned[] = new boolean[] {false};
-        DataConsumeListener lis = () -> {
+        DataConsumeListener lis = avail -> {
             tour.checkTourId(checkId);
             tour.ship.returnTour(tour);
             tourReturned[0] = true;
@@ -471,7 +471,7 @@ public class TourRes implements Reusable {
             if(tour.isZombie() || tour.isAborted()) {
                 // Don't send peer any data. Do nothing
                 BayLog.debug("%s Aborted or zombie tour. do nothing: %s state=%s", this, tour, tour.state);
-                lis.dataConsumed();
+                lis.dataConsumed(true);
             }
             else {
                 try {
@@ -479,7 +479,7 @@ public class TourRes implements Reusable {
                 }
                 catch(IOException e) {
                     BayLog.debug("%s Error on sending end tour", this);
-                    lis.dataConsumed();
+                    lis.dataConsumed(true);
                     throw e;
                 }
             }
@@ -636,17 +636,18 @@ public class TourRes implements Reusable {
 
     /**
      * This method is called back when a part of the response data is actually sent to the client.
-     * In this method, the internal buffer space is increased
+     * The bufferAvailable flag indicates whether the internal write buffer still has room
+     * at the time of consumption; callers listening for resume use it to know when to
+     * continue submitting content.
      */
-    private void consumed(int checkId, int length) {
+    private void consumed(int checkId, int length, boolean bufferAvailable) {
         tour.checkTourId(checkId);
         if(resConsumeListener == null)
             throw new Sink("Consume listener is null");
 
-        BayLog.debug("%s resConsumed: len=%d", tour, length);
+        BayLog.debug("%s resConsumed: len=%d available=%b", tour, length, bufferAvailable);
 
-        // Ship-level buffer tracking and resume (notifies all suspended tours)
-        tour.ship.consumeResBytes(length);
+        resConsumeListener.contentConsumed(length, bufferAvailable);
     }
 
 }
