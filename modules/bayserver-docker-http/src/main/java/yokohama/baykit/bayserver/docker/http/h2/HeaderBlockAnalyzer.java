@@ -25,7 +25,14 @@ public class HeaderBlockAnalyzer {
         clear();
         switch(blk.op) {
             case Index: {
-                KeyVal kv = tbl.get(blk.index);
+                // RFC 7541 § 2.3.3: indexed representation must reference a
+                // valid entry; out-of-range indices are a decoding error.
+                KeyVal kv;
+                try {
+                    kv = tbl.get(blk.index);
+                } catch (IllegalArgumentException e) {
+                    throw new ProtocolException("Invalid header index: " + blk.index);
+                }
                 if(kv == null)
                     throw new ProtocolException("Invalid header index: " + blk.index);
                 name = kv.name;
@@ -35,7 +42,12 @@ public class HeaderBlockAnalyzer {
 
             case KnownHeader:
             case OverloadKnownHeader: {
-                KeyVal kv = tbl.get(blk.index);
+                KeyVal kv;
+                try {
+                    kv = tbl.get(blk.index);
+                } catch (IllegalArgumentException e) {
+                    throw new ProtocolException("Invalid header index: " + blk.index);
+                }
                 if(kv == null)
                     throw new ProtocolException("Invalid header index: " + blk.index);
                 name = kv.name;

@@ -1,17 +1,24 @@
 package yokohama.baykit.bayserver.docker.http.h2.huffman;
 
+import yokohama.baykit.bayserver.protocol.ProtocolException;
+
 import java.io.CharArrayWriter;
 
 public class HTree {
 
+    // RFC 7541 defines the EOS symbol with value 256; it must never appear
+    // in a header's payload except as the padding prefix at the tail.
+    public static final int EOS_SYMBOL = 256;
+
     static HNode root = new HNode();
 
-    public static String decode(byte[] data) {
+    public static String decode(byte[] data) throws ProtocolException {
         CharArrayWriter w = new CharArrayWriter();
         HNode cur = root;
+        int bitsSinceLastLeaf = 0;
         for(int i = 0; i < data.length; i++) {
             for(int j = 0; j < 8; j++) {
-                int bit = data[i] >> (8 - j - 1) & 0x1;                 
+                int bit = data[i] >> (8 - j - 1) & 0x1;
 
                 // down tree
                 if(bit == 1) {
@@ -20,19 +27,53 @@ public class HTree {
                 else {
                     cur = cur.zero;
                 }
-                
+                if (cur == null) {
+                    // Bit pattern does not match any Huffman code.
+                    throw new ProtocolException("Huffman decode: invalid code sequence");
+                }
+                bitsSinceLastLeaf++;
+
                 if(cur.value > 0) {
                     // leaf node
+                    // RFC 7541 § 5.2: EOS must not appear inside a string literal.
+                    if (cur.value == EOS_SYMBOL)
+                        throw new ProtocolException("Huffman decode: EOS symbol in string literal");
                     w.write(cur.value);
                     cur = root;
+                    bitsSinceLastLeaf = 0;
                 }
             }
         }
+
+        if (cur != root) {
+            // RFC 7541 § 5.2: any trailing bits form a padding that must be a
+            // strict prefix of the EOS code (which is all 1s) and be no longer
+            // than 7 bits.
+            if (bitsSinceLastLeaf > 7)
+                throw new ProtocolException(
+                        "Huffman decode: padding longer than 7 bits (" + bitsSinceLastLeaf + ")");
+            if (!isEosPrefix(cur))
+                throw new ProtocolException("Huffman decode: padding must be MSB of EOS (all 1s)");
+        }
+
         return w.toString();
     }
-    
-    
-    
+
+    /**
+     * Returns true iff the path from {@link #root} to {@code node} traverses
+     * only the {@code one} (= 1-bit) branch. Since the EOS code is all 1s,
+     * this is equivalent to "the bits consumed so far are a prefix of EOS."
+     */
+    private static boolean isEosPrefix(HNode node) {
+        HNode cur = root;
+        while (cur != node) {
+            if (cur.one == null)
+                return false;
+            cur = cur.one;
+        }
+        return true;
+    }
+
     static void insert(int code, int lenInBits, int sym) {
         int[] bits = new int[lenInBits];
         for (int i = 0; i < lenInBits; i++) {
@@ -59,7 +100,7 @@ public class HTree {
         }
         curNode.value = sym;
     }
-    
+
     static {
         insert(0x1ff8,13,0);
         insert(0x7fffd8,23,1);
@@ -101,7 +142,7 @@ public class HTree {
         insert(0x15,6,37);
         insert(0xf8,8,38);
         insert(0x7fa,11,39);
-        insert(0x3fa, 10, 40);         
+        insert(0x3fa, 10, 40);
         insert(0x3fb,10,41);
         insert(0xf9,8,42);
         insert(0x7fb,11,43);

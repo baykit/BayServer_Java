@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.docker.http.h2.command;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.http.h2.*;
 import yokohama.baykit.bayserver.protocol.PacketPartAccessor;
+import yokohama.baykit.bayserver.protocol.ProtocolException;
 
 import java.io.IOException;
 
@@ -61,7 +62,11 @@ public class CmdHeaders extends H2Command {
         }
         this.data = pkt.buf;
         this.start = pkt.headerLen + acc.pos;
-        this.length = pkt.dataLen() - acc.pos;
+        this.length = pkt.dataLen() - acc.pos - padLength;
+
+        // RFC 7540 § 6.2: padding length must leave at least one octet of payload.
+        if (this.length < 0)
+            throw new ProtocolException("HEADERS pad length exceeds payload: pad=" + padLength);
     }
 
 
