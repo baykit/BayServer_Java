@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.docker.http.h2.command;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.http.h2.*;
 import yokohama.baykit.bayserver.protocol.PacketPartAccessor;
+import yokohama.baykit.bayserver.protocol.ProtocolException;
 
 import java.io.IOException;
 
@@ -36,6 +37,11 @@ public class CmdPriority extends H2Command {
         streamDependency = H2Packet.extractInt31(val);
 
         weight = acc.getByte();
+
+        // RFC 7540 § 5.3.1: a stream MUST NOT depend on itself.
+        if (streamDependency == streamId)
+            throw new ProtocolException(
+                    "PRIORITY stream depends on itself: " + streamId);
     }
 
     @Override

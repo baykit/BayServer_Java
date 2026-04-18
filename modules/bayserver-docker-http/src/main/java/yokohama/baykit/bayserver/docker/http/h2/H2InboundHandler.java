@@ -47,6 +47,15 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
     int reqContRead;
     int windowSize = BayServer.harbor.shipBufferSize();
     final H2Settings settings = new H2Settings();
+
+    // RFC 7540 § 6.9.1: the flow-control window must not exceed 2^31-1.
+    // We track only the outbound (send) window so that WINDOW_UPDATE frames
+    // that would overflow it can be rejected. Default initial window per
+    // RFC 7540 § 5.2.1 is 65535.
+    private static final long MAX_WINDOW = 0x7FFFFFFFL;
+    private static final long DEFAULT_INITIAL_WINDOW = 65535L;
+    long connSendWindow = DEFAULT_INITIAL_WINDOW;
+    final java.util.Map<Integer, Long> streamSendWindows = new java.util.HashMap<>();
     final HeaderBlockAnalyzer analyzer = new HeaderBlockAnalyzer();
     public final HeaderTable reqHeaderTbl = HeaderTable.createDynamicTable();
     public final HeaderTable resHeaderTbl = HeaderTable.createDynamicTable();
@@ -171,7 +180,12 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
         CmdGoAway cmd = new CmdGoAway(H2ProtocolHandler.CTL_STREAM_ID);
         cmd.streamId = 0;
         cmd.lastStreamId = 0;
-        cmd.errorCode = H2ErrorCode.PROTOCOL_ERROR;
+        // H2ProtocolException carries a caller-specified error code (e.g.
+        // FLOW_CONTROL_ERROR, COMPRESSION_ERROR); bare ProtocolException
+        // defaults to PROTOCOL_ERROR as per RFC 7540 § 5.4.
+        cmd.errorCode = (e instanceof H2ProtocolException)
+                ? ((H2ProtocolException) e).errorCode
+                : H2ErrorCode.PROTOCOL_ERROR;
         cmd.debugData = "Thank you!".getBytes(StandardCharsets.UTF_8);
         try {
             // Defer the close until the GOAWAY frame has actually been written.
@@ -220,10 +234,14 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
         BayLog.debug("%s handle_headers: stm=%d dep=%d weight=%d", ship(), cmd.streamId, cmd.streamDependency, cmd.weight);
         Tour tur = getTour(cmd.streamId);
         if(tur == null) {
+            // RFC 7540 § 5.1.2: the peer exceeded the advertised
+            // MAX_CONCURRENT_STREAMS; refuse the new stream with
+            // RST_STREAM(REFUSED_STREAM). Sending 503 on a new stream would
+            // also consume a tour slot we just said we do not have.
             BayLog.error(BayMessage.get(Symbol.INT_NO_MORE_TOURS));
-            tur = ship().getTour(cmd.streamId, true);
-            tur.res.sendError(Tour.TOUR_ID_NOCHECK, HttpStatus.SERVICE_UNAVAILABLE, "No available tours");
-            //sip.agent.shutdown(false);
+            CmdRstStream rst = new CmdRstStream(cmd.streamId);
+            rst.errorCode = H2ErrorCode.REFUSED_STREAM;
+            protocolHandler.post(rst, true);
             return NextSocketAction.Continue;
         }
 
@@ -243,6 +261,17 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
         Tour tur = getTour(cmd.streamId);
         if(tur == null) {
             throw new IllegalArgumentException("Invalid stream id: " + cmd.streamId);
+        }
+
+        // RFC 7540 § 8.1.2.6: if content-length is given, the sum of DATA
+        // payload lengths MUST match it. Detect the END_STREAM boundary so a
+        // mismatch is flagged before the handler processes the payload.
+        if (cmd.flags.endStream()) {
+            int contLen = tur.req.headers.contentLength();
+            if (contLen >= 0 && tur.req.bytesPosted + cmd.length != contLen)
+                throw new ProtocolException(
+                        "content-length " + contLen + " does not match DATA payload "
+                                + (tur.req.bytesPosted + cmd.length));
         }
 
         try {
@@ -320,15 +349,32 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
                     settings.headerTableSize = item.value;
                     break;
                 case CmdSettings.ENABLE_PUSH:
+                    // RFC 7540 § 6.5.2: ENABLE_PUSH must be 0 or 1.
+                    if (item.value != 0 && item.value != 1)
+                        throw new ProtocolException(
+                                "SETTINGS_ENABLE_PUSH must be 0 or 1, got " + item.value);
                     settings.enablePush = (item.value != 0);
                     break;
                 case CmdSettings.MAX_CONCURRENT_STREAMS:
                     settings.maxConcurrentStreams = item.value;
                     break;
                 case CmdSettings.INITIAL_WINDOW_SIZE:
-                    settings.initialWindowSize = item.value;;
+                    // RFC 7540 § 6.5.2: INITIAL_WINDOW_SIZE must not exceed
+                    // 2^31-1; larger values are FLOW_CONTROL_ERROR. The field
+                    // is parsed as a signed int so a negative value also means
+                    // it overflowed the 31-bit limit.
+                    if (item.value < 0)
+                        throw new H2ProtocolException(H2ErrorCode.FLOW_CONTROL_ERROR,
+                                "SETTINGS_INITIAL_WINDOW_SIZE exceeds 2^31-1: " + item.value);
+                    settings.initialWindowSize = item.value;
                     break;
                 case CmdSettings.MAX_FRAME_SIZE:
+                    // RFC 7540 § 6.5.2: MAX_FRAME_SIZE must be within
+                    // [2^14, 2^24-1] (16384..16777215).
+                    if (item.value < H2Packet.DEFAULT_PAYLOAD_MAXLEN
+                            || item.value > H2Packet.MAX_PAYLOAD_MAXLEN)
+                        throw new ProtocolException(
+                                "SETTINGS_MAX_FRAME_SIZE out of range: " + item.value);
                     settings.maxFrameSize = item.value;
                     break;
                 case CmdSettings.MAX_HEADER_LIST_SIZE:
@@ -346,10 +392,33 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
 
     @Override
     public NextSocketAction handleWindowUpdate(CmdWindowUpdate cmd) throws IOException {
+        // RFC 7540 § 6.9: a WINDOW_UPDATE with increment 0 is PROTOCOL_ERROR
+        // (or FLOW_CONTROL_ERROR at the stream level — both terminate the peer).
         if(cmd.windowSizeIncrement == 0)
             throw new ProtocolException("Invalid increment value");
         BayLog.debug("%s handleWindowUpdate: stmid=%d siz=%d", ship(),  cmd.streamId, cmd.windowSizeIncrement);
-        int windowSizse = cmd.windowSizeIncrement;
+
+        // RFC 7540 § 6.9.1: adding the increment must not push the window
+        // above 2^31-1. Overflow at the connection level is a connection
+        // error FLOW_CONTROL_ERROR (GOAWAY); at the stream level it is a
+        // stream error (RST_STREAM) so the connection itself survives.
+        if (cmd.streamId == 0) {
+            connSendWindow += (cmd.windowSizeIncrement & 0xFFFFFFFFL);
+            if (connSendWindow > MAX_WINDOW)
+                throw new H2ProtocolException(H2ErrorCode.FLOW_CONTROL_ERROR,
+                        "Connection send window overflow: " + connSendWindow);
+        } else {
+            long win = streamSendWindows.getOrDefault(cmd.streamId, DEFAULT_INITIAL_WINDOW)
+                    + (cmd.windowSizeIncrement & 0xFFFFFFFFL);
+            if (win > MAX_WINDOW) {
+                CmdRstStream rst = new CmdRstStream(cmd.streamId);
+                rst.errorCode = H2ErrorCode.FLOW_CONTROL_ERROR;
+                protocolHandler.post(rst, true);
+                streamSendWindows.remove(cmd.streamId);
+                return NextSocketAction.Continue;
+            }
+            streamSendWindows.put(cmd.streamId, win);
+        }
         return NextSocketAction.Continue;
     }
 
@@ -414,6 +483,18 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
     ///////////////////////////////////////////////////////////////////////////////////////////
     // private
     ///////////////////////////////////////////////////////////////////////////////////////////
+
+    private static boolean hasUpperCase(String s) {
+        if (s == null)
+            return false;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c >= 'A' && c <= 'Z')
+                return true;
+        }
+        return false;
+    }
+
     InboundShip ship() {
         return (InboundShip) protocolHandler.ship;
     }
@@ -478,6 +559,12 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
             throw new ProtocolException("HPACK decode failed: " + e.getMessage());
         }
 
+        // Pseudo-header + header-field validation (RFC 7540 § 8.1.2). We track
+        // state across the whole header block so duplicates and ordering can
+        // be detected.
+        boolean sawMethod = false, sawScheme = false, sawPath = false, sawAuthority = false;
+        boolean sawRegularHeader = false;
+
         for(HeaderBlock blk : headerBlocks) {
             if(blk.op == HeaderBlock.HeaderOp.UpdateDynamicTableSize) {
                 BayLog.trace("%s header block update table size: %d", tur, blk.size);
@@ -492,21 +579,81 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
             if(analyzer.name == null) {
                 continue;
             }
-            else if(analyzer.name.charAt(0) != ':') {
+
+            // § 8.1.2: header field names must be lowercase.
+            if (hasUpperCase(analyzer.rawName))
+                throw new ProtocolException(
+                        "Header name must be lowercase: " + analyzer.rawName);
+
+            if (analyzer.pseudo) {
+                // § 8.1.2.1: pseudo-header fields must precede regular headers.
+                if (sawRegularHeader)
+                    throw new ProtocolException(
+                            "Pseudo-header " + analyzer.rawName + " appears after a regular header");
+
+                // § 8.1.2.1: request pseudo-headers are :method, :scheme,
+                // :path, :authority. :status is only for responses.
+                switch (analyzer.rawName) {
+                    case HeaderTable.PSEUDO_HEADER_METHOD:
+                        if (sawMethod)
+                            throw new ProtocolException("Duplicated :method");
+                        sawMethod = true;
+                        tur.req.method = analyzer.method;
+                        break;
+                    case HeaderTable.PSEUDO_HEADER_SCHEME:
+                        if (sawScheme)
+                            throw new ProtocolException("Duplicated :scheme");
+                        sawScheme = true;
+                        break;
+                    case HeaderTable.PSEUDO_HEADER_PATH:
+                        if (sawPath)
+                            throw new ProtocolException("Duplicated :path");
+                        // § 8.1.2.3: :path must not be empty for http/https.
+                        if (analyzer.path == null || analyzer.path.isEmpty())
+                            throw new ProtocolException("Empty :path pseudo-header");
+                        sawPath = true;
+                        tur.req.uri = analyzer.path;
+                        break;
+                    case HeaderTable.PSEUDO_HEADER_AUTHORITY:
+                        if (sawAuthority)
+                            throw new ProtocolException("Duplicated :authority");
+                        sawAuthority = true;
+                        tur.req.headers.add(analyzer.name, analyzer.value);
+                        break;
+                    case HeaderTable.PSEUDO_HEADER_STATUS:
+                        throw new ProtocolException(
+                                ":status pseudo-header is invalid in a request");
+                    default:
+                        throw new ProtocolException(
+                                "Unknown pseudo-header: " + analyzer.rawName);
+                }
+            }
+            else {
+                sawRegularHeader = true;
+                // § 8.1.2.2: connection-specific header fields are forbidden
+                // in HTTP/2. The only allowed TE value is "trailers".
+                if (analyzer.name.equalsIgnoreCase("connection")
+                        || analyzer.name.equalsIgnoreCase("keep-alive")
+                        || analyzer.name.equalsIgnoreCase("proxy-connection")
+                        || analyzer.name.equalsIgnoreCase("transfer-encoding")
+                        || analyzer.name.equalsIgnoreCase("upgrade"))
+                    throw new ProtocolException(
+                            "Connection-specific header in HTTP/2: " + analyzer.name);
+                if (analyzer.name.equalsIgnoreCase("te")
+                        && !"trailers".equalsIgnoreCase(analyzer.value))
+                    throw new ProtocolException(
+                            "TE header with value other than 'trailers': " + analyzer.value);
                 tur.req.headers.add(analyzer.name, analyzer.value);
             }
-            else if(analyzer.method != null) {
-                tur.req.method = analyzer.method;
-            }
-            else if(analyzer.path != null) {
-                tur.req.uri = analyzer.path;
-            }
-            else if(analyzer.scheme != null) {
-            }
-            else if(analyzer.status != null) {
-                throw new IllegalStateException();
-            }
         }
+
+        // § 8.1.2.3: request MUST include :method, :scheme, :path.
+        if (!sawMethod)
+            throw new ProtocolException("Missing :method pseudo-header");
+        if (!sawScheme)
+            throw new ProtocolException("Missing :scheme pseudo-header");
+        if (!sawPath)
+            throw new ProtocolException("Missing :path pseudo-header");
 
         tur.req.protocol = "HTTP/2.0";
         BayLog.debug("%s H2 read header method=%s protocol=%s uri=%s contlen=%d",
