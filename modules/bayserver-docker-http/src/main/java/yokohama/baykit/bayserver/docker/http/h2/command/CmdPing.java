@@ -14,7 +14,7 @@ public class CmdPing extends H2Command {
 
     public CmdPing(int streamId, H2Flags flags, byte[] opaqueData) {
         super(H2Type.Ping, streamId, flags);
-        this.opaqueData = new byte[8];
+        this.opaqueData = (opaqueData != null) ? opaqueData : new byte[8];
     }
 
     public CmdPing(int streamId, H2Flags flags) {

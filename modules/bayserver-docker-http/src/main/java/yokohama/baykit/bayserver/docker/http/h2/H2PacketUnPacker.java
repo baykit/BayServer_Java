@@ -105,15 +105,23 @@ public class H2PacketUnPacker extends PacketUnpacker<H2Packet> {
         boolean suspend = false;
 
         if(serverMode && !prefaceRead) {
-            int len = CONNECTION_PREFACE.length - tmpBuf.length();
+            int prevLen = tmpBuf.length();
+            int len = CONNECTION_PREFACE.length - prevLen;
             if(len > buf.remaining())
                 len = buf.remaining();
             tmpBuf.put(buf, len);
+            // Validate each newly arrived byte against the expected preface
+            // so that a malformed client is rejected immediately rather than
+            // only after all 24 bytes have been accumulated. This also lets
+            // us surface the error (via ProtocolException -> GOAWAY) even if
+            // the peer sends fewer than 24 bytes before closing.
+            for (int i = prevLen; i < tmpBuf.length(); i++) {
+                if (CONNECTION_PREFACE[i] != tmpBuf.bytes()[i])
+                    throw new ProtocolException(
+                            "Invalid connection preface at byte " + i + ": got "
+                                    + (tmpBuf.bytes()[i] & 0xFF));
+            }
             if(tmpBuf.length() == CONNECTION_PREFACE.length) {
-                for(int i = 0; i < tmpBuf.length(); i++) {
-                    if(CONNECTION_PREFACE[i] != tmpBuf.bytes()[i])
-                        throw new ProtocolException("Invalid connection preface: " + new String(tmpBuf.bytes(), 0, tmpBuf.length()));
-                }
                 H2Packet pkt = pktStore.rent(H2Type.Preface);
                 pkt.newDataAccessor().putBytes(tmpBuf.bytes(), 0, tmpBuf.length());
                 NextSocketAction nstat = cmdUnpacker.packetReceived(pkt);
@@ -132,6 +140,12 @@ public class H2PacketUnPacker extends PacketUnpacker<H2Packet> {
                 case ReadLength:
                     if(readHeaderItem(buf)) {
                         payloadLen = ((item.get(0) & 0xFF) << 16 | (item.get(1) & 0xFF) << 8 | (item.get(2) & 0xFF));
+                        // RFC 7540 § 4.2: payload size must not exceed SETTINGS_MAX_FRAME_SIZE
+                        // (16384 is the initial value, which BayServer currently never negotiates up).
+                        if (payloadLen > H2Packet.DEFAULT_PAYLOAD_MAXLEN)
+                            throw new ProtocolException(
+                                    "Frame size " + payloadLen + " exceeds MAX_FRAME_SIZE "
+                                            + H2Packet.DEFAULT_PAYLOAD_MAXLEN);
                         item = new FrameHeaderItem(tmpBuf.length(), FRAME_LEN_TYPE);
                         changeState(State.ReadType);
                     }
