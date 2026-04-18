@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.agent.multiplexer;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.TimerHandler;
@@ -131,7 +132,8 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         // the data stays in the write queue to be batched with subsequent writes,
         // reducing the number of syscalls (e.g., headers and body are combined
         // into a single writev call).
-        if(st.remaining() > 0 && (flush || st.remaining() >= st.bufsize)) {
+        int flushThreshold = Math.min(st.bufsize, BayServer.harbor.shipBufferSize());
+        if(st.remaining() > 0 && (flush || st.remaining() >= flushThreshold)) {
             synchronized (tryWriteList) {
                 tryWriteList.add(st);
             }
