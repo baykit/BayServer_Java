@@ -59,6 +59,10 @@ public class CmdHeaders extends H2Command {
             excluded = H2Packet.extractFlag(val) == 1;
             streamDependency = H2Packet.extractInt31(val);
             weight = acc.getByte();
+            // RFC 7540 § 5.3.1: a stream MUST NOT depend on itself.
+            if (streamDependency == streamId)
+                throw new ProtocolException(
+                        "HEADERS stream depends on itself: " + streamId);
         }
         this.data = pkt.buf;
         this.start = pkt.headerLen + acc.pos;

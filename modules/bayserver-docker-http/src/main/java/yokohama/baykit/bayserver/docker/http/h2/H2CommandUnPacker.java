@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.docker.http.h2;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.http.h2.command.*;
 import yokohama.baykit.bayserver.protocol.CommandUnPacker;
@@ -231,6 +232,23 @@ public class H2CommandUnPacker extends CommandUnPacker<H2Packet> {
             // by § 5.1.1 (any HEADERS on a stream id N implicitly closes all
             // lower-numbered streams).
             boolean implicitlyClosed = streamId <= highestSeenStreamId;
+            // RFC 7540 § 5.1.1: streams initiated by the client must have odd
+            // stream ids, and ids must strictly increase.
+            if (type == H2Type.Headers) {
+                if ((streamId & 1) == 0)
+                    throw new ProtocolException(
+                            "Client HEADERS with even stream id " + streamId);
+                if (implicitlyClosed)
+                    throw new ProtocolException(
+                            "Stream id " + streamId + " is not greater than the previous "
+                                    + highestSeenStreamId);
+                // RFC 7540 § 5.1.2: reject a new stream that would exceed the
+                // advertised MAX_CONCURRENT_STREAMS (REFUSED_STREAM).
+                int max = BayServer.harbor.maxToursPerShip();
+                if (countActiveStreams() >= max)
+                    throw new H2ProtocolException(H2ErrorCode.REFUSED_STREAM,
+                            "Concurrent stream limit (" + max + ") exceeded");
+            }
             switch (type) {
                 case H2Type.Headers:
                 case H2Type.Priority:
@@ -276,6 +294,15 @@ public class H2CommandUnPacker extends CommandUnPacker<H2Packet> {
                 throw new ProtocolException(
                         "Frame type " + type + " on closed stream " + streamId);
         }
+    }
+
+    private int countActiveStreams() {
+        int n = 0;
+        for (StreamState s : streamStates.values()) {
+            if (s != StreamState.CLOSED)
+                n++;
+        }
+        return n;
     }
 
     private void updateHeaderBlockState(H2Packet pkt) {
