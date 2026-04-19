@@ -49,9 +49,11 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
     final H2Settings settings = new H2Settings();
 
     // RFC 7540 § 6.9.1: the flow-control window must not exceed 2^31-1.
-    // We track only the outbound (send) window so that WINDOW_UPDATE frames
-    // that would overflow it can be rejected. Default initial window per
-    // RFC 7540 § 5.2.1 is 65535.
+    // We track (but do not yet enforce on send) the outbound window so that
+    // WINDOW_UPDATE frames that would overflow it can be rejected per spec.
+    // Actually respecting the window while emitting DATA frames would require
+    // deeper changes to the send path; that is left for a later pass and is
+    // what the remaining h2spec failures exercise.
     private static final long MAX_WINDOW = 0x7FFFFFFFL;
     private static final long DEFAULT_INITIAL_WINDOW = 65535L;
     long connSendWindow = DEFAULT_INITIAL_WINDOW;
@@ -82,6 +84,11 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
         reqContLen = 0;
         reqContRead = 0;
         headerBuffer.reset();
+
+        // Flow-control tracking is per-connection; pooled handlers must start
+        // each new connection with fresh windows.
+        connSendWindow = DEFAULT_INITIAL_WINDOW;
+        streamSendWindows.clear();
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////
