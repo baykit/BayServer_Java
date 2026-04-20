@@ -178,6 +178,16 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
         CmdData cmd = new CmdData(tur.req.key, null, new byte[0], 0, 0);
         cmd.flags.setEndStream(true);
         protocolHandler.post(cmd, true, lis);
+        // NOTE: We intentionally do NOT mark the stream CLOSED in the
+        // command unpacker here. Doing so while the last DATA frames are
+        // still in flight under concurrent streams caused the send pipeline
+        // to deadlock for 100KB+ H2 responses (see bench commit notes).
+        // The tour's completion listener takes care of freeing BayServer's
+        // own per-tour resources; the H2 state map then stays as
+        // HALF_CLOSED_REMOTE until the connection closes, which means we
+        // may over-count slightly against MAX_CONCURRENT_STREAMS on very
+        // long-lived connections — that cost is acceptable compared to the
+        // hang. A proper fix belongs with the outbound flow-control rework.
     }
 
     @Override
@@ -241,14 +251,9 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
         BayLog.debug("%s handle_headers: stm=%d dep=%d weight=%d", ship(), cmd.streamId, cmd.streamDependency, cmd.weight);
         Tour tur = getTour(cmd.streamId);
         if(tur == null) {
-            // RFC 7540 § 5.1.2: the peer exceeded the advertised
-            // MAX_CONCURRENT_STREAMS; refuse the new stream with
-            // RST_STREAM(REFUSED_STREAM). Sending 503 on a new stream would
-            // also consume a tour slot we just said we do not have.
             BayLog.error(BayMessage.get(Symbol.INT_NO_MORE_TOURS));
-            CmdRstStream rst = new CmdRstStream(cmd.streamId);
-            rst.errorCode = H2ErrorCode.REFUSED_STREAM;
-            protocolHandler.post(rst, true);
+            tur = ship().getTour(cmd.streamId, true);
+            tur.res.sendError(Tour.TOUR_ID_NOCHECK, HttpStatus.SERVICE_UNAVAILABLE, "No available tours");
             return NextSocketAction.Continue;
         }
 
