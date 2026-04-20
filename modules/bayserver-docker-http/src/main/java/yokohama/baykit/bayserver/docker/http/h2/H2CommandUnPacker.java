@@ -242,12 +242,15 @@ public class H2CommandUnPacker extends CommandUnPacker<H2Packet> {
                     throw new ProtocolException(
                             "Stream id " + streamId + " is not greater than the previous "
                                     + highestSeenStreamId);
-                // RFC 7540 § 5.1.2: reject a new stream that would exceed the
-                // advertised MAX_CONCURRENT_STREAMS (REFUSED_STREAM).
-                int max = BayServer.harbor.maxToursPerShip();
-                if (countActiveStreams() >= max)
-                    throw new H2ProtocolException(H2ErrorCode.REFUSED_STREAM,
-                            "Concurrent stream limit (" + max + ") exceeded");
+                // RFC 7540 § 5.1.2: we advertise MAX_CONCURRENT_STREAMS but do
+                // not enforce it here. The receive-side state map cannot see
+                // the server's own END_STREAM, so HALF_CLOSED_REMOTE streams
+                // linger and counting them against the limit falsely refused
+                // well-behaved clients. The proper fix belongs with the
+                // outbound flow-control rework. The concurrency cap is still
+                // enforced at InboundShip.getTour via the per-agent TourStore
+                // (default 12800 concurrent tours), which is generous but
+                // keeps the server bounded.
             }
             switch (type) {
                 case H2Type.Headers:
@@ -304,6 +307,7 @@ public class H2CommandUnPacker extends CommandUnPacker<H2Packet> {
         }
         return n;
     }
+
 
     private void updateHeaderBlockState(H2Packet pkt) {
         int type = pkt.type();
