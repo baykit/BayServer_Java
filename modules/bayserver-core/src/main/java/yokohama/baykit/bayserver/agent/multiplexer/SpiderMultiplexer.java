@@ -345,6 +345,11 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
             tryWriteList.clear();
         }
         for(RudderState st : writeTargets) {
+            if(st.rudder == null) {
+                // RudderState was cleaned up after being added to tryWriteList.
+                // Nothing to write to, just drop it silently instead of crashing.
+                continue;
+            }
             try {
                 onWritable(st);
             } catch (Throwable e) {
