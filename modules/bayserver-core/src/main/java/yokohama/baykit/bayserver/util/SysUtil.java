@@ -7,6 +7,7 @@ import java.lang.reflect.Method;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.net.StandardProtocolFamily;
+import java.net.StandardSocketOptions;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
@@ -108,4 +109,20 @@ public class SysUtil {
         }
     }
 
+    /**
+     * Probe whether this JVM/OS combination accepts the SO_REUSEPORT socket
+     * option on a TCP server socket.  Linux and recent BSDs support it; on
+     * Windows and on older JDKs the call throws
+     * {@link UnsupportedOperationException}.
+     */
+    public static boolean supportReusePort() {
+        try (ServerSocketChannel probe = ServerSocketChannel.open()) {
+            probe.setOption(StandardSocketOptions.SO_REUSEPORT, true);
+            return true;
+        }
+        catch (Throwable e) {
+            BayLog.debug("SO_REUSEPORT not supported: %s", e);
+            return false;
+        }
+    }
 }
