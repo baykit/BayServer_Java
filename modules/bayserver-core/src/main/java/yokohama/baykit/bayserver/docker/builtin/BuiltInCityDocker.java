@@ -64,18 +64,35 @@ public class BuiltInCityDocker extends DockerBase implements City {
         int turId = tur.id();
         int chunkSize = tur.ship.protocolHandler.maxResPacketDataSize();
         int[] pos = {0};
+        // Re-entry guard.  sendResContent may complete synchronously for a
+        // chunk that fits in the write queue, in which case the consume
+        // listener fires inside sendChunks itself — if the listener then
+        // calls sendChunks again, each chunk adds a stack frame and 100 KB+
+        // responses overflow the thread stack.  With this guard the listener
+        // becomes a no-op while the outer sendChunks is still iterating; the
+        // outer loop sends the next chunk itself.
+        boolean[] sending = {false};
 
         tur.res.setConsumeListener((len, resume) -> {
-            if (resume) {
-                try {
-                    sendChunks(tur, turId, cgo, pos, chunkSize);
-                } catch (IOException e) {
-                    BayLog.error(e);
-                }
+            if (!resume || sending[0]) {
+                return;
+            }
+            sending[0] = true;
+            try {
+                sendChunks(tur, turId, cgo, pos, chunkSize);
+            } catch (IOException e) {
+                BayLog.error(e);
+            } finally {
+                sending[0] = false;
             }
         });
 
-        sendChunks(tur, turId, cgo, pos, chunkSize);
+        sending[0] = true;
+        try {
+            sendChunks(tur, turId, cgo, pos, chunkSize);
+        } finally {
+            sending[0] = false;
+        }
     }
 
     private static void sendChunks(Tour tur, int turId, Barge.Cargo cgo, int[] pos, int chunkSize) throws IOException {
