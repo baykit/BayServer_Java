@@ -164,6 +164,16 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
 
     @Override
     public boolean sendContent(Tour tur, byte[] bytes, int ofs, final int len, DataConsumeListener lis) throws IOException {
+        // Account for the bytes we are about to send against the flow-control
+        // windows.  Without this, {@link #handleWindowUpdate} only ever sees
+        // WINDOW_UPDATE additions and eventually trips the > 2^31-1 guard
+        // on long-lived high-throughput connections, which kills the agent.
+        if (len > 0) {
+            int streamId = tur.req.key;
+            connSendWindow -= len;
+            long strWin = streamSendWindows.getOrDefault(streamId, DEFAULT_INITIAL_WINDOW) - len;
+            streamSendWindows.put(streamId, strWin);
+        }
         CmdData cmd = new CmdData(tur.req.key, null, bytes, ofs, len);
         return protocolHandler.post(cmd, false, lis);
     }
