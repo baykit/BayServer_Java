@@ -70,9 +70,38 @@ public class BayServer {
     /** BayAgent */
     public static SignalAgent signalAgent;
 
-    public static final ArrayList<Pair<Channel, Port>> anchorablePorts = new ArrayList<>();
+    /**
+     * Anchorable (TCP / UNIX) ports.
+     *
+     * <p>Each entry stores a list of listening channels plus the Port docker.
+     * When SO_REUSEPORT is enabled the list holds {@code grandAgents}
+     * independent {@link ServerSocketChannel}s bound to the same address; each
+     * GrandAgent registers only its own channel with its selector so that the
+     * kernel, not a user-space thundering herd, decides which agent receives
+     * each incoming connection.  On platforms without SO_REUSEPORT (and for
+     * the async/UNIX-domain paths where we do not apply it) the list contains
+     * a single shared channel and every agent registers the same one.</p>
+     */
+    public static final ArrayList<Pair<List<Channel>, Port>> anchorablePorts = new ArrayList<>();
 
     public static final ArrayList<Pair<Channel, Port>> unanchorablePorts = new ArrayList<>();
+
+    /**
+     * Mapping from GrandAgent id to the index of the listening channel it
+     * should register inside each {@link #anchorablePorts} entry.
+     *
+     * <p>Initially each agent {@code i} is mapped to index {@code i - 1}, so
+     * with SO_REUSEPORT the N initial agents own N distinct channels.  When
+     * an agent aborts, {@link yokohama.baykit.bayserver.agent.monitor.GrandAgentMonitor#agentAborted}
+     * removes the entry and reassigns the same channel index to the next
+     * agent id about to be created, so the replacement inherits the bound
+     * socket without any array manipulation.</p>
+     *
+     * <p>When a port has only one listener (no SO_REUSEPORT) callers should
+     * take {@code index % listeners.size()} so every agent lands on the
+     * shared channel.</p>
+     */
+    public static final Map<Integer, Integer> agentIdToChannelIndex = new HashMap<>();
 
     /**
      * Date format for debug
@@ -236,37 +265,9 @@ public class BayServer {
 
             if(portDkr.anchored()) {
                 BayLog.info(BayMessage.get(Symbol.MSG_OPENING_TCP_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), portDkr.protocol()));
-                AsynchronousServerSocketChannel ach = null;
-                ServerSocketChannel ch = null;
-                if(adr instanceof InetSocketAddress) {
-                    if (harbor.netMultiplexer() == Harbor.MultiPlexerType.Pigeon) {
-                        ach = AsynchronousServerSocketChannel.open();
-                    }
-                    else {
-                        ch = ServerSocketChannel.open();
-                    }
-                }
-                else {
-                    File f = new File(portDkr.socketPath());
-                    if(f.exists())
-                        f.delete();
-                    if (harbor.netMultiplexer() == Harbor.MultiPlexerType.Pigeon) {
-                        throw new IOException("Asynchronous mode not supported for UNIX domain socket");
-                    }
-                    else {
-                        ch = SysUtil.openUnixDomainServerSocketChannel();
-                    }
-                }
-
                 try {
-                    if(ch != null) {
-                        ch.bind(adr);
-                        anchorablePorts.add(new Pair<>(ch, portDkr));
-                    }
-                    else {
-                        ach.bind(adr);
-                        anchorablePorts.add(new Pair<>(ach, portDkr));
-                    }
+                    List<Channel> listeners = openAnchorableListeners(portDkr, adr);
+                    anchorablePorts.add(new Pair<>(listeners, portDkr));
                 } catch (SocketException e) {
                     BayLog.error(BayMessage.get(Symbol.INT_CANNOT_OPEN_PORT, portDkr.host() == null ? "" : portDkr.host(), portDkr.port(), e.getMessage()));
                     throw e;
@@ -285,6 +286,77 @@ public class BayServer {
             }
         }
 
+        // Seed agentIdToChannelIndex with the initial 1:1 assignment.  This
+        // runs regardless of SO_REUSEPORT support: when there is only one
+        // listener per port the values still resolve to index 0 through the
+        // {@code index % listeners.size()} fold applied at registration
+        // time, so every agent correctly maps onto the shared socket.  The
+        // range covers the unanchorable agent (if any) plus the anchorable
+        // agents configured by {@code grandAgents}.
+        int totalAgents = harbor.grandAgents() + (unanchorablePorts.isEmpty() ? 0 : 1);
+        for (int i = 1; i <= totalAgents; i++) {
+            agentIdToChannelIndex.put(i, i - 1);
+        }
+    }
+
+    /**
+     * Open the listening channels that back an anchorable Port docker.
+     *
+     * <p>Two layouts are possible:</p>
+     * <ul>
+     *   <li><b>SO_REUSEPORT</b> — when the OS supports it and the port is a
+     *       regular TCP endpoint driven by a selector-based multiplexer, we
+     *       open {@code grandAgents()} independent {@link ServerSocketChannel}s,
+     *       each bound to the same address with SO_REUSEPORT set.  Each
+     *       GrandAgent later registers exactly one of these channels, so the
+     *       kernel distributes incoming connections across agents by hashing
+     *       the 4-tuple rather than letting all agents race on a single
+     *       accept queue.</li>
+     *   <li><b>Single shared channel</b> — UNIX-domain sockets, the async
+     *       (Pigeon) multiplexer and platforms without SO_REUSEPORT fall back
+     *       to the legacy layout: one channel, every agent registers it.</li>
+     * </ul>
+     */
+    private static List<Channel> openAnchorableListeners(Port portDkr, SocketAddress adr) throws IOException {
+        List<Channel> listeners = new ArrayList<>();
+
+        boolean tcpSelector = adr instanceof InetSocketAddress
+                && harbor.netMultiplexer() != Harbor.MultiPlexerType.Pigeon;
+
+        if (tcpSelector && SysUtil.supportReusePort() && harbor.grandAgents() > 1) {
+            for (int i = 0; i < harbor.grandAgents(); i++) {
+                ServerSocketChannel ch = ServerSocketChannel.open();
+                ch.setOption(StandardSocketOptions.SO_REUSEPORT, true);
+                ch.bind(adr);
+                listeners.add(ch);
+            }
+            return listeners;
+        }
+
+        // Fall back: open exactly one listener shared by all agents.
+        Channel shared;
+        if (adr instanceof InetSocketAddress) {
+            if (harbor.netMultiplexer() == Harbor.MultiPlexerType.Pigeon) {
+                AsynchronousServerSocketChannel ach = AsynchronousServerSocketChannel.open();
+                ach.bind(adr);
+                shared = ach;
+            } else {
+                ServerSocketChannel ch = ServerSocketChannel.open();
+                ch.bind(adr);
+                shared = ch;
+            }
+        } else {
+            File f = new File(portDkr.socketPath());
+            if (f.exists()) f.delete();
+            if (harbor.netMultiplexer() == Harbor.MultiPlexerType.Pigeon) {
+                throw new IOException("Asynchronous mode not supported for UNIX domain socket");
+            }
+            ServerSocketChannel ch = SysUtil.openUnixDomainServerSocketChannel();
+            ch.bind(adr);
+            shared = ch;
+        }
+        listeners.add(shared);
+        return listeners;
     }
 
     /**
@@ -328,12 +400,34 @@ public class BayServer {
      * Finds port docker from server socket rudder
      */
     public static Port findAnchorablePort(Channel ch) {
-        for(Pair<Channel, Port> pair: anchorablePorts) {
-            if(pair.a == ch) {
-                return pair.b;
+        for(Pair<List<Channel>, Port> pair: anchorablePorts) {
+            for(Channel c: pair.a) {
+                if(c == ch) {
+                    return pair.b;
+                }
             }
         }
         return null;
+    }
+
+    /**
+     * Resolve the (listening channel, Port docker) pairs that the given
+     * GrandAgent should register with its selector.
+     *
+     * <p>When SO_REUSEPORT is active each agent owns one of the N bound
+     * listeners, selected through {@link #agentIdToChannelIndex}.  Otherwise
+     * every agent shares the same single listener per port.</p>
+     */
+    public static List<Pair<Channel, Port>> anchorableListenersFor(int agentId) {
+        int idx = agentIdToChannelIndex.get(agentId);
+        boolean reusePort = SysUtil.supportReusePort();
+        List<Pair<Channel, Port>> result = new ArrayList<>();
+        for (Pair<List<Channel>, Port> pair : anchorablePorts) {
+            List<Channel> listeners = pair.a;
+            Channel ch = reusePort ? listeners.get(idx) : listeners.get(0);
+            result.add(new Pair<>(ch, pair.b));
+        }
+        return result;
     }
 
 

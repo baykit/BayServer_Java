@@ -7,8 +7,10 @@ import yokohama.baykit.bayserver.common.Multiplexer;
 import yokohama.baykit.bayserver.common.RudderState;
 import yokohama.baykit.bayserver.common.Transporter;
 import yokohama.baykit.bayserver.common.WriteUnit;
+import yokohama.baykit.bayserver.rudder.AsynchronousServerSocketChannelRudder;
 import yokohama.baykit.bayserver.rudder.ChannelRudder;
 import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.bayserver.rudder.ServerSocketChannelRudder;
 import yokohama.baykit.bayserver.util.RoughTime;
 
 import java.io.IOException;
@@ -139,14 +141,29 @@ public abstract class MultiplexerBase implements Multiplexer {
     }
 
     protected final void closeAll() {
-        // Use copied ArrayList to avoid ConcurrentModificationException
+        // Use copied ArrayList to avoid ConcurrentModificationException.
+        //
+        // Server-socket rudders (the listening channels) are intentionally
+        // skipped: a replacement GrandAgent spawned by GrandAgentMonitor
+        // will inherit this agent's channel-index slot (see
+        // BayServer.agentIdToChannelIndex) and register the very same
+        // ServerSocketChannel with its own selector.  Closing the channel
+        // here would make that reuse impossible and, in the non-SO_REUSEPORT
+        // fallback where the listener is shared, also break every other
+        // live agent.
         for (Iterator<Rudder> it = rudders.iterator(); it.hasNext(); ) {
             Rudder rd = it.next();
-            if(rd != agent.commandReceiver.rudder) {
-                closeRudder(rd);
-                it.remove();
+            if(rd == agent.commandReceiver.rudder || isListenerRudder(rd)) {
+                continue;
             }
+            closeRudder(rd);
+            it.remove();
         }
+    }
+
+    private static boolean isListenerRudder(Rudder rd) {
+        return rd instanceof ServerSocketChannelRudder
+                || rd instanceof AsynchronousServerSocketChannelRudder;
     }
 
 

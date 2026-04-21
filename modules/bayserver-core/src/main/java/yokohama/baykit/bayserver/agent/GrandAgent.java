@@ -148,14 +148,19 @@ public class GrandAgent extends Thread {
             netMultiplexer.reqRead(commandReceiver.rudder);
 
             if(anchorable) {
-                // Adds server socket channel of anchorable ports
-                for(Pair<Channel, Port> pair: BayServer.anchorablePorts) {
+                // Register this agent's server socket(s) with its selector.
+                // BayServer picks the correct listener per port: the
+                // agent-owned channel when SO_REUSEPORT is active, or the
+                // shared fallback channel otherwise.
+                for(Pair<Channel, Port> pair: BayServer.anchorableListenersFor(agentId)) {
+                    Channel ch = pair.a;
+
                     Rudder rd;
-                    if(pair.a instanceof ServerSocketChannel) {
-                        rd = new ServerSocketChannelRudder((ServerSocketChannel)pair.a);
+                    if(ch instanceof ServerSocketChannel) {
+                        rd = new ServerSocketChannelRudder((ServerSocketChannel)ch);
                     }
                     else {
-                        rd = new AsynchronousServerSocketChannelRudder((AsynchronousServerSocketChannel)pair.a);
+                        rd = new AsynchronousServerSocketChannelRudder((AsynchronousServerSocketChannel)ch);
                     }
                     anchorableRudders.add(rd);
 
@@ -351,7 +356,7 @@ public class GrandAgent extends Thread {
     }
 
     void reloadCert() {
-        for(Pair<Channel, Port> pair : BayServer.anchorablePorts) {
+        for(Pair<List<Channel>, Port> pair : BayServer.anchorablePorts) {
             if(pair.b.secure()) {
                 PortBase pbase = (PortBase)pair.b;
                 try {

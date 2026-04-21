@@ -212,6 +212,13 @@ public class GrandAgentMonitor extends Thread {
 
         if(!finale) {
             if (monitors.size() < numAgents) {
+                // Hand the departing agent's channel slot to the replacement
+                // (which add() will create with agentId == curId + 1), so the
+                // new agent registers the same bound ServerSocketChannel.
+                Integer deadIdx = BayServer.agentIdToChannelIndex.remove(agtId);
+                if (deadIdx != null) {
+                    BayServer.agentIdToChannelIndex.put(curId + 1, deadIdx);
+                }
                 try {
                     add(anchorable);
                 }
