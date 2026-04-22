@@ -26,6 +26,8 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     public static final int DEFAULT_SOCKET_TIMEOUT_SEC = 300;
     public static final int DEFAULT_KEEP_TIMEOUT_SEC = 20;
     public static final int DEFAULT_SHIP_BUFFER_SIZE = 64 * 1024;  // 1M
+    /** -1 disables the per-receive event cap (pre-tuning behaviour). */
+    public static final int DEFAULT_MAX_EVENTS_PER_RECEIVE = -1;
     public static final String DEFAULT_CHARSET = "UTF-8";
     public static final int DEFAULT_CONTROL_PORT = -1;
     public static final MultiPlexerType DEFAULT_NET_MULTIPLEXER = MultiPlexerType.Spider;
@@ -71,6 +73,10 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
 
     /** Internal buffer size of Tour */
     int shipBufferSize = DEFAULT_SHIP_BUFFER_SIZE;
+
+    /** Cap on epoll events SpiderMultiplexer.receive() will drain per call.
+     *  -1 disables the cap (original unlimited draining). */
+    int maxEventsPerReceive = DEFAULT_MAX_EVENTS_PER_RECEIVE;
 
     /** Trace req/res header flag */
     boolean traceHeader = false;
@@ -297,6 +303,16 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
                 this.shipBufferSize = StringUtil.parseSize(kv.value);
                 break;
 
+            case "maxeventsperreceive": {
+                int v = Integer.parseInt(kv.value);
+                if (v == 0) {
+                    throw new ConfigException(kv.fileName, kv.lineNo,
+                            "maxEventsPerReceive must be -1 (disabled) or positive: %s", kv.value);
+                }
+                this.maxEventsPerReceive = v;
+                break;
+            }
+
             case "traceheader":
                 traceHeader = StringUtil.parseBool(kv.value);
                 break;
@@ -461,6 +477,11 @@ public class BuiltInHarborDocker extends DockerBase implements Harbor {
     @Override
     public int shipBufferSize() {
         return shipBufferSize;
+    }
+
+    @Override
+    public int maxEventsPerReceive() {
+        return maxEventsPerReceive;
     }
 
     @Override
