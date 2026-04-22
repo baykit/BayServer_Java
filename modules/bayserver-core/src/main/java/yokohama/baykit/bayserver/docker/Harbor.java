@@ -54,6 +54,22 @@ public interface Harbor {
     /** Internal buffer size of Tour */
     int shipBufferSize();
 
+    /**
+     * Maximum number of epoll events a single SpiderMultiplexer.receive()
+     * call will hand off to handleChannel() before returning.  Any leftover
+     * ready keys stay in the selected-key set and are drained on subsequent
+     * receive() calls without re-entering select().  Keeps the agent's hot
+     * working set inside per-core L2 cache under high -c workloads.
+     *
+     * -1 (the default) disables the limit entirely and restores the
+     * pre-tuning behaviour of draining the whole selected-key set in one
+     * pass.  A positive value (e.g. 32 on Xeon Skylake-class L2=1MB)
+     * activates the cap.  Since the optimal value depends on per-core L2
+     * size and per-connection hot footprint, we require operators to opt
+     * in rather than hard-coding a machine-specific default.
+     */
+    int maxEventsPerReceive();
+
     /** File name to redirect stdout/stderr */
     String redirectFile();
 

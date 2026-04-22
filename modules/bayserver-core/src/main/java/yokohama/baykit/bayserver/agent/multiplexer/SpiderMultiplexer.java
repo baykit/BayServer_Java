@@ -314,8 +314,30 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
     ////////////////////////////////////////////
     @Override
     public boolean receive(boolean wait) throws IOException{
+        // When harbor.maxEventsPerReceive() is a positive value, cap the
+        // number of epoll events drained per call so the agent's hot
+        // working set (RudderState / readBuf / Tour state of the
+        // connections currently being serviced) stays inside per-core L2.
+        // Leftover ready keys remain in selectedKeys and are drained on
+        // subsequent receive() calls without re-entering select().
+        //
+        // The optimal value depends on per-core L2 size and per-connection
+        // hot footprint (~32 on Xeon Skylake-class L2=1MB), so the default
+        // is -1 (disabled) and operators opt in by setting the harbor
+        // parameter maxEventsPerReceive.
+        int maxEvents = BayServer.harbor.maxEventsPerReceive();
+        boolean capped = maxEvents > 0;
+
+        Set<SelectionKey> selKeys = selector.selectedKeys();
+        boolean hasLeftover = capped && !selKeys.isEmpty();
+
         int count;
-        if (!wait) {
+        if (hasLeftover) {
+            // Still draining keys from a previous select(); skip the syscall
+            // and keep the agent on the same connection subset one more pass.
+            count = selKeys.size();
+        }
+        else if (!wait) {
             count = selector.selectNow();
         }
         else {
@@ -325,12 +347,22 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         //BayLog.debug(this + " select count=" + count);
         registerChannelOps();
 
-        Set<SelectionKey> selKeys = selector.selectedKeys();
-
-        for(Iterator<SelectionKey> it = selKeys.iterator(); it.hasNext(); ) {
-            SelectionKey key = it.next();
-            it.remove();
-            handleChannel(key);
+        if (capped) {
+            int processed = 0;
+            for(Iterator<SelectionKey> it = selKeys.iterator();
+                    it.hasNext() && processed < maxEvents; ) {
+                SelectionKey key = it.next();
+                it.remove();
+                handleChannel(key);
+                processed++;
+            }
+        }
+        else {
+            for(Iterator<SelectionKey> it = selKeys.iterator(); it.hasNext(); ) {
+                SelectionKey key = it.next();
+                it.remove();
+                handleChannel(key);
+            }
         }
 
         // Shortcut for write: instead of registering OP_WRITE with the selector
