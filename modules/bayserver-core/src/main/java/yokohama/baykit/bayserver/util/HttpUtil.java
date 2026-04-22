@@ -179,6 +179,21 @@ public class HttpUtil {
             Pattern.compile("^[A-Za-z0-9!#$%&'*+\\-.^_`|~]+$");
 
     public static void checkMethod(String method) throws ProtocolException{
+        // Fast path: common HTTP methods bypass the regex (and its Matcher
+        // allocation) entirely.  HTTP spec allows arbitrary tokens but >99%
+        // of production traffic uses one of these.
+        switch (method) {
+            case "GET":
+            case "POST":
+            case "HEAD":
+            case "PUT":
+            case "DELETE":
+            case "PATCH":
+            case "OPTIONS":
+            case "CONNECT":
+            case "TRACE":
+                return;
+        }
         if (!TOKEN_PATTERN.matcher(method).matches())
             throw new ProtocolException("Invalid method: " + method);
 

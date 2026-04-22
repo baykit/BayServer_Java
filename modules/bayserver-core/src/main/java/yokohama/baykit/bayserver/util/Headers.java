@@ -4,7 +4,6 @@ import yokohama.baykit.bayserver.BayLog;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
@@ -43,8 +42,9 @@ public class Headers {
     /** Status */
     int status = HttpStatus.OK;
 
-    /** Header hash */
-    Map<String, List<String>> headers = new ConcurrentHashMap<>();
+    /** Header hash.  Plain HashMap because a Headers instance is owned by a
+     *  single Tour and accessed from one agent thread at a time. */
+    Map<String, List<String>> headers = new HashMap<>();
 
     @Override
     public String toString() {
@@ -376,9 +376,11 @@ public class Headers {
 
 
     public void clear() {
-        // It turned out that creating a new instance is faster than calling HashMap.clear().
-        //headers.clear();
-        headers = new HashMap<>();
+        // Reuse the HashMap by calling clear() so the table/bucket arrays stay
+        // allocated across requests.  Headers pools allocate ~1 HashMap + ~7
+        // Node entries per request otherwise, which shows up near the top of
+        // alloc flamegraphs under high keep-alive traffic.
+        headers.clear();
         status = HttpStatus.OK;
     }
 
