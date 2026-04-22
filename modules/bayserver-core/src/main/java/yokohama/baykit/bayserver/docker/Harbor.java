@@ -118,10 +118,21 @@ public interface Harbor {
     int maxDirectBoardings();
 
     /**
-     * The maximum file size, in bytes, to be cached.
-     * Files exceeding this size will not be cached.
+     * The maximum file size, in bytes, to be cached for non-secure (plain
+     * HTTP) tours.  Files exceeding this size are served via directBoarding
+     * (sendfile) when available, or fall back to per-request file open
+     * otherwise.
      */
     int maxCargoSize();
+
+    /**
+     * The maximum file size, in bytes, to be cached for secure (HTTPS) tours.
+     * Returns {@link #maxCargoSize()} when not explicitly configured so the
+     * default preserves the previous behaviour.  Secure tours cannot use
+     * sendfile (TLS requires user-space encryption), so a larger HTTPS cache
+     * threshold keeps large files out of the slow per-request file-open path.
+     */
+    int maxCargoSizeSecure();
 
     /**
      * The maximum file size, in bytes, for Direct Boarding (sendfile/transferTo).

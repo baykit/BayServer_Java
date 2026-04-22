@@ -97,8 +97,14 @@ public class MemBargeDocker extends DockerBase implements Barge {
             BayLog.debug("%s save content len=%d", this, len);
             length += len;
 
-            if(length > BayServer.harbor.maxCargoSize()) {
-                BayLog.debug("%s cargo exceeded: len=%d max=%d", this, length, BayServer.harbor.maxCargoSize());
+            // Cache up to the larger of the two thresholds so that secure
+            // tours can still hit the cache for files that plain tours
+            // would route to sendfile.
+            int effectiveMax = Math.max(
+                    BayServer.harbor.maxCargoSize(),
+                    BayServer.harbor.maxCargoSizeSecure());
+            if(length > effectiveMax) {
+                BayLog.debug("%s cargo exceeded: len=%d effectiveMax=%d", this, length, effectiveMax);
                 status = EXCEEDED;
                 buf.reset();
                 return;
@@ -247,11 +253,22 @@ public class MemBargeDocker extends DockerBase implements Barge {
 
             }
             else {
-                // Cargo exceeds cache limit — follow harbor's directBoarding setting
-                // (sendfile for zero-copy transfer instead of byte-copy through protocol stack).
-                // Cargo fits in cache — disable directBoarding so content flows through
-                // userspace for in-memory serving.
-                tour.res.directBoarding = cgo.exceeded() && BayServer.harbor.directBoarding();
+                // Decide the per-tour cache threshold.  Secure tours may cache
+                // larger files (they cannot use sendfile) than plain tours,
+                // which prefer directBoarding above their threshold for
+                // zero-copy transfer.
+                int tourLimit = tour.isSecure
+                        ? BayServer.harbor.maxCargoSizeSecure()
+                        : BayServer.harbor.maxCargoSize();
+                boolean exceedsForTour = cgo.exceeded() || cgo.length() > tourLimit;
+
+                // Only plain tours can use sendfile — TLS requires user-space
+                // encryption.  Secure tours with exceedsForTour fall through to
+                // per-request file open.
+                tour.res.directBoarding =
+                        exceedsForTour
+                        && BayServer.harbor.directBoarding()
+                        && !tour.isSecure;
             }
         }
         cgo.access();
