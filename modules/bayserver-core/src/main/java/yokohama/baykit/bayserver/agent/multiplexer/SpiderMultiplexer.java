@@ -486,7 +486,8 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         if (st == null) {
             BayLog.warn("%s Channel state is not registered", agent);
             key.cancel();
-            st.selectionKey = null;
+            // st is null so there is no selectionKey field to clear; the
+            // previous code dereferenced null here and crashed the agent.
             return;
         }
 
