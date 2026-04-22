@@ -18,10 +18,13 @@ public class PacketPacker<P extends Packet> implements Reusable {
         if(listener == null)
             throw new NullPointerException();
 
+        // Pass the listener through instead of wrapping it in a pass-through
+        // lambda; the wrapper was a hot allocation (one per post call) with
+        // no added behaviour.
         return sip.transporter.reqWrite(
                 sip.rudder,
                 ByteBuffer.wrap(pkt.buf, 0, pkt.bufLen),
                 null,
-                pkt, flush, avail -> listener.dataConsumed(avail));
+                pkt, flush, listener);
     }
 }
