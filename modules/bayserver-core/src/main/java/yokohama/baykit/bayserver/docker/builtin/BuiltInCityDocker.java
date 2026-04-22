@@ -291,9 +291,16 @@ public class BuiltInCityDocker extends DockerBase implements City {
                     agt.spiderMultiplexer.reqRead(rd);
                     return;
                 }
-                else if(cgo.onBarge()) {
+                else if(cgo.onBarge() && cgo.length() <= (
+                        tur.isSecure
+                            ? BayServer.harbor.maxCargoSizeSecure()
+                            : BayServer.harbor.maxCargoSize())) {
                     //BayLog.debug("%s Cargo is ready (on barge): %s", tur, cgo);
-                    /** Cargo is ready (on cache) */
+                    /** Cargo is ready (on cache) and fits this tour's threshold.
+                     *  For a plain tour whose threshold is lower than the cache
+                     *  limit, a file sitting in the cache but above its
+                     *  threshold skips this branch so it can be served via
+                     *  sendfile (tur.cargo branch below). */
                     tur.req.setReqContentHandler(new ReqContentHandler() {
                         @Override
                         public void onReadReqContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
@@ -324,7 +331,15 @@ public class BuiltInCityDocker extends DockerBase implements City {
                     return;
                 }
                 else {
-                    tur.cargo = cgo;
+                    // Cargo is either new/loading, EXCEEDED (not cached), or
+                    // LOADED but over this tour's threshold (routed to sendfile).
+                    // Only set tur.cargo when the tour itself will populate the
+                    // cargo (new/empty case); on LOADED cargo endResContent
+                    // would otherwise re-invoke cgo.endSave() and trigger
+                    // IllegalStateException.
+                    if (!cgo.onBarge()) {
+                        tur.cargo = cgo;
+                    }
                 }
             }
 
