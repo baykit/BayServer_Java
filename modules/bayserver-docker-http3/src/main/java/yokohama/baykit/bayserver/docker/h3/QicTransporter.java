@@ -24,11 +24,18 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.HashMap;
 
 
 public final class QicTransporter implements Transporter {
+
+    /** Connection ID length we hand out to clients in Retry responses. */
+    private static final int CONN_ID_LEN = 16;
+    /** Scratch buffer size for version negotiation / retry packet synthesis. */
+    private static final int MAX_PKT_BUF = 1350;
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     Multiplexer multiplexer;
     static HashMap<String, InboundShip> shipMap = new HashMap<>();
@@ -96,7 +103,7 @@ public final class QicTransporter implements Transporter {
         // parse first QUIC packet in byte data
         PacketHeader hdr;
         try {
-            hdr = PacketHeader.parse(packetBuf, packetBuf.length, Address.CONN_ID_LEN);
+            hdr = PacketHeader.parse(packetBuf, packetBuf.length, CONN_ID_LEN);
         }
         catch(CrouteException e) {
             BayLog.error("%s Header parse error: %s(%d)", this, e.getMessage(), e.code);
@@ -204,7 +211,7 @@ public final class QicTransporter implements Transporter {
         // Use the DCID that was chosen in the retry response as our SCID.
         final byte[] srcConId = hdr.dcid();
 
-        Address peer = Address.from(adr);
+        Address peer = new Address(adr.getAddress().getHostAddress(), adr.getPort());
         Connection con = Connection.accept(
                 srcConId,
                 odcid,
@@ -274,17 +281,18 @@ public final class QicTransporter implements Transporter {
     void negotiateVersion(PacketHeader hdr, InetSocketAddress adr) throws IOException {
         BayLog.info("%s Invalid quic version: %d. Start version negotiation", this, hdr.version());
 
-        byte[] pktBytes;
+        byte[] out = new byte[MAX_PKT_BUF];
+        long n;
         try {
-            pktBytes = Quiche.negotiateVersion(hdr.scid(), hdr.dcid());
+            n = Quiche.negotiateVersion(hdr.scid(), hdr.dcid(), out);
         }
         catch(CrouteException e) {
             throw new IOException("Quiche: cannot create negotiate version packet: " + e.getMessage(), e);
         }
 
         QicPacket pkt = new QicPacket();
-        System.arraycopy(pktBytes, 0, pkt.buf, 0, pktBytes.length);
-        pkt.bufLen = pktBytes.length;
+        System.arraycopy(out, 0, pkt.buf, 0, (int) n);
+        pkt.bufLen = (int) n;
 
         BayLog.info("%s start negotiation", this);
         tmpPostPacket = pkt;
@@ -295,22 +303,24 @@ public final class QicTransporter implements Transporter {
      * Retry
      */
     void retry(PacketHeader hdr, InetSocketAddress adr) throws IOException {
-        byte[] newScid = Address.generateConnId();
+        byte[] newScid = new byte[CONN_ID_LEN];
+        RANDOM.nextBytes(newScid);
         BayLog.info("%s Empty quic token. Retry scid=%s dcid=%s newid=%s",
                 this, asHex(hdr.scid()), asHex(hdr.dcid()), asHex(newScid));
 
         byte[] token = mintToken(hdr, adr.getAddress());
-        byte[] pktBytes;
+        byte[] out = new byte[MAX_PKT_BUF];
+        long n;
         try {
-            pktBytes = Quiche.retry(hdr.scid(), hdr.dcid(), newScid, token, hdr.version());
+            n = Quiche.retry(hdr.scid(), hdr.dcid(), newScid, token, hdr.version(), out);
         }
         catch(CrouteException e) {
             throw new IOException("Quiche: cannot create retry packet: " + e.getMessage(), e);
         }
 
         QicPacket pkt = new QicPacket();
-        System.arraycopy(pktBytes, 0, pkt.buf, 0, pktBytes.length);
-        pkt.bufLen = pktBytes.length;
+        System.arraycopy(out, 0, pkt.buf, 0, (int) n);
+        pkt.bufLen = (int) n;
         tmpPostPacket = pkt;
         tmpPostAddress = adr;
     }
