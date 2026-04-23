@@ -340,14 +340,16 @@ public final class QicTransporter implements Transporter {
     }
 
     /**
-     * Cleanup closed connections
+     * Cleanup closed connections. Must iterate through Iterator.remove() since
+     * HashMap#remove() during a keySet() for-each throws
+     * ConcurrentModificationException.
      */
     void cleanupConnections() {
-        for (String connId : shipMap.keySet()) {
-
-            if (((QicProtocolHandler)shipMap.get(connId).protocolHandler).isClosed()) {
-                BayLog.debug("%s cleaning up conn=%s", this, connId);
-                shipMap.remove(connId);
+        for (java.util.Iterator<java.util.Map.Entry<String, InboundShip>> it = shipMap.entrySet().iterator(); it.hasNext(); ) {
+            java.util.Map.Entry<String, InboundShip> entry = it.next();
+            if (((QicProtocolHandler) entry.getValue().protocolHandler).isClosed()) {
+                BayLog.debug("%s cleaning up conn=%s", this, entry.getKey());
+                it.remove();
                 BayLog.debug("%s # of clients: %d", this, shipMap.size());
             }
         }
