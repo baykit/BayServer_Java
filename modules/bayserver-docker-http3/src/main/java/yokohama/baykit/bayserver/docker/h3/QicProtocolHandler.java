@@ -144,7 +144,14 @@ public class QicProtocolHandler
             n = con.recv(bytes, recvInfo);
         }
         catch(CrouteException e) {
-            throw new ProtocolException("Invalid packet: " + e.getMessage());
+            // A recv() error means quiche rejected the packet (invalid transport
+            // param, protocol violation, etc). quiche has moved the connection
+            // into the closing state and queued a CONNECTION_CLOSE frame. Let
+            // the caller flush outgoing packets so the client gets the error
+            // response before we tear down. Do not propagate as an exception
+            // or postPackets() will be skipped.
+            BayLog.debug("%s recv rejected: %s (code=%d)", this, e.getMessage(), e.code);
+            return NextSocketAction.Continue;
         }
 
         if (n < bytes.length)
@@ -369,12 +376,21 @@ public class QicProtocolHandler
     boolean postPackets() throws IOException {
         boolean posted = false;
         while (true) {
+            if (con.isClosed()) {
+                // Already fully drained; nothing more to send. Avoid the
+                // CrouteException("connection is closed") that sendOne would
+                // otherwise raise.
+                break;
+            }
             byte[] pktBytes;
             try {
                 pktBytes = con.sendOne();
             }
             catch(CrouteException e) {
-                throw new IOException("Quiche: cannot send packet: " + e.getMessage(), e);
+                // Race: connection transitioned to closed between the check
+                // above and sendOne(). Treat as drained.
+                BayLog.debug("%s sendOne on closing connection: %s", this, e.getMessage());
+                break;
             }
             if(pktBytes == null) {
                 break;
