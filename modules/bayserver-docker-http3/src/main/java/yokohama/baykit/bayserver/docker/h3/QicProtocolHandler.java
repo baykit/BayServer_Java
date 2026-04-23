@@ -11,11 +11,8 @@ import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Reusable;
-import com.sun.jna.Pointer;
-import com.sun.jna.ptr.LongByReference;
-import yokohama.baykit.bayserver.rudder.DatagramChannelRudder;
 import yokohama.baykit.croute.CrouteException;
-import yokohama.baykit.croute.binding.Binding;
+import yokohama.baykit.croute.binding.QuicheBinding;
 import yokohama.baykit.croute.binding.QuicheStructs;
 import yokohama.baykit.croute.h3.Event;
 import yokohama.baykit.croute.h3.H3Config;
@@ -27,7 +24,6 @@ import yokohama.baykit.croute.quic.Connection;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
 import java.util.*;
 
 public class QicProtocolHandler
@@ -115,14 +111,15 @@ public class QicProtocolHandler
         this.sender = adr;
         this.localAddress = localAddress;
         this.peerAddress = peerAddress;
-        // quiche_recv_info is a pair of sockaddr pointers (local, peer). croute
-        // dropped the builder helper, so we populate the Structure manually.
+        // quiche_recv_info is just a pair of (sockaddr, socklen). In croute's
+        // JNI binding these are expanded to byte[] + int fields passed down
+        // directly when con.recv() is called, so there is no Structure.write()
+        // step to perform here.
         this.recvInfo = new QuicheStructs.RecvInfo();
-        this.recvInfo.from   = peerAddress.toSockaddrPtr();
+        this.recvInfo.from    = peerAddress.toSockaddr();
         this.recvInfo.fromLen = peerAddress.toSockaddrLen();
-        this.recvInfo.to      = localAddress.toSockaddrPtr();
+        this.recvInfo.to      = localAddress.toSockaddr();
         this.recvInfo.toLen   = localAddress.toSockaddrLen();
-        this.recvInfo.write();
         this.h3Config = cfg;
         this.multiplexer = mpx;
     }
@@ -221,20 +218,17 @@ public class QicProtocolHandler
     /**
      * When H3 returns H3_ERR_TRANSPORT_ERROR, the underlying QUIC error is
      * available on the connection via quiche_conn_peer_error /
-     * quiche_conn_local_error. We do not need the full payload here, just a
-     * hint to include in the exception message. Returning -1 means no error
-     * was recorded (or the introspection was not useful).
+     * quiche_conn_local_error. Returning -1 means no error was recorded.
      */
     long peerOrLocalErrorCode() {
-        com.sun.jna.ptr.ByteByReference isApp = new com.sun.jna.ptr.ByteByReference();
-        LongByReference errorCode = new LongByReference();
-        com.sun.jna.ptr.PointerByReference reason = new com.sun.jna.ptr.PointerByReference();
-        com.sun.jna.ptr.NativeLongByReference reasonLen = new com.sun.jna.ptr.NativeLongByReference();
-        if (Binding.lib().quiche_conn_peer_error(con.getPtr(), isApp, errorCode, reason, reasonLen)) {
-            return errorCode.getValue();
+        boolean[] isApp = new boolean[1];
+        long[] errorCode = new long[1];
+        byte[][] reason = new byte[1][];
+        if (QuicheBinding.quiche_conn_peer_error(con.getPtr(), isApp, errorCode, reason)) {
+            return errorCode[0];
         }
-        if (Binding.lib().quiche_conn_local_error(con.getPtr(), isApp, errorCode, reason, reasonLen)) {
-            return errorCode.getValue();
+        if (QuicheBinding.quiche_conn_local_error(con.getPtr(), isApp, errorCode, reason)) {
+            return errorCode[0];
         }
         return -1;
     }
@@ -283,17 +277,18 @@ public class QicProtocolHandler
     }
 
     void flushWritable() throws IOException {
-        // quiche_conn_writable returns a stream-id iterator that the caller
-        // must free. croute dropped the List<Long> materialising helper.
-        Pointer iter = Binding.lib().quiche_conn_writable(con.getPtr());
-        if (iter == null) return;
+        // quiche_conn_writable returns a stream-id iterator pointer (long)
+        // that the caller must free. croute dropped the List<Long>
+        // materialising helper.
+        long iter = QuicheBinding.quiche_conn_writable(con.getPtr());
+        if (iter == 0) return;
         try {
-            LongByReference idRef = new LongByReference();
-            while (Binding.lib().quiche_stream_iter_next(iter, idRef)) {
-                onStreamWritable(idRef.getValue());
+            long[] idOut = new long[1];
+            while (QuicheBinding.quiche_stream_iter_next(iter, idOut)) {
+                onStreamWritable(idOut[0]);
             }
         } finally {
-            Binding.lib().quiche_stream_iter_free(iter);
+            QuicheBinding.quiche_stream_iter_free(iter);
         }
     }
 

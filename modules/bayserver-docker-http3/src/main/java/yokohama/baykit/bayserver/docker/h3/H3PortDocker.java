@@ -1,6 +1,5 @@
 package yokohama.baykit.bayserver.docker.h3;
 
-import com.sun.jna.NativeLong;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.common.RudderState;
@@ -11,8 +10,6 @@ import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.base.PortBase;
 import yokohama.baykit.bayserver.docker.builtin.BuiltInSecureDocker;
 import yokohama.baykit.bayserver.rudder.Rudder;
-import yokohama.baykit.croute.binding.Binding;
-import yokohama.baykit.croute.binding.QuicheBinding;
 import yokohama.baykit.croute.quic.Config;
 
 import java.io.ByteArrayOutputStream;
@@ -60,25 +57,20 @@ public class H3PortDocker extends PortBase implements H3Docker {
         }
 
         this.config = Config.server(cert.getPath(), key.getPath());
-        byte[] alpn = out.toByteArray();
-        int rc = Binding.lib().quiche_config_set_application_protos(
-                config.getPtr(), alpn, new NativeLong(alpn.length));
-        if (rc != 0)
-            throw new ConfigException(elm.fileName, elm.lineNo, "ALPN setup failed: " + rc);
-        Binding.lib().quiche_config_verify_peer(config.getPtr(), false);
-        Binding.lib().quiche_config_set_max_idle_timeout(config.getPtr(), 5_000);
-        Binding.lib().quiche_config_set_max_recv_udp_payload_size(
-                config.getPtr(), new NativeLong(QicPacket.MAX_DATAGRAM_SIZE));
-        Binding.lib().quiche_config_set_max_send_udp_payload_size(
-                config.getPtr(), new NativeLong(QicPacket.MAX_DATAGRAM_SIZE));
-        Binding.lib().quiche_config_set_initial_max_data(config.getPtr(), 10_000_000);
-        Binding.lib().quiche_config_set_initial_max_stream_data_bidi_local(config.getPtr(), 1_000_000);
-        Binding.lib().quiche_config_set_initial_max_stream_data_bidi_remote(config.getPtr(), 1_000_000);
-        Binding.lib().quiche_config_set_initial_max_stream_data_uni(config.getPtr(), 1_000_000);
-        Binding.lib().quiche_config_set_initial_max_streams_bidi(config.getPtr(), 4);
-        Binding.lib().quiche_config_set_initial_max_streams_uni(config.getPtr(), 4);
-        Binding.lib().quiche_config_set_disable_active_migration(config.getPtr(), true);
-        config.enableEarlyData();
+        this.config.setApplicationProtos(out.toByteArray());
+        // Config has no verifyPeer setter on the server side; server-side
+        // defaults (no client-cert verification) match what we want.
+        this.config.setMaxIdleTimeout(5_000);
+        this.config.setMaxRecvUdpPayloadSize(QicPacket.MAX_DATAGRAM_SIZE);
+        this.config.setMaxSendUdpPayloadSize(QicPacket.MAX_DATAGRAM_SIZE);
+        this.config.setInitialMaxData(10_000_000);
+        this.config.setInitialMaxStreamDataBidiLocal(1_000_000);
+        this.config.setInitialMaxStreamDataBidiRemote(1_000_000);
+        this.config.setInitialMaxStreamDataUni(1_000_000);
+        this.config.setInitialMaxStreamsBidi(4);
+        this.config.setInitialMaxStreamsUni(4);
+        this.config.setDisableActiveMigration(true);
+        this.config.enableEarlyData();
     }
 
     ////////////////////////////////////////////
