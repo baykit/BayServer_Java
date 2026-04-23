@@ -11,7 +11,10 @@ import yokohama.baykit.bayserver.protocol.ProtocolException;
 import yokohama.baykit.bayserver.protocol.ProtocolHandler;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Reusable;
+import com.sun.jna.Pointer;
+import com.sun.jna.ptr.LongByReference;
 import yokohama.baykit.croute.CrouteException;
+import yokohama.baykit.croute.binding.Binding;
 import yokohama.baykit.croute.binding.QuicheStructs;
 import yokohama.baykit.croute.h3.Event;
 import yokohama.baykit.croute.h3.H3Config;
@@ -103,7 +106,14 @@ public class QicProtocolHandler
         this.sender = adr;
         this.localAddress = localAddress;
         this.peerAddress = peerAddress;
-        this.recvInfo = Address.buildRecvInfo(localAddress, peerAddress);
+        // quiche_recv_info is a pair of sockaddr pointers (local, peer). croute
+        // dropped the builder helper, so we populate the Structure manually.
+        this.recvInfo = new QuicheStructs.RecvInfo();
+        this.recvInfo.from   = peerAddress.toSockaddrPtr();
+        this.recvInfo.fromLen = peerAddress.toSockaddrLen();
+        this.recvInfo.to      = localAddress.toSockaddrPtr();
+        this.recvInfo.toLen   = localAddress.toSockaddrLen();
+        this.recvInfo.write();
         this.h3Config = cfg;
         this.multiplexer = mpx;
     }
@@ -201,13 +211,22 @@ public class QicProtocolHandler
 
     /**
      * When H3 returns H3_ERR_TRANSPORT_ERROR, the underlying QUIC error is
-     * available on the connection via peer/local error introspection.
+     * available on the connection via quiche_conn_peer_error /
+     * quiche_conn_local_error. We do not need the full payload here, just a
+     * hint to include in the exception message. Returning -1 means no error
+     * was recorded (or the introspection was not useful).
      */
     long peerOrLocalErrorCode() {
-        var pe = con.peerError();
-        if (pe != null) return pe.errorCode();
-        var le = con.localError();
-        if (le != null) return le.errorCode();
+        com.sun.jna.ptr.ByteByReference isApp = new com.sun.jna.ptr.ByteByReference();
+        LongByReference errorCode = new LongByReference();
+        com.sun.jna.ptr.PointerByReference reason = new com.sun.jna.ptr.PointerByReference();
+        com.sun.jna.ptr.NativeLongByReference reasonLen = new com.sun.jna.ptr.NativeLongByReference();
+        if (Binding.lib().quiche_conn_peer_error(con.getPtr(), isApp, errorCode, reason, reasonLen)) {
+            return errorCode.getValue();
+        }
+        if (Binding.lib().quiche_conn_local_error(con.getPtr(), isApp, errorCode, reason, reasonLen)) {
+            return errorCode.getValue();
+        }
         return -1;
     }
 
@@ -240,9 +259,12 @@ public class QicProtocolHandler
 
         BayLog.trace("%s processH3Connection", this);
 
-        // Polling h3 events
+        // Polling h3 events (croute's pollAll was removed; loop over poll()).
         try {
-            h3con.pollAll(this::dispatchEvent);
+            Event ev;
+            while ((ev = h3con.poll()) != null) {
+                dispatchEvent(ev);
+            }
         }
         catch(CrouteException e) {
             BayLog.debug("%s h3 poll failed: %s (code=%d)", this, e.getMessage(), e.code);
@@ -252,8 +274,17 @@ public class QicProtocolHandler
     }
 
     void flushWritable() throws IOException {
-        for(long stmId: con.writableStreams()) {
-            onStreamWritable(stmId);
+        // quiche_conn_writable returns a stream-id iterator that the caller
+        // must free. croute dropped the List<Long> materialising helper.
+        Pointer iter = Binding.lib().quiche_conn_writable(con.getPtr());
+        if (iter == null) return;
+        try {
+            LongByReference idRef = new LongByReference();
+            while (Binding.lib().quiche_stream_iter_next(iter, idRef)) {
+                onStreamWritable(idRef.getValue());
+            }
+        } finally {
+            Binding.lib().quiche_stream_iter_free(iter);
         }
     }
 
@@ -287,9 +318,10 @@ public class QicProtocolHandler
                 BayLog.trace("%s handleWritable stm#%d part cap=%d", this, stmId, cap);
 
                 if (part.headers != null) {
-                    // send header
+                    // send header (croute now wants FfiHeaders for the 1:1 wrapper)
+                    Headers.FfiHeaders ffi = Headers.toFfi(part.headers);
                     try {
-                        h3con.sendHeaders(stmId, part.headers, part.fin);
+                        h3con.sendHeaders(stmId, ffi, part.fin);
                     }
                     catch(CrouteException e) {
                         if (e.code == CrouteException.H3_ERR_STREAM_BLOCKED) {
@@ -375,30 +407,30 @@ public class QicProtocolHandler
 
     boolean postPackets() throws IOException {
         boolean posted = false;
+        byte[] scratch = new byte[QicPacket.MAX_DATAGRAM_SIZE];
+        QuicheStructs.SendInfo sendInfo = new QuicheStructs.SendInfo();
         while (true) {
             if (con.isClosed()) {
-                // Already fully drained; nothing more to send. Avoid the
-                // CrouteException("connection is closed") that sendOne would
-                // otherwise raise.
+                // Already fully drained; nothing more to send.
                 break;
             }
-            byte[] pktBytes;
+            long n;
             try {
-                pktBytes = con.sendOne();
+                n = con.send(scratch, sendInfo);
             }
             catch(CrouteException e) {
                 // Race: connection transitioned to closed between the check
-                // above and sendOne(). Treat as drained.
-                BayLog.debug("%s sendOne on closing connection: %s", this, e.getMessage());
+                // above and send(). Treat as drained.
+                BayLog.debug("%s send on closing connection: %s", this, e.getMessage());
                 break;
             }
-            if(pktBytes == null) {
+            if (n == CrouteException.ERR_DONE) {
                 break;
             }
 
             QicPacket pkt = new QicPacket();
-            System.arraycopy(pktBytes, 0, pkt.buf, 0, pktBytes.length);
-            pkt.bufLen = pktBytes.length;
+            System.arraycopy(scratch, 0, pkt.buf, 0, (int) n);
+            pkt.bufLen = (int) n;
             multiplexer.reqWrite(ship.rudder, pkt.asBuffer(), sender, pkt, true, null);
             posted = true;
         }

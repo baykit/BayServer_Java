@@ -14,9 +14,7 @@ import yokohama.baykit.bayserver.tour.TourReq;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Headers;
 import yokohama.baykit.bayserver.util.HttpStatus;
-import com.sun.jna.NativeLong;
 import yokohama.baykit.croute.CrouteException;
-import yokohama.baykit.croute.binding.Binding;
 import yokohama.baykit.croute.binding.QuicheBinding;
 
 import java.io.IOException;
@@ -73,7 +71,8 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
         }
 
         try {
-            protocolHandler.h3con.sendHeaders(stmId, h3headers, false);
+            protocolHandler.h3con.sendHeaders(stmId,
+                    yokohama.baykit.croute.h3.Headers.toFfi(h3headers), false);
             long capAfter;
             try {
                 capAfter = protocolHandler.con.streamCapacity(stmId);
@@ -354,32 +353,31 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
                 return;
             }
 
+            byte[] buf = new byte[QicPacket.MAX_DATAGRAM_SIZE];
             for (int i = 0; i == 0; i++) {
-                byte[] buf;
+                long nRead;
                 try {
-                    buf = protocolHandler.h3con.recvBody(cmd.stmId);
+                    nRead = protocolHandler.h3con.recvBody(cmd.stmId, buf);
                 }
                 catch(CrouteException e) {
                     BayLog.error("%s stm#%d h3: recv body failed :%s(%d)", this, cmd.stmId, H3ErrorCode.getMessage(e.code), e.code);
                     break;
                 }
 
-                if (buf == null) {
-                    // DONE
+                if (nRead == CrouteException.H3_ERR_DONE) {
                     break;
                 }
-                if (buf.length == 0) {
+                if (nRead == 0) {
                     break;
                 }
 
                 int sid = protocolHandler.ship.shipId;
-                int nRead = buf.length;
                 boolean success =
                         tur.req.postReqContent(
                                 Tour.TOUR_ID_NOCHECK,
                                 buf,
                                 0,
-                                nRead,
+                                (int) nRead,
                                 (length, resume) -> {
                                     if (resume)
                                         tur.ship.resumeRead(sid);
@@ -538,30 +536,18 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
     /**
      * Move the underlying QUIC connection into closing state with an
      * application-layer error code and flush the CONNECTION_CLOSE so the peer
-     * sees the response before we tear down.
-     *
-     * <p>This bypasses {@code croute.Connection.closeConnection()} because
-     * that wrapper flips the Java-side {@code closed} flag as a side effect,
-     * and the subsequent {@code sendOne()} used by {@link
-     * QicProtocolHandler#postPackets()} refuses to run against a "closed"
-     * Connection. quiche itself treats {@code quiche_conn_close} purely as
-     * an enqueue -- the connection stays live for one more send step so the
-     * CONNECTION_CLOSE frame actually goes on the wire. Call the native
-     * binding directly to match that lifetime.
+     * sees the response before we tear down. quiche's {@code quiche_conn_close}
+     * only enqueues the frame; the following {@code postPackets()} is what
+     * actually puts it on the wire.
      */
     private void closeWithH3Error(long errorCode, String reason) {
         BayLog.debug("%s closing H3 connection: code=0x%x reason=%s", this, errorCode, reason);
         byte[] reasonBytes = reason == null ? new byte[0] : reason.getBytes();
         try {
-            Binding.lib().quiche_conn_close(
-                    protocolHandler.con.getPtr(),
-                    true,
-                    errorCode,
-                    reasonBytes,
-                    new NativeLong(reasonBytes.length));
+            protocolHandler.con.closeConnection(true, errorCode, reasonBytes);
         }
-        catch(Exception e) {
-            BayLog.debug("%s quiche_conn_close failed: %s", this, e.getMessage());
+        catch(CrouteException e) {
+            BayLog.debug("%s closeConnection failed: %s", this, e.getMessage());
         }
         try {
             protocolHandler.postPackets();
