@@ -1,8 +1,5 @@
 package yokohama.baykit.bayserver.docker.h3;
 
-import io.quiche4j.Quiche;
-import io.quiche4j.http3.Http3;
-import io.quiche4j.http3.Http3Header;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.common.InboundHandler;
 import yokohama.baykit.bayserver.docker.h3.command.CmdData;
@@ -17,6 +14,8 @@ import yokohama.baykit.bayserver.tour.TourReq;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Headers;
 import yokohama.baykit.bayserver.util.HttpStatus;
+import yokohama.baykit.croute.CrouteException;
+import yokohama.baykit.croute.binding.QuicheBinding;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -41,14 +40,22 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
 
     @Override
     public void sendHeaders(Tour tur) throws IOException {
-        BayLog.debug("%s stm#%d sendResHeader cap=%d", tur, tur.req.key, protocolHandler.con.streamCapacity(tur.req.key));
+        long stmId = tur.req.key;
+        long cap;
+        try {
+            cap = protocolHandler.con.streamCapacity(stmId);
+        }
+        catch(CrouteException e) {
+            cap = -1;
+        }
+        BayLog.debug("%s stm#%d sendResHeader cap=%d", tur, stmId, cap);
 
-        final List<Http3Header> h3headers = new ArrayList<>();
-        h3headers.add(new Http3Header(":status", Integer.toString(tur.res.headers.status())));
+        final List<yokohama.baykit.croute.h3.Headers.Header> h3headers = new ArrayList<>();
+        h3headers.add(new yokohama.baykit.croute.h3.Headers.Header(":status", Integer.toString(tur.res.headers.status())));
 
         tur.res.headers.headerNames().forEach(name -> {
             tur.res.headers.headerValues(name).forEach(value -> {
-                h3headers.add(new Http3Header(name, value));
+                h3headers.add(new yokohama.baykit.croute.h3.Headers.Header(name, value));
             });
         });
 
@@ -58,29 +65,30 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
             });
         }
 
-        long stmId = tur.req.key;
-
-        long written = protocolHandler.h3con.sendResponse(stmId, h3headers, false);
-
-        if(written < 0) {
-            // Error
-            short h3err = Http3.ErrorCode.h3Error((short) written);
-            short qerr = Http3.ErrorCode.quicheError((short) written);
-
-            if (h3err == Http3.ErrorCode.STREAM_BLOCKED) {
+        try {
+            protocolHandler.h3con.sendHeaders(stmId, h3headers, false);
+            long capAfter;
+            try {
+                capAfter = protocolHandler.con.streamCapacity(stmId);
+            }
+            catch(CrouteException e) {
+                capAfter = -1;
+            }
+            BayLog.debug("%s stm#%d send header succeed cap=%d", tur, stmId, capAfter);
+            protocolHandler.postPackets();
+        }
+        catch(CrouteException e) {
+            if (e.code == CrouteException.H3_ERR_STREAM_BLOCKED) {
                 BayLog.warn("%s stm#%d sending header is blocked", tur, stmId);
                 protocolHandler.addPartialResponse(stmId, new QicProtocolHandler.PartialResponse(h3headers));
             }
-            else if (h3err == Http3.ErrorCode.TRANSPORT_ERROR) {
-                throw new IOException("h3: send body failed: " + QuicheErrorCode.getMessage(qerr) + "(" + qerr + ")");
+            else if (e.code == CrouteException.H3_ERR_TRANSPORT_ERROR) {
+                long qerr = protocolHandler.peerOrLocalErrorCode();
+                throw new IOException("h3: send header failed (transport): qerr=" + qerr);
             }
             else {
-                throw new IOException("h3: send body failed: " + H3ErrorCode.getMessage(h3err) + "(" + h3err + ")");
+                throw new IOException("h3: send header failed: " + H3ErrorCode.getMessage(e.code) + "(" + e.code + ")");
             }
-        }
-        else {
-            BayLog.debug("%s stm#%d send header succeed cap=%d", tur, stmId, protocolHandler.con.streamCapacity(stmId));
-            protocolHandler.postPackets();
         }
     }
 
@@ -98,56 +106,56 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
 
         QicProtocolHandler.PartialResponse part = null;
         if (protocolHandler.partialResponses.containsKey(stmId)) {
-            BayLog.trace("%s stm#%d waiting. put packet into queue", tur, stmId, len);
+            BayLog.trace("%s stm#%d waiting. put packet into queue len=%d", tur, stmId, len);
             part = new QicProtocolHandler.PartialResponse(bytes, 0, lis);
         }
         else {
-            int cap = protocolHandler.con.streamCapacity(stmId);
+            long cap;
+            try {
+                cap = protocolHandler.con.streamCapacity(stmId);
+            }
+            catch(CrouteException e) {
+                if (e.code == CrouteException.ERR_STREAM_STOPPED) {
+                    BayLog.error("%s stm#%d Stream stopped", tur, stmId);
+                    part = new QicProtocolHandler.PartialResponse(bytes, 0, lis);
+                    cap = -1;
+                }
+                else {
+                    throw protocolHandler.quicheError("Get capacity failed: ", stmId, e.code);
+                }
+            }
             BayLog.trace("%s stm#%d capacity=%d", tur, stmId, cap);
 
-            if (cap < 0) {
-                // Error
-                if (cap == Quiche.ErrorCode.STREAM_STOPPED) {
-                    BayLog.error("%s stm#%d Stream stopped", tur, stmId);
+            if (part == null) {
+                if (cap == 0) {
                     part = new QicProtocolHandler.PartialResponse(bytes, 0, lis);
                 }
                 else {
-                    throw protocolHandler.quicheError("Get capacity failed: ", (int)stmId, cap);
-                }
-            }
-            else if (cap == 0) {
-                part = new QicProtocolHandler.PartialResponse(bytes, 0, lis);
-            }
-            else {
-                long written = protocolHandler.h3con.sendBody(tur.req.key, bytes, false);
+                    try {
+                        long written = protocolHandler.h3con.sendBody(stmId, bytes, false);
+                        BayLog.debug("stm#%d send %d/%d bytes body", stmId, written, len);
 
-                BayLog.debug("stm#%d send %d/%d bytes body", stmId, written, len);
-
-                if (written < 0) {
-                    // Error
-                    if (written == Http3.ErrorCode.DONE) {
-                        BayLog.debug("stm#%d send content DONE (^o^)", stmId);
-                        part = new QicProtocolHandler.PartialResponse(bytes, 0, lis);
+                        if (written == 0) {
+                            BayLog.debug("stm#%d send content DONE (^o^)", stmId);
+                            part = new QicProtocolHandler.PartialResponse(bytes, 0, lis);
+                        }
+                        else if (written < len) {
+                            BayLog.debug("stm#%d put remained packet into queue %d/%d", stmId, written, len);
+                            part = new QicProtocolHandler.PartialResponse(bytes, (int) written, lis);
+                        }
                     }
-                    else if (written == Http3.ErrorCode.FRAME_UNEXPECTED) {
-                        // Header not sent yet
-                        part = new QicProtocolHandler.PartialResponse(bytes, 0, lis);
-                    }
-                    else {
-                        short h3err = Http3.ErrorCode.h3Error((short) written);
-                        short qerr = Http3.ErrorCode.quicheError((short) written);
-                        if (h3err == Http3.ErrorCode.TRANSPORT_ERROR) {
-                            throw new IOException("h3: send body failed: " + QuicheErrorCode.getMessage(qerr) + "(" + qerr + ")");
+                    catch(CrouteException e) {
+                        if (e.code == CrouteException.H3_ERR_FRAME_UNEXPECTED) {
+                            // Header not sent yet
+                            part = new QicProtocolHandler.PartialResponse(bytes, 0, lis);
+                        }
+                        else if (e.code == CrouteException.H3_ERR_TRANSPORT_ERROR) {
+                            long qerr = protocolHandler.peerOrLocalErrorCode();
+                            throw new IOException("h3: send body failed (transport): qerr=" + qerr);
                         }
                         else {
-                            throw new IOException("h3: send body failed: " + H3ErrorCode.getMessage(h3err) + "(" + h3err + ")");
+                            throw new IOException("h3: send body failed: " + H3ErrorCode.getMessage(e.code) + "(" + e.code + ")");
                         }
-                    }
-                }
-                else {
-                    if (written < len) {
-                        BayLog.debug("stm#%d put remained packet into queue %d/%d", stmId, written, len);
-                        part = new QicProtocolHandler.PartialResponse(bytes, (int) written, lis);
                     }
                 }
             }
@@ -183,53 +191,46 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
         }
         else {
 
-            int cap;
-            long written = 0;
-
-            cap = protocolHandler.con.streamCapacity(stmId);
-            BayLog.trace("%s stm#%d capacity=%d", tur, stmId, cap);
-
-            if (cap < 0) {
-                // Error
-                if (cap == Quiche.ErrorCode.STREAM_STOPPED) {
+            long cap;
+            try {
+                cap = protocolHandler.con.streamCapacity(stmId);
+            }
+            catch(CrouteException e) {
+                if (e.code == CrouteException.ERR_STREAM_STOPPED) {
                     BayLog.error("%s stm#%d Stream stopped", tur, stmId);
                     retry = true;
+                    cap = -1;
                 }
-                else if (cap == Quiche.ErrorCode.INVALID_STREAM_STATE) {
+                else if (e.code == CrouteException.ERR_INVALID_STREAM_STATE) {
                     BayLog.error("%s stm#%d Invalid stream (ignore)", tur, stmId);
+                    cap = -1;
                 }
                 else {
-                    throw protocolHandler.quicheError(tur + " stm#" + stmId + " Cannot get capacity: ", stmId, cap);
+                    throw protocolHandler.quicheError(tur + " stm#" + stmId + " Cannot get capacity: ", stmId, e.code);
                 }
             }
-            else if (cap == 0) {
+            BayLog.trace("%s stm#%d capacity=%d", tur, stmId, cap);
+
+            if (!retry && cap == 0) {
                 BayLog.debug("%s stm#%d stream full, retry", tur, stmId);
                 retry = true;
             }
-            else {
-                byte[] bytes = new byte[0];
-                written = protocolHandler.h3con.sendBody(stmId, bytes, true);
-                BayLog.debug("stm#%d send finish data %d bytes", stmId, written);
-
-                if (written < 0) {
-
-                    if (written == -1) {
-                        BayLog.warn("stm#%d send end content DONE (^o^)", stmId);
-                    }
-                    else if (written == Http3.ErrorCode.FRAME_UNEXPECTED) {
-                        // Header not sent yet
+            else if (!retry && cap > 0) {
+                try {
+                    long written = protocolHandler.h3con.sendBody(stmId, new byte[0], true);
+                    BayLog.debug("stm#%d send finish data %d bytes", stmId, written);
+                }
+                catch(CrouteException e) {
+                    if (e.code == CrouteException.H3_ERR_FRAME_UNEXPECTED) {
                         BayLog.warn("stm#%d send end content error Frame Unexpected", stmId);
                         retry = true;
                     }
+                    else if (e.code == CrouteException.H3_ERR_TRANSPORT_ERROR) {
+                        long qerr = protocolHandler.peerOrLocalErrorCode();
+                        throw new IOException("h3: send body failed (transport): qerr=" + qerr);
+                    }
                     else {
-                        short h3err = Http3.ErrorCode.h3Error((short) written);
-                        short qerr = Http3.ErrorCode.quicheError((short) written);
-                        if (h3err == Http3.ErrorCode.TRANSPORT_ERROR) {
-                            throw protocolHandler.quicheError("h3: send body failed: ", stmId, qerr);
-                        }
-                        else {
-                            throw protocolHandler.h3Error("h3: send body failed: ", stmId, h3err);
-                        }
+                        throw protocolHandler.h3Error("h3: send body failed: ", stmId, e.code);
                     }
                 }
             }
@@ -265,7 +266,7 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
                 return;
             }
 
-            for (Http3Header hdr : cmd.reqHeaders) {
+            for (yokohama.baykit.croute.h3.Headers.Header hdr : cmd.reqHeaders) {
                 if (BayServer.harbor.traceHeader()) {
                     BayLog.info("%s stm#%d ReqHeader %s=%s", tur, cmd.stmId, hdr.name(), hdr.value());
                 }
@@ -334,37 +335,36 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
                 return;
             }
 
-            byte[] buf = new byte[QicPacket.MAX_DATAGRAM_SIZE];
             for (int i = 0; i == 0; i++) {
-                int nRead = protocolHandler.h3con.recvBody(cmd.stmId, buf);
-
-                if (nRead < 0) {
-                    // Error
-                    if (nRead == Http3.ErrorCode.DONE) {
-                        //endReqContent(Tour.TOUR_ID_NOCHECK, tur);
-                        break;
-                    }
-                    else {
-                        BayLog.error("%s stm#%d h3: recv body failed :%s(%d)", this, cmd.stmId, H3ErrorCode.getMessage(nRead), nRead);
-                        break;
-                    }
+                byte[] buf;
+                try {
+                    buf = protocolHandler.h3con.recvBody(cmd.stmId);
                 }
-                else if (nRead == 0) {
+                catch(CrouteException e) {
+                    BayLog.error("%s stm#%d h3: recv body failed :%s(%d)", this, cmd.stmId, H3ErrorCode.getMessage(e.code), e.code);
                     break;
                 }
-                else {
-                    int sid = protocolHandler.ship.shipId;
-                    boolean success =
-                            tur.req.postReqContent(
-                                    Tour.TOUR_ID_NOCHECK,
-                                    buf,
-                                    0,
-                                    nRead,
-                                    (len, resume) -> {
-                                        if (resume)
-                                            tur.ship.resumeRead(sid);
-                                    });
+
+                if (buf == null) {
+                    // DONE
+                    break;
                 }
+                if (buf.length == 0) {
+                    break;
+                }
+
+                int sid = protocolHandler.ship.shipId;
+                int nRead = buf.length;
+                boolean success =
+                        tur.req.postReqContent(
+                                Tour.TOUR_ID_NOCHECK,
+                                buf,
+                                0,
+                                nRead,
+                                (length, resume) -> {
+                                    if (resume)
+                                        tur.ship.resumeRead(sid);
+                                });
             }
 
             if (tur.req.bytesPosted >= tur.req.headers.contentLength()) {
@@ -390,14 +390,6 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
     @Override
     public void handleFinished(CmdFinished cmd) {
         BayLog.debug("%s stm#%d onFinished.", this, cmd.stmId);
-        /*
-        Tour tur = ship.getTour((int)streamId);
-        try {
-            endReqContent(Tour.TOUR_ID_NOCHECK, tur);
-        } catch (Exception e) {
-            BayLog.error(e);
-        }
-         */
     }
 
 
@@ -414,14 +406,12 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
         BayLog.error(BayMessage.get(Symbol.INT_NO_MORE_TOURS));
         Tour tur = protocolHandler.ship.getTour((int) stmId, true);
         tur.res.sendError(Tour.TOUR_ID_NOCHECK, HttpStatus.SERVICE_UNAVAILABLE, "No available tours");
-        //sip.agent.shutdown(false);
         return;
     }
 
     private void endReqContent(int checkId, Tour tur) throws IOException, HttpException {
-        // read shutdown
         BayLog.debug("%s endReqContent", tur);
-        protocolHandler.con.streamShutdown(tur.req.key, Quiche.Shutdown.READ, 0L);
+        protocolHandler.con.streamShutdown(tur.req.key, QuicheBinding.SHUTDOWN_READ, 0L);
         tur.req.endReqContent(checkId);
     }
 

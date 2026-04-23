@@ -1,8 +1,6 @@
 package yokohama.baykit.bayserver.docker.h3;
 
-import io.quiche4j.Config;
-import io.quiche4j.ConfigBuilder;
-import io.quiche4j.Quiche;
+import com.sun.jna.NativeLong;
 import yokohama.baykit.bayserver.*;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.common.RudderState;
@@ -13,6 +11,9 @@ import yokohama.baykit.bayserver.docker.Harbor;
 import yokohama.baykit.bayserver.docker.base.PortBase;
 import yokohama.baykit.bayserver.docker.builtin.BuiltInSecureDocker;
 import yokohama.baykit.bayserver.rudder.Rudder;
+import yokohama.baykit.croute.binding.Binding;
+import yokohama.baykit.croute.binding.QuicheBinding;
+import yokohama.baykit.croute.quic.Config;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -58,22 +59,26 @@ public class H3PortDocker extends PortBase implements H3Docker {
             }
         }
 
-        this.config = new ConfigBuilder(Quiche.PROTOCOL_VERSION)
-                .withApplicationProtos(out.toByteArray())
-                .withVerifyPeer(false)
-                .loadCertChainFromPemFile(cert.getPath())
-                .loadPrivKeyFromPemFile(key.getPath())
-                .withMaxIdleTimeout(5_000)
-                .withMaxUdpPayloadSize(QicPacket.MAX_DATAGRAM_SIZE)
-                .withInitialMaxData(10_000_000)
-                .withInitialMaxStreamDataBidiLocal(1_000_000)
-                .withInitialMaxStreamDataBidiRemote(1_000_000)
-                .withInitialMaxStreamDataUni(1_000_000)
-                .withInitialMaxStreamsBidi(4)
-                .withInitialMaxStreamsUni(4)
-                .withDisableActiveMigration(true)
-                .enableEarlyData()
-                .build();
+        this.config = Config.server(cert.getPath(), key.getPath());
+        byte[] alpn = out.toByteArray();
+        int rc = Binding.lib().quiche_config_set_application_protos(
+                config.getPtr(), alpn, new NativeLong(alpn.length));
+        if (rc != 0)
+            throw new ConfigException(elm.fileName, elm.lineNo, "ALPN setup failed: " + rc);
+        Binding.lib().quiche_config_verify_peer(config.getPtr(), false);
+        Binding.lib().quiche_config_set_max_idle_timeout(config.getPtr(), 5_000);
+        Binding.lib().quiche_config_set_max_recv_udp_payload_size(
+                config.getPtr(), new NativeLong(QicPacket.MAX_DATAGRAM_SIZE));
+        Binding.lib().quiche_config_set_max_send_udp_payload_size(
+                config.getPtr(), new NativeLong(QicPacket.MAX_DATAGRAM_SIZE));
+        Binding.lib().quiche_config_set_initial_max_data(config.getPtr(), 10_000_000);
+        Binding.lib().quiche_config_set_initial_max_stream_data_bidi_local(config.getPtr(), 1_000_000);
+        Binding.lib().quiche_config_set_initial_max_stream_data_bidi_remote(config.getPtr(), 1_000_000);
+        Binding.lib().quiche_config_set_initial_max_stream_data_uni(config.getPtr(), 1_000_000);
+        Binding.lib().quiche_config_set_initial_max_streams_bidi(config.getPtr(), 4);
+        Binding.lib().quiche_config_set_initial_max_streams_uni(config.getPtr(), 4);
+        Binding.lib().quiche_config_set_disable_active_migration(config.getPtr(), true);
+        config.enableEarlyData();
     }
 
     ////////////////////////////////////////////
@@ -98,16 +103,6 @@ public class H3PortDocker extends PortBase implements H3Docker {
         return true;
     }
 
-    /*
-    @Override
-    public Ship newShip(int agentId, Rudder rd) {
-        QicTransporter lis = new QicTransporter();
-        GrandAgent agt = GrandAgent.get(agentId);
-        lis.initUdp(agentId, rd, agt.netMultiplexer, this);
-        return lis;
-    }
-    */
-
     @Override
     public void onConnected(int agentId, Rudder rd) {
         QicTransporter tp = new QicTransporter();
@@ -120,9 +115,4 @@ public class H3PortDocker extends PortBase implements H3Docker {
         agt.netMultiplexer.addRudderState(rd, st);
         agt.netMultiplexer.reqRead(rd);
     }
-
-    ////////////////////////////////////////////
-    // private methods
-    ////////////////////////////////////////////
-
 }
