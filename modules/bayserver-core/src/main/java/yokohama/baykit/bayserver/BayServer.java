@@ -286,16 +286,20 @@ public class BayServer {
             }
         }
 
-        // Seed agentIdToChannelIndex with the initial 1:1 assignment.  This
-        // runs regardless of SO_REUSEPORT support: when there is only one
-        // listener per port the values still resolve to index 0 through the
-        // {@code index % listeners.size()} fold applied at registration
-        // time, so every agent correctly maps onto the shared socket.  The
-        // range covers the unanchorable agent (if any) plus the anchorable
-        // agents configured by {@code grandAgents}.
-        int totalAgents = harbor.grandAgents() + (unanchorablePorts.isEmpty() ? 0 : 1);
-        for (int i = 1; i <= totalAgents; i++) {
-            agentIdToChannelIndex.put(i, i - 1);
+        // Seed agentIdToChannelIndex for the anchorable (TCP) agents.  This
+        // map is consulted by anchorableListenersFor(agentId) to pick one
+        // of the N SO_REUSEPORT-backed ServerSocketChannels (or the single
+        // shared channel on platforms without SO_REUSEPORT).
+        //
+        // When there is an unanchorable (UDP / H3) port, GrandAgentMonitor
+        // spawns a dedicated agent at id 1 for it and the anchorable agents
+        // start at id 2.  That UDP agent never calls
+        // anchorableListenersFor, so it must not be represented in the
+        // map -- otherwise the TCP agents would all be shifted by one and
+        // the last one would read past the end of the listener list.
+        int udpAgentOffset = unanchorablePorts.isEmpty() ? 0 : 1;
+        for (int i = 1; i <= harbor.grandAgents(); i++) {
+            agentIdToChannelIndex.put(udpAgentOffset + i, i - 1);
         }
     }
 
