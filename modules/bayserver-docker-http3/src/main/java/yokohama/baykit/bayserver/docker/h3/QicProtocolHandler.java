@@ -13,6 +13,7 @@ import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Reusable;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.LongByReference;
+import yokohama.baykit.bayserver.rudder.DatagramChannelRudder;
 import yokohama.baykit.croute.CrouteException;
 import yokohama.baykit.croute.binding.Binding;
 import yokohama.baykit.croute.binding.QuicheStructs;
@@ -26,6 +27,7 @@ import yokohama.baykit.croute.quic.Connection;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
 import java.util.*;
 
 public class QicProtocolHandler
@@ -93,6 +95,13 @@ public class QicProtocolHandler
     final HashMap<Long, ArrayList<PartialResponse>> partialResponses = new HashMap<>();
     final H3Config h3Config;
     final Multiplexer multiplexer;
+
+    // Reusable scratch state for the outgoing packet loop. Every post reuses
+    // the same buffer so quiche_conn_send does not allocate per datagram.
+    private final byte[] sendScratch = new byte[QicPacket.MAX_DATAGRAM_SIZE];
+    private final ByteBuffer sendBuffer = ByteBuffer.wrap(sendScratch);
+    private final QuicheStructs.SendInfo sendInfo = new QuicheStructs.SendInfo();
+
     InboundShip ship;
     H3Connection h3con;
 
@@ -407,8 +416,6 @@ public class QicProtocolHandler
 
     boolean postPackets() throws IOException {
         boolean posted = false;
-        byte[] scratch = new byte[QicPacket.MAX_DATAGRAM_SIZE];
-        QuicheStructs.SendInfo sendInfo = new QuicheStructs.SendInfo();
         while (true) {
             if (con.isClosed()) {
                 // Already fully drained; nothing more to send.
@@ -416,7 +423,7 @@ public class QicProtocolHandler
             }
             long n;
             try {
-                n = con.send(scratch, sendInfo);
+                n = con.send(sendScratch, sendInfo);
             }
             catch(CrouteException e) {
                 // Race: connection transitioned to closed between the check
@@ -428,8 +435,13 @@ public class QicProtocolHandler
                 break;
             }
 
+            // Hand the packet off to the multiplexer, which handles back
+            // pressure if the socket send buffer is full. The per-packet
+            // QicPacket copy is required because the multiplexer retains the
+            // buffer until the write completes; sendScratch has to stay
+            // reusable for the next iteration.
             QicPacket pkt = new QicPacket();
-            System.arraycopy(scratch, 0, pkt.buf, 0, (int) n);
+            System.arraycopy(sendScratch, 0, pkt.buf, 0, (int) n);
             pkt.bufLen = (int) n;
             multiplexer.reqWrite(ship.rudder, pkt.asBuffer(), sender, pkt, true, null);
             posted = true;
