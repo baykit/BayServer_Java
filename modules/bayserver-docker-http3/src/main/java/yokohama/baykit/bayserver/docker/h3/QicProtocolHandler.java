@@ -245,7 +245,7 @@ public class QicProtocolHandler
             h3con.pollAll(this::dispatchEvent);
         }
         catch(CrouteException e) {
-            BayLog.error("%s h3 poll failed: %s", this, e.getMessage());
+            BayLog.debug("%s h3 poll failed: %s (code=%d)", this, e.getMessage(), e.code);
         }
 
         flushWritable();
