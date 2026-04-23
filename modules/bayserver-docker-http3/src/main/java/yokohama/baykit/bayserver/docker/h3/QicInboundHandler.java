@@ -14,14 +14,21 @@ import yokohama.baykit.bayserver.tour.TourReq;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.Headers;
 import yokohama.baykit.bayserver.util.HttpStatus;
+import com.sun.jna.NativeLong;
 import yokohama.baykit.croute.CrouteException;
+import yokohama.baykit.croute.binding.Binding;
 import yokohama.baykit.croute.binding.QuicheBinding;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHandler, QicHandler {
+
+    // HTTP/3 application error codes (RFC 9114 §8.1)
+    private static final long H3_MESSAGE_ERROR = 0x10eL;
 
     QicProtocolHandler protocolHandler;
 
@@ -266,6 +273,18 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
                 return;
             }
 
+            // RFC 9114 §4.3 pseudo-header validation. h3spec (and conformant
+            // clients) expect the server to reject malformed header sections
+            // with H3_MESSAGE_ERROR (0x10e). quiche passes the headers through
+            // unchecked, so we enforce the rules here.
+            if (!validatePseudoHeaders(cmd)) {
+                // Close the whole connection so h3spec's wait for CLOSE
+                // succeeds. Stream-level rejection would also satisfy the
+                // RFC, but we don't have per-stream error surface yet.
+                closeWithH3Error(H3_MESSAGE_ERROR, "malformed pseudo-headers");
+                return;
+            }
+
             for (yokohama.baykit.croute.h3.Headers.Header hdr : cmd.reqHeaders) {
                 if (BayServer.harbor.traceHeader()) {
                     BayLog.info("%s stm#%d ReqHeader %s=%s", tur, cmd.stmId, hdr.name(), hdr.value());
@@ -430,5 +449,125 @@ public class QicInboundHandler implements CommandHandler<QicCommand>, InboundHan
         tur.isSecure = true;
 
         tur.go();
+    }
+
+    /**
+     * Enforce the pseudo-header rules from RFC 9114 §4.3 on an inbound request:
+     *
+     * <ul>
+     *   <li>A pseudo-header must not appear after any regular field.</li>
+     *   <li>No pseudo-header name may appear twice.</li>
+     *   <li>Response-only pseudo-headers (e.g. {@code :status}) and any
+     *       unrecognised {@code :*} name are prohibited in requests.</li>
+     *   <li>{@code :method} is mandatory; {@code :scheme} / {@code :path} are
+     *       mandatory for non-CONNECT requests (CONNECT relaxes them).</li>
+     * </ul>
+     *
+     * @return {@code true} if the header section is well-formed, {@code false}
+     *         if the caller must close the connection with H3_MESSAGE_ERROR.
+     */
+    private boolean validatePseudoHeaders(CmdHeader cmd) {
+        Set<String> seenPseudo = new HashSet<>();
+        boolean sawRegular = false;
+        String method = null;
+        String scheme = null;
+        String path = null;
+        String authority = null;
+        for (yokohama.baykit.croute.h3.Headers.Header hdr : cmd.reqHeaders) {
+            String name = hdr.name();
+            if (name.isEmpty()) {
+                BayLog.debug("%s stm#%d empty header name", this, cmd.stmId);
+                return false;
+            }
+            if (name.charAt(0) == ':') {
+                if (sawRegular) {
+                    BayLog.debug("%s stm#%d pseudo-header %s after regular fields", this, cmd.stmId, name);
+                    return false;
+                }
+                if (!seenPseudo.add(name)) {
+                    BayLog.debug("%s stm#%d duplicated pseudo-header %s", this, cmd.stmId, name);
+                    return false;
+                }
+                switch (name) {
+                    case ":method":    method    = hdr.value(); break;
+                    case ":scheme":    scheme    = hdr.value(); break;
+                    case ":path":      path      = hdr.value(); break;
+                    case ":authority": authority = hdr.value(); break;
+                    default:
+                        // Any other :xxx (notably :status) is a response or
+                        // unknown pseudo-header; prohibited in a request.
+                        BayLog.debug("%s stm#%d prohibited pseudo-header %s", this, cmd.stmId, name);
+                        return false;
+                }
+            } else {
+                sawRegular = true;
+            }
+        }
+        if (method == null) {
+            BayLog.debug("%s stm#%d missing :method", this, cmd.stmId);
+            return false;
+        }
+        boolean isConnect = "CONNECT".equalsIgnoreCase(method);
+        if (!isConnect) {
+            if (scheme == null) {
+                BayLog.debug("%s stm#%d missing :scheme", this, cmd.stmId);
+                return false;
+            }
+            if (path == null || path.isEmpty()) {
+                BayLog.debug("%s stm#%d missing :path", this, cmd.stmId);
+                return false;
+            }
+            // RFC 9110 §7.2 / RFC 9114 §4.3.1: an HTTP request must identify a
+            // target host. HTTP/3 does this through :authority (or a Host
+            // header, but that is explicitly discouraged for H3). Treat a
+            // request with neither as malformed.
+            if (authority == null) {
+                boolean hasHost = false;
+                for (yokohama.baykit.croute.h3.Headers.Header h : cmd.reqHeaders) {
+                    if ("host".equalsIgnoreCase(h.name())) { hasHost = true; break; }
+                }
+                if (!hasHost) {
+                    BayLog.debug("%s stm#%d missing :authority and Host", this, cmd.stmId);
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Move the underlying QUIC connection into closing state with an
+     * application-layer error code and flush the CONNECTION_CLOSE so the peer
+     * sees the response before we tear down.
+     *
+     * <p>This bypasses {@code croute.Connection.closeConnection()} because
+     * that wrapper flips the Java-side {@code closed} flag as a side effect,
+     * and the subsequent {@code sendOne()} used by {@link
+     * QicProtocolHandler#postPackets()} refuses to run against a "closed"
+     * Connection. quiche itself treats {@code quiche_conn_close} purely as
+     * an enqueue -- the connection stays live for one more send step so the
+     * CONNECTION_CLOSE frame actually goes on the wire. Call the native
+     * binding directly to match that lifetime.
+     */
+    private void closeWithH3Error(long errorCode, String reason) {
+        BayLog.debug("%s closing H3 connection: code=0x%x reason=%s", this, errorCode, reason);
+        byte[] reasonBytes = reason == null ? new byte[0] : reason.getBytes();
+        try {
+            Binding.lib().quiche_conn_close(
+                    protocolHandler.con.getPtr(),
+                    true,
+                    errorCode,
+                    reasonBytes,
+                    new NativeLong(reasonBytes.length));
+        }
+        catch(Exception e) {
+            BayLog.debug("%s quiche_conn_close failed: %s", this, e.getMessage());
+        }
+        try {
+            protocolHandler.postPackets();
+        }
+        catch(IOException e) {
+            BayLog.debug("%s postPackets after close failed: %s", this, e.getMessage());
+        }
     }
 }
