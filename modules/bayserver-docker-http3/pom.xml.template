@@ -31,11 +31,18 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>io.quiche4j</groupId>
-      <artifactId>quiche4j-core</artifactId>
-      <version>1.0</version>
+      <groupId>yokohama.baykit.croute</groupId>
+      <artifactId>croute</artifactId>
+      <version>0.1.0-SNAPSHOT</version>
       <scope>system</scope>
-      <systemPath>${project.basedir}/../../lib/quiche4j-core-0.2.5.jar</systemPath>
+      <systemPath>${project.basedir}/../../lib/croute-0.1.0-SNAPSHOT.jar</systemPath>
+    </dependency>
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna</artifactId>
+      <version>5.14.0</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/../../lib/jna-5.14.0.jar</systemPath>
     </dependency>
   </dependencies>
 
