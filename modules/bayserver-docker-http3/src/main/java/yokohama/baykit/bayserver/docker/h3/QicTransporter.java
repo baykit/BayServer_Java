@@ -95,6 +95,9 @@ public final class QicTransporter implements Transporter {
     @Override
     public synchronized NextSocketAction onRead(Rudder rd, ByteBuffer buf, InetSocketAddress adr) throws IOException {
 
+        // croute's Connection.recv uses byte[].length as the packet size, so
+        // we need an exactly-sized array here rather than reusing a scratch
+        // field. One small allocation per inbound datagram is the cost.
         byte[] packetBuf = new byte[buf.limit()];
         buf.get(packetBuf);
 
