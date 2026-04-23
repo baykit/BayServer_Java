@@ -630,7 +630,13 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
             }
 
             Channel ch = ChannelRudder.getChannel(st.rudder);
-            if (ch instanceof GatheringByteChannel && !st.writeQueue.get(0).skipFormalities()) {
+            // DatagramChannel implements GatheringByteChannel, but writev() on an
+            // unconnected UDP socket throws NotYetConnectedException. Route it
+            // through the per-unit send(buf, addr) path below instead.
+            boolean useWritev = (ch instanceof GatheringByteChannel)
+                    && !(st.rudder instanceof DatagramChannelRudder)
+                    && !st.writeQueue.get(0).skipFormalities();
+            if (useWritev) {
                 // GatheringByteChannel.write(ByteBuffer[]) issues writev() syscall,
                 // which sends multiple buffers in a single kernel call. We need to
                 // build the ByteBuffer array from the write queue before calling writev().
