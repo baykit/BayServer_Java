@@ -53,6 +53,10 @@ public class HtpWarpDocker extends WarpBase implements HtpDocker {
 
     boolean secure;
     boolean supportH2 = true;
+    // When true, the warp uses H2 from the start (h2c on cleartext, h2 on
+    // TLS without ALPN negotiation). Defaults to false so existing httpWarp
+    // configs keep their H1 behaviour.
+    boolean enableH2 = false;
     boolean traceSSL = false;
     SSLContext sslCtx;
 
@@ -89,6 +93,10 @@ public class HtpWarpDocker extends WarpBase implements HtpDocker {
                 supportH2 = StringUtil.parseBool(kv.value);
                 break;
 
+            case "enableh2":
+                enableH2 = StringUtil.parseBool(kv.value);
+                break;
+
             case "tracessl":
                 traceSSL = StringUtil.parseBool(kv.value);
                 break;
@@ -114,7 +122,13 @@ public class HtpWarpDocker extends WarpBase implements HtpDocker {
     //////////////////////////////////////////////////////////////////////////////////////////
     @Override
     protected String protocol() {
-        return H1_PROTO_NAME;
+        // When enableh2 is set, the warp speaks HTTP/2 from the start:
+        //  - secure=false  -> h2c (cleartext H2 with prior knowledge); the
+        //    H2WarpHandler emits the connection preface + initial SETTINGS
+        //    on the first sendReqHeaders call.
+        //  - secure=true   -> h2 over TLS *without* ALPN negotiation. Most
+        //    servers also accept this when their listener is h2-enabled.
+        return enableH2 ? H2_PROTO_NAME : H1_PROTO_NAME;
     }
 
     @Override

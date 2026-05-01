@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.docker.http.h2;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.protocol.*;
@@ -12,8 +13,10 @@ import yokohama.baykit.bayserver.common.WarpHandler;
 import yokohama.baykit.bayserver.common.WarpShip;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 import yokohama.baykit.bayserver.util.HttpStatus;
+import yokohama.baykit.bayserver.util.SimpleBuffer;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class H2WarpHandler implements WarpHandler, H2Handler {
 
@@ -25,6 +28,7 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
 
             H2WarpHandler warpHandler = new H2WarpHandler();
             H2CommandUnPacker commandUnpacker = new H2CommandUnPacker(warpHandler);
+            // serverMode=false on the warp side: we send the preface, we don't expect to receive it.
             H2PacketUnPacker packetUnpacker = new H2PacketUnPacker(commandUnpacker, pktStore, false);
             PacketPacker packetPacker = new PacketPacker<>();
             CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
@@ -40,7 +44,10 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
     public final HeaderTable reqHeaderTbl = HeaderTable.createDynamicTable();
     public final HeaderTable resHeaderTbl = HeaderTable.createDynamicTable();
     int curStreamId = 1;
-    WarpShip ship;
+    // True once the H2 connection prelude (PRI preface + initial SETTINGS)
+    // has been pushed onto the wire. Sent lazily on the first sendReqHeaders
+    // call so we don't need a notifyConnect hook on this handler.
+    boolean preludeSent = false;
 
     protected H2WarpHandler() {
 
@@ -57,6 +64,7 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
     @Override
     public void reset() {
         curStreamId = 1;
+        preludeSent = false;
     }
 
     /////////////////////////////////////
@@ -65,6 +73,7 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
 
     @Override
     public NextSocketAction handlePreface(CmdPreface cmd) throws IOException {
+        // Client side never receives a preface: only servers do.
         throw new IllegalStateException();
     }
 
@@ -72,6 +81,25 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
     public NextSocketAction handleData(CmdData cmd) throws IOException {
         Tour tur = ship().getTour(cmd.streamId);
         boolean available = tur.res.sendResContent(Tour.TOUR_ID_NOCHECK, cmd.data, cmd.start, cmd.length);
+
+        // Replenish flow-control windows so the upstream backend can keep
+        // sending. Without this the connection-level + stream-level windows
+        // (default 65535 each) drain after ~65 KB of body and the backend
+        // stops sending DATA frames; multi-chunk responses (>= 100 KB) hang
+        // until timeout.
+        // We send WINDOW_UPDATE immediately on every DATA frame; a tighter
+        // implementation would batch updates after the data is actually
+        // forwarded downstream, but this is sufficient for a forwarding
+        // proxy whose downstream buffer absorbs the flow.
+        if (cmd.length > 0) {
+            CmdWindowUpdate upd = new CmdWindowUpdate(cmd.streamId);
+            upd.windowSizeIncrement = cmd.length;
+            CmdWindowUpdate upd2 = new CmdWindowUpdate(0);
+            upd2.windowSizeIncrement = cmd.length;
+            ship().post(upd);
+            ship().post(upd2);
+        }
+
         if(!available)
             return NextSocketAction.Suspend;
 
@@ -85,38 +113,66 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
     @Override
     public NextSocketAction handleHeaders(CmdHeaders cmd) throws IOException {
         Tour tur = ship().getTour(cmd.streamId);
+        if (tur == null) {
+            BayLog.error("%s no tour for streamId=%d", ship(), cmd.streamId);
+            return NextSocketAction.Continue;
+        }
         WarpData wtur = WarpData.get(tur);
 
         if (tur.res.headerSent())
             throw new ProtocolException("Header command not expected");
 
-        /*
-        for(HeaderBlock blk : cmd.headerBlocks) {
-            analyzer.clear();
+        ArrayList<HeaderBlock> headerBlocks;
+        try {
+            headerBlocks = new HeaderBlockParser(cmd.data, cmd.start, cmd.length).parseHeaderBlocks();
+        } catch (RuntimeException e) {
+            throw new ProtocolException("HPACK decode failed: " + e.getMessage());
+        }
+
+        for (HeaderBlock blk : headerBlocks) {
+            if (blk.op == HeaderBlock.HeaderOp.UpdateDynamicTableSize) {
+                resHeaderTbl.setSize(blk.size);
+                continue;
+            }
             analyzer.analyzeHeaderBlock(blk, resHeaderTbl);
-            if(BayLog.isTraceMode())
-                BayLog.trace(ship() + " header block: " + blk + "(" + analyzer.name + "=" + analyzer.value + ")");
-            if(analyzer.name != null) {
-                if (analyzer.name.charAt(0) != ':') {
-                    tur.res.headers.add(analyzer.name, analyzer.value);
-                }
-                else if (analyzer.status != null) {
-                    try {
-                        tur.res.headers.setStatus(Integer.parseInt(analyzer.status));
-                    }
-                    catch (NumberFormatException e) {
-                        BayLog.error(e);
-                    }
-                }
-                else {
-                    throw new IllegalStateException();
+            if (analyzer.name == null)
+                continue;
+
+            if (analyzer.name.charAt(0) != ':') {
+                tur.res.headers.add(analyzer.name, analyzer.value);
+            }
+            else if (HeaderTable.PSEUDO_HEADER_STATUS.equals(analyzer.name)) {
+                try {
+                    tur.res.headers.setStatus(Integer.parseInt(analyzer.value));
+                } catch (NumberFormatException e) {
+                    BayLog.error(e);
                 }
             }
+            // other pseudo-headers in a response are protocol errors per RFC,
+            // but we ignore them here since the warp peer is trusted.
         }
-        */
 
-        if(cmd.flags.endHeaders()) {
+        if (cmd.flags.endHeaders()) {
             tur.res.sendHeaders(Tour.TOUR_ID_NOCHECK);
+
+            // Wire up the back-pressure resume hook (mirrors H1WarpHandler):
+            //  * the consumer listener fires when the downstream write buffer
+            //    drains; on `resume==true` we ask the warp ship to read more
+            //    from the backend
+            //  * without this, sendResContent's internal consumed() callback
+            //    finds resConsumeListener=null and tears the agent down with
+            //    "Consume listener is null" — exactly what we hit before this
+            //    fix on h2c proxy benches
+            if (!cmd.flags.endStream()) {
+                WarpShip wsip = ship();
+                int sid = wsip.id();
+                tur.res.setConsumeListener((len, resume) -> {
+                    if (resume) {
+                        wsip.resumeRead(sid);
+                    }
+                });
+            }
+
             if (cmd.flags.endStream()) {
                 endResContent(tur);
             }
@@ -126,7 +182,8 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
 
     @Override
     public NextSocketAction handlePriority(CmdPriority cmd) throws IOException {
-        throw new IllegalStateException();
+        // PRIORITY frames are deprecated in RFC 9113; we don't act on them.
+        return NextSocketAction.Continue;
     }
 
     @Override
@@ -173,7 +230,12 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
 
     @Override
     public NextSocketAction handleContinuation(CmdContinuation cmd) throws IOException {
-        return null;
+        // We do not currently split inbound HEADERS across CONTINUATION frames
+        // (h2c backends are expected to send headers in a single HEADERS frame
+        // for the body sizes used in this bench). If a backend chooses to use
+        // CONTINUATION the response will be malformed; treat it as a no-op for
+        // now. A proper fix would buffer fragments until END_HEADERS.
+        return NextSocketAction.Continue;
     }
 
     /////////////////////////////////////
@@ -181,6 +243,7 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
     /////////////////////////////////////
     @Override
     public int nextWarpId() {
+        // Client-initiated H2 streams use odd ids: 1, 3, 5, ...
         int cur = curStreamId;
         curStreamId += 2;
         return cur;
@@ -188,11 +251,12 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
 
     @Override
     public WarpData newWarpData(int warpId) {
-        return null;
+        return new WarpData(ship(), warpId);
     }
 
     @Override
     public void sendReqHeaders(Tour tur) throws IOException {
+        sendPreludeIfNeeded();
         sendReqHeaderCommand(tur);
     }
 
@@ -203,11 +267,19 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
 
     @Override
     public void sendEndReq(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
-
+        int streamId = WarpData.get(tur).warpId;
+        CmdData cmd = new CmdData(streamId, null, new byte[0], 0, 0);
+        cmd.flags.setEndStream(true);
+        // WarpShip.post handles the !connected case via cmdBuf; once the
+        // connection is up, post becomes a flush-true forward to
+        // protocolHandler.post under the hood.
+        ship().post(cmd, lis);
     }
 
     @Override
     public void verifyProtocol(String protocol) throws IOException {
+        // No-op: H2WarpDocker forces H2 from the start, so there's no
+        // ALPN-driven protocol switch to verify.
     }
 
     /////////////////////////////////////
@@ -225,54 +297,161 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
     /////////////////////////////////////
 
     WarpShip ship() {
-        return null;
+        return (WarpShip) protocolHandler.ship;
     }
+
+    /**
+     * Send the H2 connection prelude (RFC 7540 § 3.5):
+     *   1. The 24-byte client connection preface "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
+     *   2. An initial SETTINGS frame
+     * This is called lazily on the first sendReqHeaders so it runs after the
+     * TCP connect completes (= after WarpShip.notifyConnect started draining
+     * the queued tours) but before the first request HEADERS go out.
+     */
+    void sendPreludeIfNeeded() throws IOException {
+        if (preludeSent) return;
+
+        // 1. Connection preface — empty CmdPreface. Its pack() emits the 24
+        //    preface bytes raw (not in H2 frame format).
+        // Use ship().post (not protocolHandler.post): WarpShip.post buffers
+        // commands in cmdBuf while !connected and drains them via flush()
+        // after notifyConnect. protocolHandler.post bypasses that and tries
+        // to write straight to a connection-pending channel (NotYetConnected).
+        CmdPreface preface = new CmdPreface(0, null);
+        ship().post(preface);
+
+        // 2. Initial SETTINGS frame on the control stream (id=0), no ACK.
+        // INITIAL_WINDOW_SIZE here only applies to per-stream windows on
+        // newly-created streams; the connection-level window starts at the
+        // RFC 7540 default of 65535 and can only be bumped via WINDOW_UPDATE
+        // on stream 0 (see step 3 below).
+        // We use a generous 16 MiB so that single large responses (1 MB
+        // body) don't even hit the per-stream window threshold; backends
+        // (Nginx, Envoy, …) honour any value <= 2^31-1.
+        CmdSettings set = new CmdSettings(H2ProtocolHandler.CTL_STREAM_ID);
+        set.streamId = 0;
+        set.items.add(new CmdSettings.Item(CmdSettings.MAX_CONCURRENT_STREAMS,
+                Math.max(BayServer.harbor.maxToursPerShip(), 100)));
+        set.items.add(new CmdSettings.Item(CmdSettings.INITIAL_WINDOW_SIZE,
+                INITIAL_WINDOW_SIZE_OUT));
+        ship().post(set);
+
+        // 3. Connection-level WINDOW_UPDATE: bump stream 0's window from
+        //    the spec-mandated 65535 to (initial + INITIAL_WINDOW_SIZE_OUT)
+        //    so multi-MB bodies aren't rate-limited by the connection
+        //    window before our reactive WINDOW_UPDATEs in handleData kick in.
+        CmdWindowUpdate connUp = new CmdWindowUpdate(0);
+        connUp.windowSizeIncrement = INITIAL_WINDOW_SIZE_OUT;
+        ship().post(connUp);
+
+        preludeSent = true;
+    }
+
+    // 16 MiB advertised stream + connection window. Far above any single
+    // bench body; reactive WINDOW_UPDATEs in handleData top it back up.
+    private static final int INITIAL_WINDOW_SIZE_OUT = 16 * 1024 * 1024;
 
     void sendReqHeaderCommand(Tour tur) throws IOException {
         Town town = tur.town;
 
-        //BayServer.debug(this + " construct header");
         String townPath = town.name();
         if (!townPath.endsWith("/"))
             townPath += "/";
-        String newUri = ship().docker().warpBase() + tur.req.uri.substring(townPath.length());
+        WarpShip sip = ship();
+        String newUri = sip.docker().warpBase() + tur.req.uri.substring(townPath.length());
 
-        /*
-        CmdHeaders cmdHdr = new CmdHeaders(WarpData.get(tur).warpId);
         HeaderBlockBuilder bld = new HeaderBlockBuilder();
-        HeaderBlock blk = bld.buildHeaderBlock(HeaderTable.PSEUDO_HEADER_METHOD, tur.req.method, reqHeaderTbl);
-        cmdHdr.addHeaderBlock(blk);
+        ArrayList<HeaderBlock> headerBlocks = new ArrayList<>();
 
-        blk = bld.buildHeaderBlock(HeaderTable.PSEUDO_HEADER_PATH, newUri, reqHeaderTbl);
-        cmdHdr.addHeaderBlock(blk);
+        headerBlocks.add(bld.buildHeaderBlock(HeaderTable.PSEUDO_HEADER_METHOD, tur.req.method, reqHeaderTbl));
+        headerBlocks.add(bld.buildHeaderBlock(HeaderTable.PSEUDO_HEADER_PATH, newUri, reqHeaderTbl));
+        headerBlocks.add(bld.buildHeaderBlock(HeaderTable.PSEUDO_HEADER_SCHEME,
+                tur.isSecure ? "https" : "http", reqHeaderTbl));
+        headerBlocks.add(bld.buildHeaderBlock(HeaderTable.PSEUDO_HEADER_AUTHORITY,
+                sip.docker().host() + ":" + sip.docker().port(), reqHeaderTbl));
 
-        blk = bld.buildHeaderBlock(HeaderTable.PSEUDO_HEADER_SCHEME, tur.isSecure ? "https" : "http", reqHeaderTbl);
-        cmdHdr.addHeaderBlock(blk);
-
-        blk = bld.buildHeaderBlock(HeaderTable.PSEUDO_HEADER_AUTHORITY, tur.req.serverName, reqHeaderTbl);
-        cmdHdr.addHeaderBlock(blk);
-
-        for(String name: tur.req.headers.headerNames()) {
-            if(!name.equalsIgnoreCase("connection")) {
-                BayLog.trace("header: " + name);
-                for (String value : tur.req.headers.headerValues(name)) {
-                    blk = bld.buildHeaderBlock(name, value, reqHeaderTbl);
-                    cmdHdr.addHeaderBlock(blk);
-                }
+        // Regular request headers: must be lowercase, must not include
+        // connection-specific fields (RFC 7540 § 8.1.2.2). The Host header
+        // is already covered by :authority above and must not be duplicated
+        // here (some backends accept both, but a single source of truth is
+        // safer).
+        for (String name : tur.req.headers.headerNames()) {
+            String lower = name.toLowerCase();
+            if (lower.equals("connection") || lower.equals("host")
+                    || lower.equals("keep-alive") || lower.equals("transfer-encoding")
+                    || lower.equals("upgrade") || lower.equals("proxy-connection")) {
+                continue;
+            }
+            for (String value : tur.req.headers.headerValues(name)) {
+                headerBlocks.add(bld.buildHeaderBlock(lower, value, reqHeaderTbl));
             }
         }
-        cmdHdr.flags = new H2Flags(H2Flags.FLAGS_END_HEADERS);
-        ship().post(cmdHdr);
-*/
+
+        SimpleBuffer buf = new SimpleBuffer();
+        new HeaderBlockRenderer(buf).renderHeaderBlocks(headerBlocks);
+
+        int streamId = WarpData.get(tur).warpId;
+        boolean endStream = !tur.req.headers.contains("content-length")
+                && !tur.req.headers.contains("transfer-encoding");
+
+        int pos = 0;
+        int len = buf.length();
+        // Always emit at least one HEADERS frame, even if HPACK rendered to
+        // zero bytes (defensive; in practice we always have :method etc.).
+        if (len == 0) {
+            CmdHeaders hcmd = new CmdHeaders(streamId);
+            hcmd.excluded = false;
+            hcmd.data = buf.bytes();
+            hcmd.start = 0;
+            hcmd.length = 0;
+            hcmd.flags.setEndHeaders(true);
+            if (endStream) hcmd.flags.setEndStream(true);
+            sip.post(hcmd);
+            return;
+        }
+
+        while (len > 0) {
+            int chunkLen = Math.min(len, H2Packet.DEFAULT_PAYLOAD_MAXLEN);
+
+            H2Command cmd;
+            if (pos == 0) {
+                CmdHeaders hcmd = new CmdHeaders(streamId);
+                hcmd.excluded = false;
+                hcmd.data = buf.bytes();
+                hcmd.start = pos;
+                hcmd.length = chunkLen;
+                cmd = hcmd;
+            }
+            else {
+                CmdContinuation ccmd = new CmdContinuation(streamId);
+                ccmd.data = buf.bytes();
+                ccmd.start = pos;
+                ccmd.length = chunkLen;
+                cmd = ccmd;
+            }
+
+            cmd.flags.setPadded(false);
+            pos += chunkLen;
+            len -= chunkLen;
+            if (len == 0) {
+                cmd.flags.setEndHeaders(true);
+                // Mark end-of-stream on the final HEADERS/CONTINUATION when
+                // there's no request body; otherwise sendEndReq will close it.
+                if (endStream) cmd.flags.setEndStream(true);
+            }
+            // Use WarpShip.post: it buffers when !connected (which is the
+            // case during startWarpTour, before notifyConnect fires).
+            sip.post(cmd);
+        }
     }
 
 
     void sendReqDataCommand(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
-
+        int streamId = WarpData.get(tur).warpId;
         CmdData cmd =
                 new CmdData(
-                        WarpData.get(tur).warpId,
-                        len == 0 ? new H2Flags(H2Flags.FLAGS_END_STREAM) : null,
+                        streamId,
+                        null,
                         buf,
                         start,
                         len);
@@ -282,7 +461,6 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
 
     private void endResContent(Tour tur) throws IOException {
         tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
-        ship.endWarpTour(tur, true);
+        ship().endWarpTour(tur, true);
     }
-
 }

@@ -30,8 +30,22 @@ public class CmdPreface extends H2Command {
 
     @Override
     public void pack(H2Packet pkt) throws IOException {
-        PacketPartAccessor acc = pkt.newDataAccessor();
-        acc.putBytes(prefaceBytes);
+        // The H2 client connection preface is 24 raw bytes that MUST appear
+        // at the very start of the connection — it is NOT wrapped in an H2
+        // frame (RFC 7540 § 3.5). H2Packet reserves 9 bytes at buf[0..9] for
+        // the frame header and writes payload to buf[9..]; using
+        // newDataAccessor here would produce 9 zero bytes followed by the
+        // preface, which servers correctly reject (the leading zeros
+        // misparse as a frame with length=0, type=0, which then reads "PRI"
+        // as the next frame's length and trips MAX_FRAME_SIZE).
+        //
+        // Bypass the frame-header reserve by writing the preface bytes
+        // directly into buf[0..24] and setting bufLen=24.
+        while (pkt.buf.length < prefaceBytes.length) {
+            pkt.expand();
+        }
+        System.arraycopy(prefaceBytes, 0, pkt.buf, 0, prefaceBytes.length);
+        pkt.bufLen = prefaceBytes.length;
     }
 
     @Override
