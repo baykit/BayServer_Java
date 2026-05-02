@@ -147,6 +147,24 @@ public abstract class WarpBase extends ClubBase implements Warp {
     public void arrive(Tour tour) throws HttpException {
 
         GrandAgent agt = GrandAgent.get(tour.ship.agentId);
+
+        // Subclass hook: a multiplex-capable docker can return an existing
+        // shared WarpShip here. When non-null, skip the rent path entirely.
+        WarpShip reused = pickReusableShip(agt, tour);
+        if (reused != null) {
+            try {
+                synchronized (tourList) {
+                    tourList.add(tour);
+                }
+                reused.startWarpTour(tour);
+            }
+            catch (IOException e) {
+                BayLog.error(e);
+                throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e.toString());
+            }
+            return;
+        }
+
         WarpShipStore sto = getShipStore(agt.agentId);
 
         WarpShip wsip = sto.rent();
@@ -193,6 +211,11 @@ public abstract class WarpBase extends ClubBase implements Warp {
 
             wsip.startWarpTour(tour);
 
+            // Subclass hook: notify after a fresh ship has been rented and
+            // attached to its first tour. Used by multiplex-capable dockers
+            // to register the ship in their reuse pool.
+            onShipRented(agt, wsip);
+
             if(needConnect) {
                 RudderState st = RudderStateStore.getStore(agt.agentId).rent();
                 st.init(wsip.rudder, tp);
@@ -205,6 +228,28 @@ public abstract class WarpBase extends ClubBase implements Warp {
             BayLog.error(e);
             throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, e.toString());
         }
+    }
+
+    /////////////////////////////////////
+    // Subclass hooks for multiplex-aware dockers
+    /////////////////////////////////////
+
+    /**
+     * Subclasses override to return an existing WarpShip that can carry an
+     * additional tour (= H2 stream multiplex). Returning non-null causes
+     * arrive() to skip the rent / connect path and just start the tour on
+     * the returned ship. Default returns null = always rent fresh.
+     */
+    protected WarpShip pickReusableShip(GrandAgent agt, Tour tour) {
+        return null;
+    }
+
+    /**
+     * Subclasses are notified immediately after arrive() rents a fresh
+     * WarpShip and starts its first tour. Use to register the ship in a
+     * reuse pool. Default no-op.
+     */
+    protected void onShipRented(GrandAgent agt, WarpShip wsip) {
     }
 
     /////////////////////////////////////

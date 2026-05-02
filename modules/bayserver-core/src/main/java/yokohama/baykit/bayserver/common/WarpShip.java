@@ -173,6 +173,16 @@ public final class WarpShip extends Ship {
         return (WarpHandler) protocolHandler.commandHandler;
     }
 
+    /** Whether the underlying TCP connection has completed connect. */
+    public boolean isConnected() {
+        return connected;
+    }
+
+    /** Number of tours currently riding this ship (= active H2 streams for H2). */
+    public int tourCount() {
+        return tourMap.size();
+    }
+
     public void startWarpTour(Tour tur) throws IOException {
         WarpHandler wHnd = warpHandler();
         int warpId = wHnd.nextWarpId();
