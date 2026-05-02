@@ -25,4 +25,13 @@ public interface WarpHandler {
      * Verify if protocol is allowed
      */
     void verifyProtocol(String protocol) throws IOException;
+
+    /**
+     * Maximum concurrent tours that can ride on a single WarpShip.
+     * Default 1 = exclusive (H1, FCGI, AJP). H2 overrides to enable
+     * stream multiplexing on a shared backend connection.
+     */
+    default int maxMultiplexedTours() {
+        return 1;
+    }
 }
