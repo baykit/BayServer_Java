@@ -87,16 +87,19 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
         // (default 65535 each) drain after ~65 KB of body and the backend
         // stops sending DATA frames; multi-chunk responses (>= 100 KB) hang
         // until timeout.
-        // We send WINDOW_UPDATE immediately on every DATA frame; a tighter
-        // implementation would batch updates after the data is actually
-        // forwarded downstream, but this is sufficient for a forwarding
-        // proxy whose downstream buffer absorbs the flow.
+        //
+        // Only send the connection-level update (streamId=0) once the
+        // peer has flagged END_STREAM: at that point the stream is closed
+        // and a per-stream WINDOW_UPDATE on it elicits STREAM_CLOSED
+        // (RST_STREAM code=5) from a strict server such as nginx.
         if (cmd.length > 0) {
-            CmdWindowUpdate upd = new CmdWindowUpdate(cmd.streamId);
-            upd.windowSizeIncrement = cmd.length;
+            if (!cmd.flags.endStream()) {
+                CmdWindowUpdate upd = new CmdWindowUpdate(cmd.streamId);
+                upd.windowSizeIncrement = cmd.length;
+                ship().post(upd);
+            }
             CmdWindowUpdate upd2 = new CmdWindowUpdate(0);
             upd2.windowSizeIncrement = cmd.length;
-            ship().post(upd);
             ship().post(upd2);
         }
 
@@ -202,8 +205,27 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
 
     @Override
     public NextSocketAction handleGoAway(CmdGoAway cmd) throws IOException {
-        BayLog.error(ship() + " received GoAway: code=" + cmd.errorCode + " desc=" + H2ErrorCode.msg.getMessage(Integer.toString(cmd.errorCode))
-                + " debug=" + new String(cmd.debugData));
+        // GOAWAY (RFC 9113 §6.8). Common case is errorCode == NO_ERROR
+        // (0) when the peer (e.g. nginx) hits its per-connection
+        // request budget and wants to rotate connections.
+        //
+        // Strategy: exclude this ship from the multiplex pool so no
+        // further tours attach to it, fail the in-flight tours, and
+        // close. Trying to "drain" the in-flight tours rarely works
+        // in practice: peers send GOAWAY immediately followed by FIN,
+        // and tours waiting for response data deadlock until the
+        // socket-read timeout fires. Failing them fast and letting
+        // the next attempt route to a fresh ship is much cheaper
+        // than absorbing a multi-second timeout per stuck tour.
+        if (cmd.errorCode == 0) {
+            BayLog.debug("%s received GoAway (NO_ERROR, lastStreamId=%d)",
+                    ship(), cmd.lastStreamId);
+        } else {
+            BayLog.error(ship() + " received GoAway: code=" + cmd.errorCode + " desc="
+                    + H2ErrorCode.msg.getMessage(Integer.toString(cmd.errorCode))
+                    + " debug=" + new String(cmd.debugData));
+        }
+        ship().docker().excludeFromPool(ship());
         ship().notifyServiceUnavailable("Received GoAway packet");
         return NextSocketAction.Close;
     }
@@ -250,6 +272,16 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
     }
 
     @Override
+    public int maxMultiplexedTours() {
+        // H2 supports stream multiplexing on a shared TCP connection. The
+        // upper bound here gates how many tours can ride a single WarpShip
+        // before the warp pool opens another backend connection. 100 is a
+        // conservative starting point; tuning surface (HtpWarpDocker
+        // parameter) can be added later.
+        return 100;
+    }
+
+    @Override
     public WarpData newWarpData(int warpId) {
         return new WarpData(ship(), warpId);
     }
@@ -267,6 +299,19 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
 
     @Override
     public void sendEndReq(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
+        // If the request had no body, sendReqHeaders already set END_STREAM
+        // on the final HEADERS/CONTINUATION frame. Sending another empty
+        // DATA frame with END_STREAM here would be a frame on an already-
+        // half-closed stream and backends respond with RST_STREAM
+        // (STREAM_CLOSED, code 5). In that case just notify the consumer
+        // listener so the deferred-write callback is satisfied.
+        boolean reqHadBody =
+                tur.req.headers.contains("content-length")
+                        || tur.req.headers.contains("transfer-encoding");
+        if (!reqHadBody) {
+            if (lis != null) lis.dataConsumed(true);
+            return;
+        }
         int streamId = WarpData.get(tur).warpId;
         CmdData cmd = new CmdData(streamId, null, new byte[0], 0, 0);
         cmd.flags.setEndStream(true);
@@ -460,7 +505,11 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
 
 
     private void endResContent(Tour tur) throws IOException {
-        tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
+        // Order matters: endWarpTour reads WarpData.get(tur) (= the
+        // tour's req contentHandler). tur.res.endResContent triggers
+        // tour.reset() which clears that contentHandler, so we must
+        // close out the warp side first. Mirrors H1WarpHandler.endResContent.
         ship().endWarpTour(tur, true);
+        tur.res.endResContent(Tour.TOUR_ID_NOCHECK);
     }
 }

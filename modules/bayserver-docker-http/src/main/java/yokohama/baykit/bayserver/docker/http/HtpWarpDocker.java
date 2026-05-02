@@ -5,10 +5,12 @@ import yokohama.baykit.bayserver.BayMessage;
 import yokohama.baykit.bayserver.ConfigException;
 import yokohama.baykit.bayserver.Symbol;
 import yokohama.baykit.bayserver.agent.GrandAgent;
+import yokohama.baykit.bayserver.agent.LifecycleListener;
 import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
 import yokohama.baykit.bayserver.agent.multiplexer.SecureTransporter;
 import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
+import yokohama.baykit.bayserver.common.WarpShip;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.base.WarpBase;
 import yokohama.baykit.bayserver.docker.http.h1.H1PacketFactory;
@@ -19,6 +21,7 @@ import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
 import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
 import yokohama.baykit.bayserver.ship.Ship;
+import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.StringUtil;
 
 import javax.net.ssl.SSLContext;
@@ -27,6 +30,8 @@ import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.HashMap;
+import java.util.Map;
 
 public class HtpWarpDocker extends WarpBase implements HtpDocker {
 
@@ -60,6 +65,13 @@ public class HtpWarpDocker extends WarpBase implements HtpDocker {
     boolean traceSSL = false;
     SSLContext sslCtx;
 
+    /**
+     * Per-agent pool of shared backend WarpShips. Only populated when
+     * enableH2 is true; otherwise null (and arrive() falls through to the
+     * exclusive rent path inherited from WarpBase).
+     */
+    final Map<Integer, WarpShipPool> pools = new HashMap<>();
+
     //////////////////////////////////////////////////////
     // Implements Docker
     //////////////////////////////////////////////////////
@@ -76,6 +88,25 @@ public class HtpWarpDocker extends WarpBase implements HtpDocker {
                 BayLog.error(e);
                 throw new ConfigException(elm.fileName, elm.lineNo, BayMessage.get(Symbol.CFG_SSL_INIT_ERROR), e);
             }
+        }
+
+        if (enableH2) {
+            // The base WarpBase already registered a listener that owns the
+            // per-agent WarpShipStore. We add a second one here, scoped to
+            // multiplex pools. Adding listeners after the base init is
+            // intentional so the pool entry exists for any agent that gets
+            // spawned during runtime.
+            GrandAgent.addLifecycleListener(new LifecycleListener() {
+                @Override
+                public void add(int agentId) {
+                    pools.put(agentId, new WarpShipPool());
+                }
+
+                @Override
+                public void remove(int agentId) {
+                    pools.remove(agentId);
+                }
+            });
         }
     }
 
@@ -158,6 +189,52 @@ public class HtpWarpDocker extends WarpBase implements HtpDocker {
             tp.init();
             return tp;
         }
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////
+    // Multiplex hooks (only active when enableH2 is true)
+    //////////////////////////////////////////////////////////////////////////////////////////
+
+    @Override
+    protected WarpShip pickReusableShip(GrandAgent agt, Tour tour) {
+        if (!enableH2) return null; // exclusive (rent) path for H1 / non-mux
+        WarpShipPool pool = pools.get(agt.agentId);
+        return (pool != null) ? pool.findIdlest() : null;
+    }
+
+    @Override
+    protected void onShipRented(GrandAgent agt, WarpShip wsip) {
+        if (!enableH2) return;
+        WarpShipPool pool = pools.get(agt.agentId);
+        if (pool != null) pool.add(wsip);
+    }
+
+    @Override
+    public void keep(Ship warpShip) {
+        if (enableH2) {
+            // Multiplex mode: ship stays in the per-agent pool until the
+            // backend connection actually closes. Returning it to the
+            // WarpShipStore.keepList here would yank the ship out of the
+            // pool's list of reusable shared connections.
+            return;
+        }
+        super.keep(warpShip);
+    }
+
+    @Override
+    public void onEndShip(Ship warpShip) {
+        if (enableH2) {
+            WarpShipPool pool = pools.get(warpShip.agentId);
+            if (pool != null) pool.remove((WarpShip) warpShip);
+        }
+        super.onEndShip(warpShip);
+    }
+
+    @Override
+    public void excludeFromPool(Ship warpShip) {
+        if (!enableH2) return;
+        WarpShipPool pool = pools.get(warpShip.agentId);
+        if (pool != null) pool.remove((WarpShip) warpShip);
     }
 
     static {
