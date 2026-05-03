@@ -240,8 +240,9 @@ public final class WarpShip extends Ship {
     void notifyErrorToOwnerTour(int status, String msg) {
         synchronized (tourMap) {
             tourMap.keySet().forEach(warpId -> {
+                Tour tur = null;
                 try {
-                    Tour tur = getTour(warpId);
+                    tur = getTour(warpId);
                     BayLog.debug("%s send error to owner: %s running=%b", this, tur, tur.isRunning());
 
                     if (tur.isRunning() || tur.isReading()) {
@@ -252,6 +253,18 @@ public final class WarpShip extends Ship {
                     }
                 } catch (IOException e) {
                     BayLog.error(e);
+                } catch (RuntimeException e) {
+                    // STABILITY FIX: sendError -> endResContent -> sendEndTour
+                    // can throw a Sink when the front-end inbound ship has
+                    // already been recycled (its shipId no longer matches the
+                    // captured tour.shipId). In H2 multiplex this is a
+                    // common race; force-return the tour to avoid unbounded
+                    // TourStore.activeTourMap drift up to the cap.
+                    BayLog.debug(e, "%s send error to owner failed (front-end recycled?), force-returning tour: %s", this, tur);
+                    if (tur != null) {
+                        try { tur.ship.returnTour(tur); }
+                        catch (RuntimeException ignored) { /* ship gone too */ }
+                    }
                 }
             });
             tourMap.clear();

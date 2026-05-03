@@ -38,7 +38,13 @@ public class WarpData implements ReqContentHandler {
     @Override
     public synchronized final void onReadReqContent(Tour tur, byte[] buf, int start, int len, ContentConsumeListener lis) throws IOException {
         BayLog.debug("%s onReadReqContent tur=%s len=%d", warpShip, tur, len);
-        warpShip.checkShipId(warpShipId);
+        if (isStaleShip()) {
+            // STABILITY FIX: the shared warp ship was recycled; drop with a
+            // bounded IOException so caller cleans up the front-end tour
+            // normally instead of taking down the agent with Sink.
+            if (lis != null) lis.contentConsumed(len, true);
+            throw new IOException(warpShip + " warp connection has been closed");
+        }
         int maxLen = warpShip.protocolHandler.maxReqPacketDataSize();
         for(int pos = 0; pos < len; pos += maxLen) {
             int postLen = len - pos;
@@ -63,7 +69,9 @@ public class WarpData implements ReqContentHandler {
     @Override
     public synchronized final void onEndReqContent(Tour tur) throws IOException {
         BayLog.debug("%s endReqContent tur=%s", warpShip, tur);
-        warpShip.checkShipId(warpShipId);
+        if (isStaleShip()) {
+            throw new IOException(warpShip + " warp connection has been closed");
+        }
         warpShip.warpHandler().sendEndReq(tur, false, avail -> {
             GrandAgent agt = GrandAgent.get(warpShip.agentId);
             agt.netMultiplexer.reqRead(warpShip.rudder);
@@ -73,9 +81,19 @@ public class WarpData implements ReqContentHandler {
     @Override
     public synchronized final boolean onAbortReq(Tour tur) {
         BayLog.debug("%s onAbortReq tur=%s", warpShip, tur);
-        warpShip.checkShipId(warpShipId);
+        if (isStaleShip()) {
+            // STABILITY FIX: warp ship already gone (recycled by sibling
+            // tour's close in H2 multiplex). Treat abort as completed so
+            // the inbound side can return the tour now.
+            return true;
+        }
         warpShip.abort(warpShipId);
         return false; // not aborted immediately
+    }
+
+    /** True if the underlying warp ship has been recycled out from under us. */
+    private boolean isStaleShip() {
+        return !warpShip.initialized || warpShip.id() != warpShipId;
     }
 
     //////////////////////////////////////////////////////
