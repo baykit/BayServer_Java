@@ -2,7 +2,7 @@ package yokohama.baykit.bayserver.docker.http.h2.huffman;
 
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 
-import java.io.CharArrayWriter;
+import java.nio.charset.StandardCharsets;
 
 public class HTree {
 
@@ -12,51 +12,150 @@ public class HTree {
 
     static HNode root = new HNode();
 
-    public static String decode(byte[] data) throws ProtocolException {
-        CharArrayWriter w = new CharArrayWriter();
-        HNode cur = root;
-        int bitsSinceLastLeaf = 0;
-        for(int i = 0; i < data.length; i++) {
-            for(int j = 0; j < 8; j++) {
-                int bit = data[i] >> (8 - j - 1) & 0x1;
+    /** Per-thread reusable scratch for decoded bytes. */
+    private static final ThreadLocal<byte[]> SCRATCH = ThreadLocal.withInitial(() -> new byte[256]);
 
-                // down tree
-                if(bit == 1) {
-                    cur = cur.one;
-                }
-                else {
-                    cur = cur.zero;
-                }
-                if (cur == null) {
-                    // Bit pattern does not match any Huffman code.
-                    throw new ProtocolException("Huffman decode: invalid code sequence");
-                }
-                bitsSinceLastLeaf++;
+    /** Lazy-init holder so the table is built after the {@code root} tree
+     *  static block finishes (its insert() calls are below in source order). */
+    private static final class TableHolder {
+        static final int[] TABLE = buildDecodeTable();
+        static final boolean[] EOS_PREFIX = buildEosPrefix();
+    }
+    private static final int INVALID = 0x80000000;
+    private static final int EOS_PREFIX_BIT = 0x40000000;
 
-                if(cur.value > 0) {
-                    // leaf node
-                    // RFC 7541 § 5.2: EOS must not appear inside a string literal.
-                    if (cur.value == EOS_SYMBOL)
-                        throw new ProtocolException("Huffman decode: EOS symbol in string literal");
-                    w.write(cur.value);
-                    cur = root;
-                    bitsSinceLastLeaf = 0;
+    private static int[] buildDecodeTable() {
+        java.util.IdentityHashMap<HNode, Integer> stateId = new java.util.IdentityHashMap<>();
+        java.util.ArrayList<HNode> internal = new java.util.ArrayList<>();
+        java.util.ArrayDeque<HNode> q = new java.util.ArrayDeque<>();
+        stateId.put(root, 0);
+        internal.add(root);
+        q.add(root);
+        while (!q.isEmpty()) {
+            HNode n = q.poll();
+            HNode[] kids = { n.zero, n.one };
+            for (HNode c : kids) {
+                if (c != null && c.value <= 0 && !stateId.containsKey(c)) {
+                    stateId.put(c, internal.size());
+                    internal.add(c);
+                    q.add(c);
                 }
             }
         }
-
-        if (cur != root) {
-            // RFC 7541 § 5.2: any trailing bits form a padding that must be a
-            // strict prefix of the EOS code (which is all 1s) and be no longer
-            // than 7 bits.
-            if (bitsSinceLastLeaf > 7)
-                throw new ProtocolException(
-                        "Huffman decode: padding longer than 7 bits (" + bitsSinceLastLeaf + ")");
-            if (!isEosPrefix(cur))
-                throw new ProtocolException("Huffman decode: padding must be MSB of EOS (all 1s)");
+        boolean[] eosPrefix = new boolean[internal.size()];
+        HNode walk = root;
+        while (walk != null && walk.value <= 0) {
+            Integer id = stateId.get(walk);
+            if (id != null) eosPrefix[id] = true;
+            walk = walk.one;
         }
+        int[] table = new int[internal.size() * 16];
+        for (int s = 0; s < internal.size(); s++) {
+            HNode startNode = internal.get(s);
+            for (int nib = 0; nib < 16; nib++) {
+                HNode cur = startNode;
+                int emit1 = 0, emit2 = 0, count = 0;
+                boolean invalid = false;
+                for (int b = 3; b >= 0; b--) {
+                    int bit = (nib >> b) & 1;
+                    cur = bit == 1 ? cur.one : cur.zero;
+                    if (cur == null) { invalid = true; break; }
+                    int v = cur.value;
+                    if (v > 0) {
+                        if (v == EOS_SYMBOL) { invalid = true; break; }
+                        if (count == 0) emit1 = v;
+                        else if (count == 1) emit2 = v;
+                        count++;
+                        cur = root;
+                    }
+                }
+                int packed;
+                if (invalid) {
+                    packed = INVALID;
+                } else {
+                    int nextId = stateId.get(cur);
+                    packed = (nextId << 20) | (count << 16)
+                            | ((emit2 & 0xff) << 8) | (emit1 & 0xff)
+                            | (eosPrefix[nextId] ? EOS_PREFIX_BIT : 0);
+                }
+                table[s * 16 + nib] = packed;
+            }
+        }
+        return table;
+    }
 
-        return w.toString();
+    private static boolean[] buildEosPrefix() {
+        java.util.IdentityHashMap<HNode, Integer> stateId = new java.util.IdentityHashMap<>();
+        java.util.ArrayList<HNode> internal = new java.util.ArrayList<>();
+        java.util.ArrayDeque<HNode> q = new java.util.ArrayDeque<>();
+        stateId.put(root, 0);
+        internal.add(root);
+        q.add(root);
+        while (!q.isEmpty()) {
+            HNode n = q.poll();
+            HNode[] kids = { n.zero, n.one };
+            for (HNode c : kids) {
+                if (c != null && c.value <= 0 && !stateId.containsKey(c)) {
+                    stateId.put(c, internal.size());
+                    internal.add(c);
+                    q.add(c);
+                }
+            }
+        }
+        boolean[] eosPrefix = new boolean[internal.size()];
+        HNode walk = root;
+        while (walk != null && walk.value <= 0) {
+            Integer id = stateId.get(walk);
+            if (id != null) eosPrefix[id] = true;
+            walk = walk.one;
+        }
+        return eosPrefix;
+    }
+
+    public static String decode(byte[] data) throws ProtocolException {
+        byte[] out = SCRATCH.get();
+        int outLen = 0;
+        int outCap = out.length;
+        int state = 0;
+        for (int i = 0; i < data.length; i++) {
+            int b = data[i] & 0xff;
+            int packed = TableHolder.TABLE[(state << 4) | (b >> 4)];
+            if (packed < 0)
+                throw new ProtocolException("Huffman decode: invalid code sequence");
+            int count = (packed >> 16) & 0xf;
+            if (count != 0) {
+                if (outLen + count > outCap) {
+                    int newCap = Math.max(outCap * 2, outLen + count);
+                    byte[] grown = new byte[newCap];
+                    System.arraycopy(out, 0, grown, 0, outLen);
+                    out = grown; outCap = newCap;
+                    SCRATCH.set(out);
+                }
+                out[outLen++] = (byte) (packed & 0xff);
+                if (count == 2) out[outLen++] = (byte) ((packed >> 8) & 0xff);
+            }
+            state = (packed >> 20) & 0x3ff;
+            packed = TableHolder.TABLE[(state << 4) | (b & 0xf)];
+            if (packed < 0)
+                throw new ProtocolException("Huffman decode: invalid code sequence");
+            count = (packed >> 16) & 0xf;
+            if (count != 0) {
+                if (outLen + count > outCap) {
+                    int newCap = Math.max(outCap * 2, outLen + count);
+                    byte[] grown = new byte[newCap];
+                    System.arraycopy(out, 0, grown, 0, outLen);
+                    out = grown; outCap = newCap;
+                    SCRATCH.set(out);
+                }
+                out[outLen++] = (byte) (packed & 0xff);
+                if (count == 2) out[outLen++] = (byte) ((packed >> 8) & 0xff);
+            }
+            state = (packed >> 20) & 0x3ff;
+        }
+        if (state != 0 && !TableHolder.EOS_PREFIX[state]) {
+            throw new ProtocolException("Huffman decode: padding must be MSB of EOS (all 1s)");
+        }
+        return new String(out, 0, outLen, StandardCharsets.ISO_8859_1);
     }
 
     /**
