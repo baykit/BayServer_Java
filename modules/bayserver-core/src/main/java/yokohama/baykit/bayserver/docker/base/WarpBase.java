@@ -185,6 +185,8 @@ public abstract class WarpBase extends ClubBase implements Warp {
                         ch = AsynchronousSocketChannel.open();
                     else
                         throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Asynchronous mode not supported for UNIX domain socket");
+                    if (hostAddr instanceof InetSocketAddress)
+                        ch.setOption(java.net.StandardSocketOptions.TCP_NODELAY, true);
                     rd = new AsynchronousSocketChannelRudder(ch);
                 }
                 else {
@@ -193,6 +195,8 @@ public abstract class WarpBase extends ClubBase implements Warp {
                         ch = SocketChannel.open();
                     else
                         ch = SysUtil.openUnixDomainSocketChannel();
+                    if (hostAddr instanceof InetSocketAddress)
+                        ch.setOption(java.net.StandardSocketOptions.TCP_NODELAY, true);
                     rd = new SocketChannelRudder(ch);
                 }
 
