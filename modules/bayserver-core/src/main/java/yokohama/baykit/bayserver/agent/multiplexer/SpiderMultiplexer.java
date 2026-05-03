@@ -466,6 +466,14 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
                 } catch (ClosedChannelException e) {
                     //BayLog.debug(e, "%s Cannot register operation (Channel is closed): %s ch=%s op=%d(%s) close=%b",
                     //        agent, st, cop.rudder, cop.op, opMode(cop.op), cop.close);
+                } catch (CancelledKeyException e) {
+                    // STABILITY FIX: the channel still carries a cancelled
+                    // SelectionKey for this selector that the JDK has not yet
+                    // flushed (happens when handleChannel cancels a key and
+                    // the same rudder is queued for re-register in the same
+                    // receive() cycle). Treat as channel-pending-close.
+                    BayLog.debug(e, "%s Cannot register operation (key cancelled, channel pending close): %s ch=%s",
+                            agent, st, rd);
                 }
             }
             rd.inDirtyList = false;
