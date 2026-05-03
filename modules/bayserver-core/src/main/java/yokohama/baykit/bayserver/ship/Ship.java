@@ -97,7 +97,17 @@ public abstract class Ship implements Reusable {
     }
 
     public void resumeRead(int chkId) {
-        checkShipId(chkId);
+        // STABILITY FIX: H2 warp multiplexes many tours over one ship: when
+        // one tour's backend connection ends and the ship is returned to
+        // the store, sibling tours may still have deferred consume callbacks
+        // pending. Those callbacks fire wsip.resumeRead(sid) with an id the
+        // ship has since reset. Crashing the agent is the wrong call --
+        // there is no read side to resume on a recycled ship, so just drop.
+        if (!initialized || (chkId != SHIP_ID_NOCHECK && chkId != shipId)) {
+            BayLog.debug("%s resumeRead on stale ship (chkId=%d, current=%d): ignored",
+                    this, chkId, shipId);
+            return;
+        }
         BayLog.debug("%s resume read", this);
         transporter.reqRead(rudder);
     }
