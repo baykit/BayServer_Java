@@ -562,6 +562,14 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
                     throw new IOException("Agent is not alive");
                 }
                 else {
+                    // TCP_NODELAY on accepted client sockets: serving small
+                    // responses suffers ~40 ms Nagle/delayed-ACK stalls
+                    // otherwise.
+                    try {
+                        ch.setOption(java.net.StandardSocketOptions.TCP_NODELAY, true);
+                    } catch (IOException ioe) {
+                        BayLog.debug(ioe, "%s could not set TCP_NODELAY on accepted ch", agent);
+                    }
                     SocketChannelRudder clientRd = new SocketChannelRudder(ch);
                     clientRd.setNonBlocking();
                     agent.sendAcceptedLetter(serverRd, this, clientRd, false);
