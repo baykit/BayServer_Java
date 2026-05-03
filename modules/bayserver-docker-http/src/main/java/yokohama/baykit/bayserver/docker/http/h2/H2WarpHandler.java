@@ -49,6 +49,18 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
     // call so we don't need a notifyConnect hook on this handler.
     boolean preludeSent = false;
 
+    // Pooled HPACK encode scratch state (single-threaded per agent so no
+    // synchronization). Per-request allocations of a 32 KiB SimpleBuffer +
+    // builder + ArrayList showed up as the top JFR sample group on the
+    // request-encode side after the dyn-table fix. The pool is reset at
+    // the start of every sendReqHeaderCommand and the rendered bytes are
+    // copied out into a tight byte[] before being attached to CmdHeaders.
+    private final yokohama.baykit.bayserver.util.SimpleBuffer encodeBuf =
+            new yokohama.baykit.bayserver.util.SimpleBuffer();
+    private final HeaderBlockBuilder reqBlockBuilder = new HeaderBlockBuilder();
+    private final HeaderBlockRenderer reqBlockRenderer = new HeaderBlockRenderer(encodeBuf);
+    private final ArrayList<HeaderBlock> reqHeaderBlocks = new ArrayList<>();
+
     protected H2WarpHandler() {
 
     }
@@ -405,8 +417,12 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
         WarpShip sip = ship();
         String newUri = sip.docker().warpBase() + tur.req.uri.substring(townPath.length());
 
-        HeaderBlockBuilder bld = new HeaderBlockBuilder();
-        ArrayList<HeaderBlock> headerBlocks = new ArrayList<>();
+        // Reuse the pooled encode buffer + block list. Both are
+        // single-threaded per agent.
+        encodeBuf.reset();
+        reqHeaderBlocks.clear();
+        HeaderBlockBuilder bld = reqBlockBuilder;
+        ArrayList<HeaderBlock> headerBlocks = reqHeaderBlocks;
 
         headerBlocks.add(bld.buildHeaderBlock(HeaderTable.PSEUDO_HEADER_METHOD, tur.req.method, reqHeaderTbl));
         headerBlocks.add(bld.buildHeaderBlock(HeaderTable.PSEUDO_HEADER_PATH, newUri, reqHeaderTbl));
@@ -432,21 +448,26 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
             }
         }
 
-        SimpleBuffer buf = new SimpleBuffer();
-        new HeaderBlockRenderer(buf).renderHeaderBlocks(headerBlocks);
+        reqBlockRenderer.renderHeaderBlocks(headerBlocks);
+        // Snapshot the rendered bytes into a tight, owned array. The
+        // WarpShip cmdBuf path can hold the resulting CmdHeaders past
+        // this method's return -- if we left the data pointing at the
+        // pooled SimpleBuffer, the next sendReqHeaderCommand would
+        // overwrite it before the buffered command reaches pack().
+        byte[] encoded = java.util.Arrays.copyOf(encodeBuf.bytes(), encodeBuf.length());
 
         int streamId = WarpData.get(tur).warpId;
         boolean endStream = !tur.req.headers.contains("content-length")
                 && !tur.req.headers.contains("transfer-encoding");
 
         int pos = 0;
-        int len = buf.length();
+        int len = encoded.length;
         // Always emit at least one HEADERS frame, even if HPACK rendered to
         // zero bytes (defensive; in practice we always have :method etc.).
         if (len == 0) {
             CmdHeaders hcmd = new CmdHeaders(streamId);
             hcmd.excluded = false;
-            hcmd.data = buf.bytes();
+            hcmd.data = encoded;
             hcmd.start = 0;
             hcmd.length = 0;
             hcmd.flags.setEndHeaders(true);
@@ -462,14 +483,14 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
             if (pos == 0) {
                 CmdHeaders hcmd = new CmdHeaders(streamId);
                 hcmd.excluded = false;
-                hcmd.data = buf.bytes();
+                hcmd.data = encoded;
                 hcmd.start = pos;
                 hcmd.length = chunkLen;
                 cmd = hcmd;
             }
             else {
                 CmdContinuation ccmd = new CmdContinuation(streamId);
-                ccmd.data = buf.bytes();
+                ccmd.data = encoded;
                 ccmd.start = pos;
                 ccmd.length = chunkLen;
                 cmd = ccmd;
