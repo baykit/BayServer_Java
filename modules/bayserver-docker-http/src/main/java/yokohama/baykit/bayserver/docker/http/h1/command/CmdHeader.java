@@ -252,47 +252,50 @@ loop:
     }
 
     private void unpackMessageHeader(byte[] bytes, int start, int len) throws IOException {
-        char[] buf = new char[len];
+        // ASCII / Latin-1 fast path on a reusable byte[] scratch.
+        // The previous loop went through Character.toLowerCase (Unicode
+        // fold) on every byte and allocated a fresh char[len] per call.
+        if (parseScratch == null || parseScratch.length < len) {
+            parseScratch = new byte[Math.max(len, 64)];
+        }
+        byte[] buf = parseScratch;
         boolean readName = true;
         int pos = 0;
         boolean skipping = true;
-        String name = null, value;
-        for(int i = 0; i < len; i++) {
-            int b = bytes[start + i];
-            if(skipping && Character.isWhitespace(b))
+        int colonPos = -1;
+        for (int i = 0; i < len; i++) {
+            int b = bytes[start + i] & 0xff;
+            if (skipping && (b == ' ' || b == '\t'))
                 continue;
-            else if(readName && (b == ':')) {
-                name = new String(buf, 0, pos);
-                pos = 0;
-                skipping = true;
+            if (readName && b == ':') {
+                colonPos = pos;
                 readName = false;
+                skipping = true;
+                continue;
             }
-            else {
-                if(readName) {
-                    // make the case of header name be lower force
-                    buf[pos++] = Character.toLowerCase((char)b);
-                }
-                else {
-                    buf[pos++] = (char) b;
-                }
-                skipping = false;
+            if (readName) {
+                if (b >= 'A' && b <= 'Z') b += 32;
+                buf[pos++] = (byte) b;
+            } else {
+                buf[pos++] = (byte) b;
             }
+            skipping = false;
         }
 
-        if (name == null) {
+        if (colonPos < 0) {
             BayLog.debug("Invalid message header: %s", new String(bytes, start, len));
             throw new ProtocolException(
                     BayMessage.get(Symbol.HTP_INVALID_HEADER_FORMAT, ""));
         }
 
-        value = new String(buf, 0, pos);
+        String name = new String(buf, 0, colonPos, StandardCharsets.ISO_8859_1);
+        String value = new String(buf, colonPos, pos - colonPos, StandardCharsets.ISO_8859_1);
 
         addHeader(name, value);
-        //BayServer.debug(this + " receive header: " + name + "=" + value);
-        //if(BayLog.isTraceMode()) {
-        //    BayLog.trace(this + " receive header: " + name + "=" + value);
-        //}
     }
+
+    /** Reusable scratch buffer for header-name/value byte assembly. */
+    private byte[] parseScratch;
 
 
     private void packRequestLine(PacketPartAccessor acc) throws IOException {
