@@ -57,14 +57,56 @@ public class HeaderTable {
         return idxList;
     }
     
+    /**
+     * RFC 7541 §4.1: each entry's "size" is the sum of its name + value
+     * lengths plus a 32-byte overhead. Used to bound the dynamic table
+     * against {@link #maxByteSize}.
+     */
+    private static int entrySize(String name, String value) {
+        return (name == null ? 0 : name.length())
+                + (value == null ? 0 : value.length())
+                + 32;
+    }
+
+    int curByteSize = 0;
+    /**
+     * Maximum byte size of the dynamic table. RFC 7541 default = 4096.
+     * Without this enforcement insert() degrades to O(N) ArrayList head
+     * inserts on an unbounded list, which made bench rps degrade ~5x as
+     * the table grew across consecutive iterations.
+     */
+    int maxByteSize = 4096;
+
     public void insert(String name, String value) {
+        int sz = entrySize(name, value);
+        // Evict oldest entries until the new one fits, RFC 7541 §4.4.
+        // idxMap stores newest-first (idxMap.get(0) is the most recent
+        // insert), so the oldest entry sits at idxMap.size()-1.
+        while (!idxMap.isEmpty() && curByteSize + sz > maxByteSize) {
+            KeyVal evicted = idxMap.remove(idxMap.size() - 1);
+            curByteSize -= entrySize(evicted.name, evicted.value);
+        }
+        if (sz > maxByteSize) {
+            // Per RFC 7541 §4.4: an entry alone exceeding the maximum
+            // size must empty the table and not be inserted. addCount
+            // is still incremented so encoder/decoder agree on numbering.
+            addCount++;
+            return;
+        }
         idxMap.add(0, new KeyVal(name, value));
+        curByteSize += sz;
         addCount++;
         addToNameMap(name, addCount);
-        //BayServer.info("Header table insert(" + name + "," + value + ") addCount=" + addCount);
     }
 
     public void setSize(int size) {
+        // SETTINGS_HEADER_TABLE_SIZE: bound the table in bytes. When the
+        // new max is below the current size, evict from the tail.
+        this.maxByteSize = size;
+        while (!idxMap.isEmpty() && curByteSize > maxByteSize) {
+            KeyVal evicted = idxMap.remove(idxMap.size() - 1);
+            curByteSize -= entrySize(evicted.name, evicted.value);
+        }
     }
     
     private HeaderTable() {
