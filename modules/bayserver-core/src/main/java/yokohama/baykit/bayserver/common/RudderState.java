@@ -25,6 +25,20 @@ public class RudderState implements Reusable {
     public boolean closing;
     public ByteBuffer readBuf;
     public ArrayList<WriteUnit> writeQueue = new ArrayList<>();
+    /** True iff this state is currently queued in SpiderMultiplexer.tryWriteList,
+     *  used to dedupe additions without paying for HashSet hashCode/equals. */
+    public boolean inTryWriteList;
+    /**
+     * Sum of WriteUnit.initialSize for all units in writeQueue, maintained
+     * by reqWrite/consumeOldestUnit so remaining() is O(1) instead of O(N)
+     * over writeQueue. Slightly overestimates during partial writes (the
+     * head unit's actual remaining may be less than its initialSize), which
+     * is fine for the back-pressure threshold check.
+     *
+     * reqWrite calls remaining() on every post, so an O(N) scan would
+     * become quadratic on large multi-frame responses.
+     */
+    public int writeQueueBytes;
     public SelectionKey selectionKey;
     public boolean reading[] = new boolean[]{false};
     public boolean writing[] = new boolean[]{false};
@@ -94,6 +108,8 @@ public class RudderState implements Reusable {
         closing = false;
         readBuf.clear();
         writeQueue.clear();
+        writeQueueBytes = 0;
+        inTryWriteList = false;
         selectionKey = null;
         bytesRead = 0;
         bytesWrote = 0;
@@ -113,11 +129,7 @@ public class RudderState implements Reusable {
     }
 
     public int remaining() {
-        int total = 0;
-        for (WriteUnit unit : writeQueue) {
-            total += unit.remaining();
-        }
-        return total;
+        return writeQueueBytes;
     }
 
     /**

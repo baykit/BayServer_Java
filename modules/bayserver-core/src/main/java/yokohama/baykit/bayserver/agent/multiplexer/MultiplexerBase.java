@@ -85,6 +85,7 @@ public abstract class MultiplexerBase implements Multiplexer {
             if(st.writeQueue.isEmpty())
                 return false;
             u = st.writeQueue.remove(0);
+            st.writeQueueBytes -= u.initialSize;
         }
         u.done(st.bufferAvailable());
         return true;
