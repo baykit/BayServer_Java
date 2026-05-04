@@ -115,12 +115,22 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
             ship().post(upd2);
         }
 
-        if(!available)
-            return NextSocketAction.Suspend;
-
+        // End-of-stream cleanup must run even when the inbound write buffer
+        // is full (= !available). Front-end-closed tours never see their
+        // inbound write listener fire (no consumer is reading), so a Suspend
+        // here would freeze the END_STREAM forever -> tur.res.endResContent
+        // is never called -> returnTour never fires -> per-agent
+        // TourStore.activeTourMap drifts up to MAX_TOURS -> 503 storm.
+        // endResContent is async (its CmdEndContent post flows through the
+        // SpiderMultiplexer.reqWrite null-state short-circuit when the
+        // rudder is gone), so it is safe to fire here regardless of
+        // back-pressure state.
         if (cmd.flags.endStream()) {
             endResContent(tur);
         }
+
+        if(!available)
+            return NextSocketAction.Suspend;
 
         return NextSocketAction.Continue;
     }
