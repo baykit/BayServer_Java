@@ -43,11 +43,69 @@ public class BayLog {
         log(LOG_LEVEL_INFO, 3, fmt, args);
     }
 
+    // Fast-path overloads: gate on logLevel BEFORE the varargs Object[] is
+    // allocated and BEFORE any int->Integer autoboxing kicks in. The
+    // varargs version (Object...) stays as the fallback for >4 args; the
+    // 0-4-arg versions cover the overwhelming majority of call sites.
+    // Hot-path proxy bench showed BayLog.debug at 9% of CPU samples even
+    // with logLevel=INFO because the varargs array allocation happened
+    // before the suppression check.
+
+    public static void trace(String fmt) {
+        if (logLevel > LOG_LEVEL_TRACE) return;
+        log(LOG_LEVEL_TRACE, 3, fmt, (Object[]) null);
+    }
+    public static void trace(String fmt, Object a) {
+        if (logLevel > LOG_LEVEL_TRACE) return;
+        log(LOG_LEVEL_TRACE, 3, fmt, new Object[]{a});
+    }
+    public static void trace(String fmt, Object a, Object b) {
+        if (logLevel > LOG_LEVEL_TRACE) return;
+        log(LOG_LEVEL_TRACE, 3, fmt, new Object[]{a, b});
+    }
+    public static void trace(String fmt, Object a, Object b, Object c) {
+        if (logLevel > LOG_LEVEL_TRACE) return;
+        log(LOG_LEVEL_TRACE, 3, fmt, new Object[]{a, b, c});
+    }
+    public static void trace(String fmt, Object a, Object b, Object c, Object d) {
+        if (logLevel > LOG_LEVEL_TRACE) return;
+        log(LOG_LEVEL_TRACE, 3, fmt, new Object[]{a, b, c, d});
+    }
     public static void trace(String fmt, Object... args) {
+        if (logLevel > LOG_LEVEL_TRACE) return;
         log(LOG_LEVEL_TRACE, 3, fmt, args);
     }
 
+    public static void debug(String fmt) {
+        if (logLevel > LOG_LEVEL_DEBUG) return;
+        log(LOG_LEVEL_DEBUG, 3, fmt, (Object[]) null);
+    }
+    public static void debug(String fmt, Object a) {
+        if (logLevel > LOG_LEVEL_DEBUG) return;
+        log(LOG_LEVEL_DEBUG, 3, fmt, new Object[]{a});
+    }
+    public static void debug(String fmt, Object a, Object b) {
+        if (logLevel > LOG_LEVEL_DEBUG) return;
+        log(LOG_LEVEL_DEBUG, 3, fmt, new Object[]{a, b});
+    }
+    public static void debug(String fmt, Object a, Object b, Object c) {
+        if (logLevel > LOG_LEVEL_DEBUG) return;
+        log(LOG_LEVEL_DEBUG, 3, fmt, new Object[]{a, b, c});
+    }
+    public static void debug(String fmt, Object a, Object b, Object c, Object d) {
+        if (logLevel > LOG_LEVEL_DEBUG) return;
+        log(LOG_LEVEL_DEBUG, 3, fmt, new Object[]{a, b, c, d});
+    }
+    public static void debug(String fmt, Object a, Object b, Object c, Object d, Object e) {
+        if (logLevel > LOG_LEVEL_DEBUG) return;
+        log(LOG_LEVEL_DEBUG, 3, fmt, new Object[]{a, b, c, d, e});
+    }
+    public static void debug(String fmt, Object a, Object b, Object c, Object d, Object e, Object f) {
+        if (logLevel > LOG_LEVEL_DEBUG) return;
+        log(LOG_LEVEL_DEBUG, 3, fmt, new Object[]{a, b, c, d, e, f});
+    }
     public static void debug(String fmt, Object... args) {
+        if (logLevel > LOG_LEVEL_DEBUG) return;
         log(LOG_LEVEL_DEBUG, 3, fmt, args);
     }
 

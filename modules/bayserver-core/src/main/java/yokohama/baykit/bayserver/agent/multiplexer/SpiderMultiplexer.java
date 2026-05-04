@@ -16,7 +16,6 @@ import yokohama.baykit.bayserver.rudder.SocketChannelRudder;
 import yokohama.baykit.bayserver.util.DataConsumeListener;
 
 import java.io.IOException;
-import java.util.HashSet;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -37,7 +36,10 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
     private Selector selector;
 
     final ArrayList<ChannelRudder> ruddersToRegister = new ArrayList<>(16384);
-    final HashSet<RudderState> tryWriteList = new HashSet<>();
+    /** RudderStates with pending flushes. ArrayList + RudderState.inTryWriteList
+     *  flag instead of HashSet to skip the hashCode/equals cost; the dedupe
+     *  is handled by the flag. */
+    final java.util.ArrayList<RudderState> tryWriteList = new java.util.ArrayList<>();
 
     public SpiderMultiplexer(GrandAgent agent, boolean anchorable) {
         super(agent);
@@ -123,8 +125,11 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         }
 
         WriteUnit unt = new WriteUnit(buf, adr, tag, listener);
+        int total;
         synchronized (st.writeQueue) {
             st.writeQueue.add(unt);
+            st.writeQueueBytes += unt.initialSize;
+            total = st.writeQueueBytes;
         }
 
         // Flush the write queue if explicitly requested or if the buffered data
@@ -133,15 +138,18 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         // reducing the number of syscalls (e.g., headers and body are combined
         // into a single writev call).
         int flushThreshold = Math.min(st.bufsize, BayServer.harbor.shipBufferSize());
-        if(st.remaining() > 0 && (flush || st.remaining() >= flushThreshold)) {
+        if(flush || total >= flushThreshold) {
             synchronized (tryWriteList) {
-                tryWriteList.add(st);
+                if (!st.inTryWriteList) {
+                    st.inTryWriteList = true;
+                    tryWriteList.add(st);
+                }
             }
             selector.wakeup();
         }
 
         st.access();
-        return st.bufferAvailable();
+        return total <= BayServer.harbor.shipBufferSize();
     }
 
     @Override
@@ -161,6 +169,7 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         WriteUnit unt = new WriteUnit(fileRd, ofs, len, listener);
         synchronized (st.writeQueue) {
             st.writeQueue.add(unt);
+            st.writeQueueBytes += unt.initialSize;
         }
         addOperation(rd, OP_WRITE);
 
@@ -374,6 +383,9 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         RudderState[] writeTargets;
         synchronized (tryWriteList) {
             writeTargets = tryWriteList.toArray(new RudderState[0]);
+            for (RudderState rs : writeTargets) {
+                rs.inTryWriteList = false;
+            }
             tryWriteList.clear();
         }
         for(RudderState st : writeTargets) {

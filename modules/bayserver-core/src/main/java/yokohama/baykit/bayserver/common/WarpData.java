@@ -18,6 +18,13 @@ public class WarpData implements ReqContentHandler {
     public final Headers resHeaders = new Headers();
     public boolean started;
     public boolean ended;
+    /**
+     * Pending stream-level WINDOW_UPDATE bytes. Accumulated across DATA
+     * frames received on this stream and flushed when the threshold (set
+     * by H2WarpHandler) is reached. Resets when END_STREAM arrives - no
+     * point updating a closed stream's window.
+     */
+    public int pendingStreamWindow = 0;
 
     public WarpData(WarpShip warpShip, int warpId) {
         this.warpShip = warpShip;

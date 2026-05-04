@@ -15,6 +15,11 @@ public class WriteUnit {
     public int written;
     public final int offset;
     public final int length;
+    /** Total bytes this unit will eventually write. Captured at construction
+     *  so RudderState.writeQueueBytes can be incremented on add and
+     *  decremented on full consume in O(1). For ByteBuffer mode it's the
+     *  initial buf.remaining(); for sendfile mode it's `length`. */
+    public final int initialSize;
 
     public WriteUnit(ByteBuffer buf, InetSocketAddress adr, Object tag, DataConsumeListener listener) {
         this(buf, null, 0, 0, adr, tag, listener);
@@ -32,6 +37,7 @@ public class WriteUnit {
         this.adr = adr;
         this.tag = tag;
         this.listener = listener;
+        this.initialSize = (buf != null) ? buf.remaining() : len;
     }
 
     public void done(boolean bufferAvailable) {
