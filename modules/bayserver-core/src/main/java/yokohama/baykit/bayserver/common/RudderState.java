@@ -25,6 +25,23 @@ public class RudderState implements Reusable {
     public boolean closing;
     public ByteBuffer readBuf;
     public ArrayList<WriteUnit> writeQueue = new ArrayList<>();
+    /** True iff this state is currently queued in SpiderMultiplexer.tryWriteList,
+     *  used to dedupe additions without paying for HashSet hashCode/equals. */
+    public boolean inTryWriteList;
+    /**
+     * Sum of WriteUnit.initialSize for all units in writeQueue, maintained
+     * by reqWrite/consumeOldestUnit so remaining() is O(1) instead of O(N)
+     * over writeQueue. Slightly overestimates during partial writes (the
+     * head unit's actual remaining may be less than its initialSize), which
+     * is fine for the back-pressure threshold check.
+     *
+     * Without this counter, RudderState.remaining() showed up as ~40% of
+     * CPU on JFR for proxy-h2 1MB c=256 because reqWrite calls it twice on
+     * every post (the body of a 1MB response is 64 H2 DATA frames + 128
+     * WindowUpdate posts = ~192 reqWrites/req, each scanning a writeQueue
+     * of dozens of units = quadratic).
+     */
+    public int writeQueueBytes;
     public SelectionKey selectionKey;
     public boolean reading[] = new boolean[]{false};
     public boolean writing[] = new boolean[]{false};
@@ -94,6 +111,8 @@ public class RudderState implements Reusable {
         closing = false;
         readBuf.clear();
         writeQueue.clear();
+        writeQueueBytes = 0;
+        inTryWriteList = false;
         selectionKey = null;
         bytesRead = 0;
         bytesWrote = 0;
@@ -113,11 +132,7 @@ public class RudderState implements Reusable {
     }
 
     public int remaining() {
-        int total = 0;
-        for (WriteUnit unit : writeQueue) {
-            total += unit.remaining();
-        }
-        return total;
+        return writeQueueBytes;
     }
 
     /**

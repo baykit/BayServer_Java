@@ -49,6 +49,17 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
     // call so we don't need a notifyConnect hook on this handler.
     boolean preludeSent = false;
 
+    /**
+     * Pending connection-level WINDOW_UPDATE bytes. Accumulated across DATA
+     * frames and flushed when {@link #WINDOW_UPDATE_THRESHOLD} is reached.
+     * The h2 spec requires the peer's connection window not to go negative,
+     * not that we update on every frame. With initial conn window 65535 and
+     * a 32 KiB threshold, the peer always retains at least 32 KiB of slack.
+     */
+    int pendingConnWindow = 0;
+    /** Threshold for WINDOW_UPDATE coalescing. < initial window (65535). */
+    static final int WINDOW_UPDATE_THRESHOLD = 32768;
+
     // Pooled HPACK encode scratch state (single-threaded per agent so no
     // synchronization). Per-request allocations of a 32 KiB SimpleBuffer +
     // builder + ArrayList showed up as the top JFR sample group on the
@@ -77,6 +88,7 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
     public void reset() {
         curStreamId = 1;
         preludeSent = false;
+        pendingConnWindow = 0;
     }
 
     /////////////////////////////////////
@@ -95,24 +107,35 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
         boolean available = tur.res.sendResContent(Tour.TOUR_ID_NOCHECK, cmd.data, cmd.start, cmd.length);
 
         // Replenish flow-control windows so the upstream backend can keep
-        // sending. Without this the connection-level + stream-level windows
-        // (default 65535 each) drain after ~65 KB of body and the backend
-        // stops sending DATA frames; multi-chunk responses (>= 100 KB) hang
-        // until timeout.
-        //
-        // Only send the connection-level update (streamId=0) once the
-        // peer has flagged END_STREAM: at that point the stream is closed
-        // and a per-stream WINDOW_UPDATE on it elicits STREAM_CLOSED
-        // (RST_STREAM code=5) from a strict server such as nginx.
+        // sending. The h2 spec only requires that the peer's window not go
+        // negative, not that we update on every frame. Coalesce per-stream
+        // and per-connection increments to threshold to cut WindowUpdate
+        // posts ~4x on multi-chunk responses (1 MB / 16 KiB frame * 2
+        // updates per frame = ~128 posts -> ~32 posts). Threshold (32 KiB)
+        // is well below the 65535-byte initial window, so the peer always
+        // retains plenty of slack.
         if (cmd.length > 0) {
+            // Per-stream: skip if this is the END_STREAM frame (stream is
+            // closing; nginx returns STREAM_CLOSED for updates on a closed
+            // stream). Otherwise accumulate and flush on threshold.
             if (!cmd.flags.endStream()) {
-                CmdWindowUpdate upd = new CmdWindowUpdate(cmd.streamId);
-                upd.windowSizeIncrement = cmd.length;
-                ship().post(upd);
+                WarpData wd = WarpData.get(tur);
+                wd.pendingStreamWindow += cmd.length;
+                if (wd.pendingStreamWindow >= WINDOW_UPDATE_THRESHOLD) {
+                    CmdWindowUpdate upd = new CmdWindowUpdate(cmd.streamId);
+                    upd.windowSizeIncrement = wd.pendingStreamWindow;
+                    ship().post(upd);
+                    wd.pendingStreamWindow = 0;
+                }
             }
-            CmdWindowUpdate upd2 = new CmdWindowUpdate(0);
-            upd2.windowSizeIncrement = cmd.length;
-            ship().post(upd2);
+            // Per-connection: always accumulate, flush on threshold.
+            pendingConnWindow += cmd.length;
+            if (pendingConnWindow >= WINDOW_UPDATE_THRESHOLD) {
+                CmdWindowUpdate upd2 = new CmdWindowUpdate(0);
+                upd2.windowSizeIncrement = pendingConnWindow;
+                ship().post(upd2);
+                pendingConnWindow = 0;
+            }
         }
 
         // End-of-stream cleanup must run even when the inbound write buffer

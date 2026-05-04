@@ -156,6 +156,7 @@ public class JobMultiplexer extends JobMultiplexerBase {
         WriteUnit unt = new WriteUnit(buf, adr, tag, listener);
         synchronized (state.writeQueue) {
             state.writeQueue.add(unt);
+            state.writeQueueBytes += unt.initialSize;
         }
         state.access();
 

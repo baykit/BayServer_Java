@@ -68,6 +68,7 @@ public class TaxiMultiplexer extends MultiplexerBase {
         WriteUnit unt = new WriteUnit(buf, adr, tag, listener);
         synchronized (st.writeQueue) {
             st.writeQueue.add(unt);
+            st.writeQueueBytes += unt.initialSize;
         }
 
         boolean needWrite = false;
