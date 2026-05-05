@@ -13,6 +13,7 @@
     <module>modules/bayserver-docker-cgi</module>
     <module>modules/bayserver-docker-fcgi</module>
     <module>modules/bayserver-docker-http</module>
+    <module>modules/bayserver-docker-phpverse</module>
     <module>modules/bayserver-docker-http3</module>
     <module>modules/bayserver-docker-servlet</module>
     <module>modules/bayserver-docker-wordpress</module>
