@@ -194,7 +194,7 @@ public class CgiReqContentHandler implements ReqContentHandler, Runnable {
 
         if (mpx != null) {
             CgiStdOutShip outShip = new CgiStdOutShip();
-            PlainTransporter outTp = new PlainTransporter(agt.netMultiplexer, outShip, false, bufsize, false);
+            PlainTransporter outTp = new PlainTransporter(mpx, outShip, false, bufsize, false);
             outTp.init();
 
             outShip.init(outRd, tour.ship.agentId, tour, outTp, this);
@@ -211,7 +211,7 @@ public class CgiReqContentHandler implements ReqContentHandler, Runnable {
             });
 
             CgiStdErrShip errShip = new CgiStdErrShip();
-            PlainTransporter errTp = new PlainTransporter(agt.netMultiplexer, errShip, false, bufsize, false);
+            PlainTransporter errTp = new PlainTransporter(mpx, errShip, false, bufsize, false);
             errTp.init();
             errShip.init(errRd, tour.ship.agentId, this);
             RudderState errRst = RudderStateStore.getStore(agt.agentId).rent();
