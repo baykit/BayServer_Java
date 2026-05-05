@@ -1,8 +1,10 @@
 package yokohama.baykit.bayserver.docker.phpverse;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.tour.Tour;
+import yokohama.baykit.bayserver.util.HttpStatus;
 
-import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
@@ -18,21 +20,22 @@ import java.nio.file.Path;
 /**
  * Process-singleton libphp.so embedding runtime for {@link PhpVerseDocker}.
  *
- * <p>This class encapsulates the M3-M5 PoC findings:
- * <ul>
- *   <li>{@link #init} runs once on plan parse: dlopen + patch ub_write +
- *       php_embed_init (then close the auto-started request).</li>
- *   <li>{@link #runScript} is called per request from any grand agent
- *       thread. First call on a new thread registers it with TSRM via
- *       {@code ts_resource_ex(0, NULL)}. Subsequent calls cycle the
- *       per-request engine state via
- *       {@code php_request_startup} / {@code _shutdown}, mirroring
- *       php-fpm's per-request boundary.</li>
- * </ul>
+ * <p>{@link #init} runs once on plan parse: dlopen + patch ub_write +
+ * php_embed_init (then close the auto-started request).
  *
- * <p>Output capture: PHP's {@code echo} is redirected to a per-thread
- * {@link StringBuilder} via the patched {@code ub_write}. Each thread sees
- * only its own buffer (= no cross-tour leakage, verified in M5 PoC).
+ * <p>{@link #runScript} is called per request from any grand agent
+ * thread. First call on a new thread registers it with TSRM via
+ * {@code ts_resource_ex(0, NULL)}. Subsequent calls cycle the
+ * per-request engine state via
+ * {@code php_request_startup} / {@code _shutdown}, mirroring
+ * php-fpm's per-request boundary.
+ *
+ * <p><b>Output path:</b> PHP's {@code echo} is streamed directly to
+ * {@code Tour.res.sendResContent} from inside the {@code ub_write}
+ * upcall via a {@link ThreadLocal} reference to the active tour.
+ * Headers are sent lazily on the first chunk. This avoids buffering
+ * the full body in Java heap, which would be 3-5 extra megabyte-scale
+ * copies on a 1 MB response.
  */
 public class PhpVerseRuntime {
 
@@ -41,13 +44,21 @@ public class PhpVerseRuntime {
      *  64-bit Linux. */
     private static final long UB_WRITE_OFFSET = 48;
 
-    /** Per-thread output buffer. ub_write upcall writes raw bytes here.
-     *  Kept as a byte stream (no String intermediate) so that PHP -&gt; HTTP
-     *  body delivery is one native-to-heap copy instead of three (= the
-     *  UTF-8 decode-then-reencode round-trip when going through String
-     *  costs ~30% of the wall time on a 1 MB response). */
-    static final ThreadLocal<ByteArrayOutputStream> OUTPUT =
-            ThreadLocal.withInitial(() -> new ByteArrayOutputStream(8192));
+    /** Active Tour for the calling thread, set by {@link #runScript}.
+     *  The ub_write upcall reads this to know where the bytes go. */
+    private static final ThreadLocal<Tour> CURRENT_TOUR = new ThreadLocal<>();
+
+    /** Per-request flag: have we already sent headers? Set on the first
+     *  ub_write call so subsequent chunks of the same response just
+     *  forward content without re-sending the header line. */
+    private static final ThreadLocal<Boolean> HEADERS_SENT =
+            ThreadLocal.withInitial(() -> Boolean.FALSE);
+
+    /** First IOException seen during a request's ub_write stream; the
+     *  upcall cannot throw back into native PHP, so we stash the error
+     *  here and surface it after the eval returns. */
+    private static final ThreadLocal<IOException> STREAM_ERROR =
+            new ThreadLocal<>();
 
     /** Has this thread been registered with TSRM yet? */
     private static final ThreadLocal<Boolean> TSRM_REGISTERED =
@@ -125,11 +136,16 @@ public class PhpVerseRuntime {
     }
 
     /**
-     * Run a PHP snippet on the current thread, return its captured echo
-     * output as bytes. Called once per HTTP request from a BayServer grand
-     * agent.
+     * Run a PHP snippet on the current thread. Output is streamed to
+     * {@code tour.res} via the ub_write upcall as PHP echoes; this
+     * method does not return a body buffer.
+     *
+     * @return true if any output was produced (= headers were sent),
+     *         false if PHP wrote nothing (caller should send a 0-byte
+     *         response).
      */
-    public byte[] runScript(String phpCode, String label) {
+    public boolean runScript(Tour tour, String phpCode, String label)
+            throws IOException {
         try {
             // Lazy per-thread TSRM registration: first call on a new
             // grand-agent thread allocates its TLS pool. Subsequent calls
@@ -139,9 +155,10 @@ public class PhpVerseRuntime {
                 TSRM_REGISTERED.set(Boolean.TRUE);
             }
 
-            // Reset per-thread output buffer at request start.
-            ByteArrayOutputStream buf = OUTPUT.get();
-            buf.reset();
+            // Set up per-request streaming context.
+            CURRENT_TOUR.set(tour);
+            HEADERS_SENT.set(Boolean.FALSE);
+            STREAM_ERROR.remove();
 
             // Per-request engine state (= the php-fpm-equivalent boundary).
             phpRequestStartup.invoke();
@@ -158,20 +175,63 @@ public class PhpVerseRuntime {
                 phpRequestShutdown.invoke(MemorySegment.NULL);
             }
 
-            return buf.toByteArray();
+            // Surface any IOException stashed by the ub_write upcall.
+            IOException err = STREAM_ERROR.get();
+            if (err != null) throw err;
+
+            return HEADERS_SENT.get();
+        } catch (IOException ioe) {
+            throw ioe;
         } catch (Throwable t) {
-            throw new RuntimeException("PhpVerse runScript failed: " + label, t);
+            throw new RuntimeException(
+                    "PhpVerse runScript failed: " + label, t);
+        } finally {
+            CURRENT_TOUR.remove();
+            HEADERS_SENT.remove();
+            STREAM_ERROR.remove();
         }
     }
 
-    /** ub_write target. PHP echo bytes -&gt; current thread's byte buffer.
-     *  No String intermediate: the bytes go directly to the response
-     *  (= they're already in the wire encoding the response will use). */
+    /**
+     * ub_write target. Called from inside libphp during
+     * {@code zend_eval_string} when PHP code executes {@code echo} or
+     * {@code print}. Streams the bytes directly to the active tour's
+     * response without staging them in a Java heap buffer.
+     */
     public static long ubWriteCallback(MemorySegment str, long length) {
-        MemorySegment data = str.reinterpret(length);
-        byte[] bytes = data.toArray(ValueLayout.JAVA_BYTE);
-        OUTPUT.get().writeBytes(bytes);
-        return length;
+        Tour tour = CURRENT_TOUR.get();
+        if (tour == null) {
+            // ub_write fired outside of a request context (= e.g. on
+            // module shutdown). Discard.
+            return length;
+        }
+
+        try {
+            // Lazy header send on the first chunk. We don't know the
+            // total content length up front, so omit Content-Length;
+            // BayServer / nginx will use chunked / connection-close
+            // framing as appropriate.
+            if (!HEADERS_SENT.get()) {
+                tour.res.headers.setStatus(HttpStatus.OK);
+                tour.res.headers.setContentType("text/html; charset=UTF-8");
+                tour.res.setConsumeListener((l, r) -> { /* no-op */ });
+                tour.res.sendHeaders(tour.tourId);
+                HEADERS_SENT.set(Boolean.TRUE);
+            }
+
+            int len = (int) length;
+            MemorySegment data = str.reinterpret(length);
+            byte[] bytes = data.toArray(ValueLayout.JAVA_BYTE);
+            tour.res.sendResContent(tour.tourId, bytes, 0, len);
+            return length;
+        } catch (IOException e) {
+            // Stash, surface after eval returns.
+            if (STREAM_ERROR.get() == null) STREAM_ERROR.set(e);
+            return -1;
+        } catch (Throwable t) {
+            BayLog.error(t, "ub_write upcall failed");
+            return -1;
+        }
     }
 
     private static MethodHandle downcall(SymbolLookup lib, String name,

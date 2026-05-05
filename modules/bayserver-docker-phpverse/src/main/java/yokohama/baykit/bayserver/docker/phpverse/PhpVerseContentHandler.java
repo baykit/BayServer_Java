@@ -12,14 +12,12 @@ import java.nio.file.Path;
 
 /**
  * Per-tour content handler: when the request body is fully received,
- * synchronously runs the requested .php file via the embedded libphp
- * runtime and writes the output to the tour response.
+ * runs the requested .php file via the embedded libphp runtime.
  *
- * <p>Mirrors {@code FileContentHandler}'s shape: ignore inbound body
- * bytes (PHP's {@code $_POST} support is M-future), and on
- * {@code onEndReqContent} dispatch to PHP. Synchronous because libphp
- * exec is blocking; the grand agent thread runs PHP inline and then
- * sends the response in one shot.
+ * <p>The runtime streams PHP's {@code echo} output directly to
+ * {@code tour.res.sendResContent} from inside its ub_write upcall, so
+ * the only thing this handler does after dispatching the script is
+ * close the response (or, if PHP wrote nothing, send a zero-byte 200).
  */
 public class PhpVerseContentHandler implements ReqContentHandler {
 
@@ -36,8 +34,7 @@ public class PhpVerseContentHandler implements ReqContentHandler {
     @Override
     public void onReadReqContent(Tour tur, byte[] buf, int start, int len,
                                  ContentConsumeListener lis) throws IOException {
-        // Body upload not yet wired into PHP's $_POST; just acknowledge.
-        // Future M will route this to the request_info.request_body stream.
+        // Body upload not yet wired into PHP's $_POST.
         BayLog.debug("%s phpverse:onReadContent len=%d (ignored for now)",
                 tur, len);
         tur.req.consumed(tur.tourId, len, lis);
@@ -47,37 +44,34 @@ public class PhpVerseContentHandler implements ReqContentHandler {
     public void onEndReqContent(Tour tur) throws IOException, HttpException {
         BayLog.debug("%s phpverse:endContent file=%s", tur, file);
 
-        // PHP eval text. Single-quoted absolute path -> PHP includes the file
-        // in its current request scope. Single-quote escape of any quote
-        // chars in the path defends against tour-side injection.
+        // PHP eval text: include the .php file. Single-quoted absolute
+        // path; backslash- and quote-escape defensively.
         String safePath = file.toString().replace("\\", "\\\\")
                                           .replace("'", "\\'");
         String script = "include '" + safePath + "';";
 
-        byte[] bytes;
+        boolean wroteAnything;
         try {
-            bytes = runtime.runScript(script, "phpverse:" + tur.req.uri);
+            wroteAnything = runtime.runScript(tur, script,
+                    "phpverse:" + tur.req.uri);
         } catch (Exception e) {
             BayLog.error(e, "phpverse: runScript failed: %s", file);
+            // If headers haven't gone out yet, surface the error.
+            // Otherwise the response is partially sent and we just close
+            // it best-effort.
             throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "PhpVerse execution failed: " + e.getMessage());
         }
 
-        tur.res.headers.setStatus(HttpStatus.OK);
-        tur.res.headers.setContentType("text/html; charset=UTF-8");
-        tur.res.headers.setContentLength(bytes.length);
-
-        // Required: TourRes.consumed() calls resConsumeListener when the
-        // ship's async write completes. Without setConsumeListener, large
-        // responses (~1 MB) that don't fit a single buffer write trigger
-        // a Sink "Consume listener is null" because ship-side write
-        // completes after we'd already left the handler.
-        // We don't need to resume anything (PHP exec was synchronous and
-        // the body is already fully buffered), so the listener is a no-op.
-        tur.res.setConsumeListener((len, resume) -> { /* no-op */ });
-
-        tur.res.sendHeaders(tur.tourId);
-        tur.res.sendResContent(tur.tourId, bytes, 0, bytes.length);
+        if (!wroteAnything) {
+            // PHP produced no output; emit a zero-byte 200 so the tour
+            // can complete normally.
+            tur.res.headers.setStatus(HttpStatus.OK);
+            tur.res.headers.setContentType("text/html; charset=UTF-8");
+            tur.res.headers.setContentLength(0);
+            tur.res.setConsumeListener((l, r) -> { /* no-op */ });
+            tur.res.sendHeaders(tur.tourId);
+        }
         tur.res.endResContent(tur.tourId);
     }
 
