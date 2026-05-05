@@ -43,6 +43,10 @@ public class TaxiMultiplexer extends MultiplexerBase {
     public void reqRead(Rudder rd) {
         BayLog.debug("%s TaxiMpx reqRead rd=%s", this, rd);
         RudderState st = getRudderState(rd);
+        if (st == null) {
+            BayLog.debug("%s TaxiMpx reqRead: state already removed for rd=%s", this, rd);
+            return;
+        }
 
         boolean needRead = false;
         synchronized (st.reading) {
