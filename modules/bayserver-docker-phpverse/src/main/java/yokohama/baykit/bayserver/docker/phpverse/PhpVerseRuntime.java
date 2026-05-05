@@ -44,25 +44,18 @@ public class PhpVerseRuntime {
      *  64-bit Linux. */
     private static final long UB_WRITE_OFFSET = 48;
 
-    /** Active Tour for the calling thread, set by {@link #runScript}.
-     *  The ub_write upcall reads this to know where the bytes go. */
-    private static final ThreadLocal<Tour> CURRENT_TOUR = new ThreadLocal<>();
+    /** Per-thread mutable context: 1 ThreadLocal lookup per ub_write
+     *  upcall instead of 3 separate ones, no Boolean autoboxing, and the
+     *  same object is reused across requests on the same grand agent. */
+    private static class ReqCtx {
+        Tour tour;
+        boolean headersSent;
+        IOException error;
+        boolean tsrmRegistered;
+    }
 
-    /** Per-request flag: have we already sent headers? Set on the first
-     *  ub_write call so subsequent chunks of the same response just
-     *  forward content without re-sending the header line. */
-    private static final ThreadLocal<Boolean> HEADERS_SENT =
-            ThreadLocal.withInitial(() -> Boolean.FALSE);
-
-    /** First IOException seen during a request's ub_write stream; the
-     *  upcall cannot throw back into native PHP, so we stash the error
-     *  here and surface it after the eval returns. */
-    private static final ThreadLocal<IOException> STREAM_ERROR =
-            new ThreadLocal<>();
-
-    /** Has this thread been registered with TSRM yet? */
-    private static final ThreadLocal<Boolean> TSRM_REGISTERED =
-            ThreadLocal.withInitial(() -> Boolean.FALSE);
+    private static final ThreadLocal<ReqCtx> CTX =
+            ThreadLocal.withInitial(ReqCtx::new);
 
     private final Path libPhpPath;
     private Arena arena;
@@ -104,7 +97,16 @@ public class PhpVerseRuntime {
             throw new RuntimeException("upcall stub setup failed", e);
         }
 
-        // 2. resolve C calls
+        // 2. resolve C calls.
+        // Note: tried Linker.Option.critical(false) on
+        // php_request_startup / ts_resource_ex (= safe because they
+        // don't trigger upcalls). Result was noise-level (+/- ~3% per
+        // size) -- our per-request downcall budget is only ~300 ns
+        // total, dwarfed by libphp's per-request cost. Reverted to keep
+        // the call sites simple. Cannot apply to zend_eval_string or
+        // php_request_shutdown anyway: both trigger our ub_write upcall
+        // (eval -> echo, shutdown -> flush of PHP's 4 KB default ob
+        // buffer for short responses).
         MethodHandle phpEmbedInit = downcall(lib, "php_embed_init",
                 FunctionDescriptor.of(ValueLayout.JAVA_INT,
                         ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
@@ -146,19 +148,20 @@ public class PhpVerseRuntime {
      */
     public boolean runScript(Tour tour, String phpCode, String label)
             throws IOException {
+        ReqCtx ctx = CTX.get();
         try {
             // Lazy per-thread TSRM registration: first call on a new
             // grand-agent thread allocates its TLS pool. Subsequent calls
             // are no-ops.
-            if (!TSRM_REGISTERED.get()) {
+            if (!ctx.tsrmRegistered) {
                 tsResourceEx.invoke(0, MemorySegment.NULL);
-                TSRM_REGISTERED.set(Boolean.TRUE);
+                ctx.tsrmRegistered = true;
             }
 
             // Set up per-request streaming context.
-            CURRENT_TOUR.set(tour);
-            HEADERS_SENT.set(Boolean.FALSE);
-            STREAM_ERROR.remove();
+            ctx.tour = tour;
+            ctx.headersSent = false;
+            ctx.error = null;
 
             // Per-request engine state (= the php-fpm-equivalent boundary).
             phpRequestStartup.invoke();
@@ -176,19 +179,19 @@ public class PhpVerseRuntime {
             }
 
             // Surface any IOException stashed by the ub_write upcall.
-            IOException err = STREAM_ERROR.get();
-            if (err != null) throw err;
+            if (ctx.error != null) throw ctx.error;
 
-            return HEADERS_SENT.get();
+            return ctx.headersSent;
         } catch (IOException ioe) {
             throw ioe;
         } catch (Throwable t) {
             throw new RuntimeException(
                     "PhpVerse runScript failed: " + label, t);
         } finally {
-            CURRENT_TOUR.remove();
-            HEADERS_SENT.remove();
-            STREAM_ERROR.remove();
+            // Clear per-request fields so a leaked Tour reference doesn't
+            // pin memory between requests. tsrmRegistered stays sticky.
+            ctx.tour = null;
+            ctx.error = null;
         }
     }
 
@@ -199,7 +202,8 @@ public class PhpVerseRuntime {
      * response without staging them in a Java heap buffer.
      */
     public static long ubWriteCallback(MemorySegment str, long length) {
-        Tour tour = CURRENT_TOUR.get();
+        ReqCtx ctx = CTX.get();
+        Tour tour = ctx.tour;
         if (tour == null) {
             // ub_write fired outside of a request context (= e.g. on
             // module shutdown). Discard.
@@ -211,12 +215,12 @@ public class PhpVerseRuntime {
             // total content length up front, so omit Content-Length;
             // BayServer / nginx will use chunked / connection-close
             // framing as appropriate.
-            if (!HEADERS_SENT.get()) {
+            if (!ctx.headersSent) {
                 tour.res.headers.setStatus(HttpStatus.OK);
                 tour.res.headers.setContentType("text/html; charset=UTF-8");
                 tour.res.setConsumeListener((l, r) -> { /* no-op */ });
                 tour.res.sendHeaders(tour.tourId);
-                HEADERS_SENT.set(Boolean.TRUE);
+                ctx.headersSent = true;
             }
 
             int len = (int) length;
@@ -226,7 +230,7 @@ public class PhpVerseRuntime {
             return length;
         } catch (IOException e) {
             // Stash, surface after eval returns.
-            if (STREAM_ERROR.get() == null) STREAM_ERROR.set(e);
+            if (ctx.error == null) ctx.error = e;
             return -1;
         } catch (Throwable t) {
             BayLog.error(t, "ub_write upcall failed");
