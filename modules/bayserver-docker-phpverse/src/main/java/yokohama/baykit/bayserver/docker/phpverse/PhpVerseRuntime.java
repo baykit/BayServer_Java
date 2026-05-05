@@ -2,6 +2,7 @@ package yokohama.baykit.bayserver.docker.phpverse;
 
 import yokohama.baykit.bayserver.BayLog;
 
+import java.io.ByteArrayOutputStream;
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
@@ -40,9 +41,13 @@ public class PhpVerseRuntime {
      *  64-bit Linux. */
     private static final long UB_WRITE_OFFSET = 48;
 
-    /** Per-thread output buffer. ub_write upcall writes here. */
-    static final ThreadLocal<StringBuilder> OUTPUT =
-            ThreadLocal.withInitial(StringBuilder::new);
+    /** Per-thread output buffer. ub_write upcall writes raw bytes here.
+     *  Kept as a byte stream (no String intermediate) so that PHP -&gt; HTTP
+     *  body delivery is one native-to-heap copy instead of three (= the
+     *  UTF-8 decode-then-reencode round-trip when going through String
+     *  costs ~30% of the wall time on a 1 MB response). */
+    static final ThreadLocal<ByteArrayOutputStream> OUTPUT =
+            ThreadLocal.withInitial(() -> new ByteArrayOutputStream(8192));
 
     /** Has this thread been registered with TSRM yet? */
     private static final ThreadLocal<Boolean> TSRM_REGISTERED =
@@ -121,9 +126,10 @@ public class PhpVerseRuntime {
 
     /**
      * Run a PHP snippet on the current thread, return its captured echo
-     * output. Called once per HTTP request from a BayServer grand agent.
+     * output as bytes. Called once per HTTP request from a BayServer grand
+     * agent.
      */
-    public String runScript(String phpCode, String label) {
+    public byte[] runScript(String phpCode, String label) {
         try {
             // Lazy per-thread TSRM registration: first call on a new
             // grand-agent thread allocates its TLS pool. Subsequent calls
@@ -134,8 +140,8 @@ public class PhpVerseRuntime {
             }
 
             // Reset per-thread output buffer at request start.
-            StringBuilder buf = OUTPUT.get();
-            buf.setLength(0);
+            ByteArrayOutputStream buf = OUTPUT.get();
+            buf.reset();
 
             // Per-request engine state (= the php-fpm-equivalent boundary).
             phpRequestStartup.invoke();
@@ -152,17 +158,19 @@ public class PhpVerseRuntime {
                 phpRequestShutdown.invoke(MemorySegment.NULL);
             }
 
-            return buf.toString();
+            return buf.toByteArray();
         } catch (Throwable t) {
             throw new RuntimeException("PhpVerse runScript failed: " + label, t);
         }
     }
 
-    /** ub_write target. PHP echo bytes -&gt; current thread's buffer. */
+    /** ub_write target. PHP echo bytes -&gt; current thread's byte buffer.
+     *  No String intermediate: the bytes go directly to the response
+     *  (= they're already in the wire encoding the response will use). */
     public static long ubWriteCallback(MemorySegment str, long length) {
         MemorySegment data = str.reinterpret(length);
         byte[] bytes = data.toArray(ValueLayout.JAVA_BYTE);
-        OUTPUT.get().append(new String(bytes, StandardCharsets.UTF_8));
+        OUTPUT.get().writeBytes(bytes);
         return length;
     }
 

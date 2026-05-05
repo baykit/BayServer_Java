@@ -8,7 +8,6 @@ import yokohama.baykit.bayserver.tour.Tour;
 import yokohama.baykit.bayserver.util.HttpStatus;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 
 /**
@@ -55,16 +54,14 @@ public class PhpVerseContentHandler implements ReqContentHandler {
                                           .replace("'", "\\'");
         String script = "include '" + safePath + "';";
 
-        String body;
+        byte[] bytes;
         try {
-            body = runtime.runScript(script, "phpverse:" + tur.req.uri);
+            bytes = runtime.runScript(script, "phpverse:" + tur.req.uri);
         } catch (Exception e) {
             BayLog.error(e, "phpverse: runScript failed: %s", file);
             throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "PhpVerse execution failed: " + e.getMessage());
         }
-
-        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
 
         tur.res.headers.setStatus(HttpStatus.OK);
         tur.res.headers.setContentType("text/html; charset=UTF-8");
