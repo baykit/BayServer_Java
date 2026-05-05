@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>yokohama.baykit</groupId>
+  <artifactId>bayserver-docker-phpverse</artifactId>
+  <version>${env.VERSION}</version>
+  <name>bayserver-docker-phpverse</name>
+  <description>PHP via in-process libphp embedding (Project Panama / FFM API).
+    Loads libphp.so once into the BayServer JVM and runs the per-request
+    SAPI lifecycle (php_request_startup / php_request_shutdown) directly,
+    avoiding the fork+exec cost of CGI mode and the FCGI envelope of an
+    external worker pool.</description>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- FFM API (Project Panama) is finalized in JDK 22 (JEP 454). -->
+    <maven.compiler.release>22</maven.compiler.release>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>yokohama.baykit</groupId>
+      <artifactId>bayserver-core</artifactId>
+      <version>${env.VERSION}</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.8.0</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>

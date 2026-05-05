@@ -44,6 +44,12 @@
     </dependency>
     <dependency>
       <groupId>yokohama.baykit</groupId>
+      <artifactId>bayserver-docker-phpverse</artifactId>
+      <version>${env.VERSION}</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>yokohama.baykit</groupId>
       <artifactId>bayserver-docker-fcgi</artifactId>
       <version>${env.VERSION}</version>
       <scope>compile</scope>
