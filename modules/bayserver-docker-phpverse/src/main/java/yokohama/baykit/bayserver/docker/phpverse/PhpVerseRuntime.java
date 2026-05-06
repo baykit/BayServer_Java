@@ -40,6 +40,16 @@ import java.nio.file.Path;
 public class PhpVerseRuntime {
 
     private static final Linker LINKER = Linker.nativeLinker();
+    /** Offset of {@code name} (= first field, char*) within
+     *  {@code sapi_module_struct}. opcache compares this against a
+     *  hard-coded whitelist (apache/fastcgi/fpm-fcgi/frankenphp/etc.);
+     *  "embed" isn't on it, so we patch the name to "fpm-fcgi" before
+     *  php_embed_init so accel_post_startup sees a supported SAPI and
+     *  flips accel_startup_ok = true. PHP code that checks
+     *  php_sapi_name() will see "fpm-fcgi" instead of "embed", which is
+     *  closer to the truth anyway (= we behave like an FCGI worker
+     *  pool, just in-process). */
+    private static final long NAME_OFFSET = 0;
     /** Offset of {@code ub_write} within {@code sapi_module_struct} on
      *  64-bit Linux. */
     private static final long UB_WRITE_OFFSET = 48;
@@ -77,11 +87,20 @@ public class PhpVerseRuntime {
         arena = Arena.ofShared();
         SymbolLookup lib = SymbolLookup.libraryLookup(libPhpPath, arena);
 
-        // 1. patch php_embed_module.ub_write -> Java upcall
+        // 1. patch php_embed_module.{name, ub_write}
+        //    - name : "embed" -> "fpm-fcgi" so opcache's accel_find_sapi
+        //             accepts us (= embed is not on its whitelist).
+        //    - ub_write : default fwrite(stdout) -> Java upcall that
+        //                 streams bytes to tour.res.sendResContent.
         MemorySegment embedModule = lib.find("php_embed_module")
                 .orElseThrow(() -> new RuntimeException(
                         "php_embed_module symbol not found in " + libPhpPath))
                 .reinterpret(UB_WRITE_OFFSET + 8, arena, null);
+
+        // Allocate the spoofed name in the same process-lifetime arena
+        // so its pointer stays valid forever.
+        MemorySegment fpmFcgiName = cString(arena, "fpm-fcgi");
+        embedModule.set(ValueLayout.ADDRESS, NAME_OFFSET, fpmFcgiName);
 
         try {
             MethodHandle javaUbWrite = MethodHandles.lookup().findStatic(
