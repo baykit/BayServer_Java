@@ -64,6 +64,19 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
     Tour curTour;
     int curTourId;
 
+    /**
+     * Whether the response in flight is being framed as HTTP/1.1
+     * "Transfer-Encoding: chunked". Set in sendHeaders() when the upstream
+     * (or local handler) didn't supply a Content-Length and the client
+     * speaks HTTP/1.1, so we can keep the connection alive without a
+     * known body length. Each subsequent sendContent / sendEndTour call
+     * inspects this to decide whether to wrap bytes in chunked frames.
+     */
+    boolean chunkedResponse;
+
+    private static final byte[] CRLF = {'\r', '\n'};
+    private static final byte[] LAST_CHUNK = {'0', '\r', '\n', '\r', '\n'};
+
     public H1InboundHandler() {
         resetState();
     }
@@ -84,6 +97,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         curReqId = 1;
         curTour = null;
         curTourId = 0;
+        chunkedResponse = false;
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -94,6 +108,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
     public void sendHeaders(Tour tur) throws IOException {
 
         String resCon;
+        chunkedResponse = false;
 
         // determine Connection header value
         Headers.ConnectionType reqConType = tur.req.headers.getConnection();
@@ -105,16 +120,31 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         }
         else {
             // Client supports "Keep-Alive"
-
-            // If the client supports Keep-Alive, the response uses Keep-Alive when Content-Length is present
-            // in the response headers; otherwise, it uses Close.
             resCon = "Keep-Alive";
-            // If tour doesn't need "Keep-Alive"
+
+            // If Content-Length is not set and the response has a body, we
+            // need a way to delimit the response. HTTP/1.1 supports
+            // chunked transfer-encoding for this exact case; falling back
+            // to "Connection: Close" (= read until EOF) was the historical
+            // BayServer behaviour but kills keep-alive against any backend
+            // that doesn't pre-compute Content-Length (e.g. php-fpm).
+            //
+            // For HTTP/1.1 + missing Content-Length + already-set
+            // Transfer-Encoding == none, set chunked. HTTP/1.0 / 0.9 don't
+            // support chunked, so they still close.
             if (tur.res.headers.contentLength() == -1) {
-                // If content-length not specified
-                if (tur.res.headers.contentType() != null &&
-                        tur.res.headers.contentType().startsWith("text/")) {
-                    // If content is text, connection must be closed
+                String existingTE = tur.res.headers.getFast("transfer-encoding");
+                boolean upstreamAlreadyChunked =
+                        existingTE != null && existingTE.toLowerCase().contains("chunked");
+
+                if ("HTTP/1.1".equals(tur.req.protocol)) {
+                    if (!upstreamAlreadyChunked) {
+                        tur.res.headers.setFast("transfer-encoding", "chunked");
+                    }
+                    chunkedResponse = true;
+                }
+                else {
+                    // HTTP/1.0 has no chunked: connection-close framing.
                     resCon = "Close";
                 }
             }
@@ -135,6 +165,20 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
 
     @Override
     public boolean sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
+        if (chunkedResponse && len > 0) {
+            // Wrap in chunked transfer-encoding frame:
+            //   <hex-len>\r\n<data>\r\n
+            byte[] hex = Integer.toHexString(len).getBytes();
+            int wrapped = hex.length + 2 + len + 2;
+            byte[] buf = new byte[wrapped];
+            int p = 0;
+            System.arraycopy(hex, 0, buf, p, hex.length); p += hex.length;
+            buf[p++] = '\r'; buf[p++] = '\n';
+            System.arraycopy(bytes, ofs, buf, p, len); p += len;
+            buf[p++] = '\r'; buf[p] = '\n';
+            CmdContent cmd = new CmdContent(buf, 0, buf.length);
+            return protocolHandler.post(cmd, false, lis);
+        }
         CmdContent cmd = new CmdContent(bytes, ofs, len);
         return protocolHandler.post(cmd, false, lis);
     }
@@ -149,6 +193,22 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         InboundShip ship = ship();
         boolean keepAlive = tur.res.headers.getConnection() == Headers.ConnectionType.KeepAlive;
         BayLog.debug("%s H1 sendEnd: tur=%s keep=%s", ship, tur, keepAlive);
+
+        // Close out the chunked stream with the last-chunk + final CRLF.
+        // post() is fire-and-forget here -- the actual end signal is the
+        // CmdEndContent below, which carries the keepalive callback.
+        if (chunkedResponse) {
+            try {
+                protocolHandler.post(
+                        new CmdContent(LAST_CHUNK, 0, LAST_CHUNK.length),
+                        false);
+            }
+            catch (IOException ioe) {
+                BayLog.debug(ioe, "%s post(last-chunk) failed", ship);
+                throw ioe;
+            }
+            chunkedResponse = false;
+        }
 
         // Send end request command
         CmdEndContent cmd = new CmdEndContent();
