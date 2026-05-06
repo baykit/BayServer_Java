@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.docker.phpverse.poc;
+package yokohama.baykit.bayserver.docker.pharos.poc;
 
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
@@ -29,7 +29,7 @@ import java.util.concurrent.ThreadLocalRandom;
  *       boundary effective, just like php-fpm).</li>
  * </ul>
  *
- * <p>Lifecycle (mirrors what M6 will do inside PhpVerseDocker):
+ * <p>Lifecycle (mirrors what M6 will do inside PharosDocker):
  * <pre>
  *   main:    php_embed_init     // tsrm_startup + sapi + module + request
  *            php_request_shutdown   // tear down the auto-started request
@@ -170,7 +170,7 @@ public class HelloPhpPocM5 {
                         try { tsFreeThread.invoke(); } catch (Throwable ignored) {}
                         done.countDown();
                     }
-                }, "phpverse-worker-" + i);
+                }, "pharos-worker-" + i);
                 workers[i].start();
             }
 

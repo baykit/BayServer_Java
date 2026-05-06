@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.docker.phpverse;
+package yokohama.baykit.bayserver.docker.pharos;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.HttpException;
@@ -19,13 +19,13 @@ import java.nio.file.Path;
  * the only thing this handler does after dispatching the script is
  * close the response (or, if PHP wrote nothing, send a zero-byte 200).
  */
-public class PhpVerseContentHandler implements ReqContentHandler {
+public class PharosContentHandler implements ReqContentHandler {
 
     private final Tour tour;
     private final Path file;
-    private final PhpVerseRuntime runtime;
+    private final PharosRuntime runtime;
 
-    public PhpVerseContentHandler(Tour tour, Path file, PhpVerseRuntime runtime) {
+    public PharosContentHandler(Tour tour, Path file, PharosRuntime runtime) {
         this.tour = tour;
         this.file = file;
         this.runtime = runtime;
@@ -35,14 +35,14 @@ public class PhpVerseContentHandler implements ReqContentHandler {
     public void onReadReqContent(Tour tur, byte[] buf, int start, int len,
                                  ContentConsumeListener lis) throws IOException {
         // Body upload not yet wired into PHP's $_POST.
-        BayLog.debug("%s phpverse:onReadContent len=%d (ignored for now)",
+        BayLog.debug("%s pharos:onReadContent len=%d (ignored for now)",
                 tur, len);
         tur.req.consumed(tur.tourId, len, lis);
     }
 
     @Override
     public void onEndReqContent(Tour tur) throws IOException, HttpException {
-        BayLog.debug("%s phpverse:endContent file=%s", tur, file);
+        BayLog.debug("%s pharos:endContent file=%s", tur, file);
 
         // PHP eval text: include the .php file. Single-quoted absolute
         // path; backslash- and quote-escape defensively.
@@ -53,14 +53,14 @@ public class PhpVerseContentHandler implements ReqContentHandler {
         boolean wroteAnything;
         try {
             wroteAnything = runtime.runScript(tur, script,
-                    "phpverse:" + tur.req.uri);
+                    "pharos:" + tur.req.uri);
         } catch (Exception e) {
-            BayLog.error(e, "phpverse: runScript failed: %s", file);
+            BayLog.error(e, "pharos: runScript failed: %s", file);
             // If headers haven't gone out yet, surface the error.
             // Otherwise the response is partially sent and we just close
             // it best-effort.
             throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "PhpVerse execution failed: " + e.getMessage());
+                    "Pharos execution failed: " + e.getMessage());
         }
 
         if (!wroteAnything) {
@@ -77,7 +77,7 @@ public class PhpVerseContentHandler implements ReqContentHandler {
 
     @Override
     public boolean onAbortReq(Tour tur) {
-        BayLog.debug("%s phpverse:onAbort", tur);
+        BayLog.debug("%s pharos:onAbort", tur);
         return true;
     }
 }

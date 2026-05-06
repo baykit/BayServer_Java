@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.docker.phpverse;
+package yokohama.baykit.bayserver.docker.pharos;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.tour.Tour;
@@ -18,7 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 
 /**
- * Process-singleton libphp.so embedding runtime for {@link PhpVerseDocker}.
+ * Process-singleton libphp.so embedding runtime for {@link PharosDocker}.
  *
  * <p>{@link #init} runs once on plan parse: dlopen + patch ub_write +
  * php_embed_init (then close the auto-started request).
@@ -37,7 +37,7 @@ import java.nio.file.Path;
  * the full body in Java heap, which would be 3-5 extra megabyte-scale
  * copies on a 1 MB response.
  */
-public class PhpVerseRuntime {
+public class PharosRuntime {
 
     private static final Linker LINKER = Linker.nativeLinker();
     /** Offset of {@code name} (= first field, char*) within
@@ -74,7 +74,7 @@ public class PhpVerseRuntime {
     private MethodHandle zendEvalString;
     private MethodHandle tsResourceEx;
 
-    public PhpVerseRuntime(String libPhpPath) {
+    public PharosRuntime(String libPhpPath) {
         this.libPhpPath = Path.of(libPhpPath);
     }
 
@@ -82,7 +82,7 @@ public class PhpVerseRuntime {
      *  php_embed_init, then closes the auto-started request so each
      *  per-request lifecycle is started fresh on its own thread. */
     public void init() {
-        BayLog.info("PhpVerseRuntime: loading %s", libPhpPath);
+        BayLog.info("PharosRuntime: loading %s", libPhpPath);
 
         arena = Arena.ofShared();
         SymbolLookup lib = SymbolLookup.libraryLookup(libPhpPath, arena);
@@ -104,7 +104,7 @@ public class PhpVerseRuntime {
 
         try {
             MethodHandle javaUbWrite = MethodHandles.lookup().findStatic(
-                    PhpVerseRuntime.class, "ubWriteCallback",
+                    PharosRuntime.class, "ubWriteCallback",
                     MethodType.methodType(long.class,
                             MemorySegment.class, long.class));
             MemorySegment ubWriteStub = LINKER.upcallStub(javaUbWrite,
@@ -150,10 +150,10 @@ public class PhpVerseRuntime {
             }
             phpRequestShutdown.invoke(MemorySegment.NULL);
         } catch (Throwable t) {
-            throw new RuntimeException("PhpVerse init failed", t);
+            throw new RuntimeException("Pharos init failed", t);
         }
 
-        BayLog.info("PhpVerseRuntime: ready (libphp loaded, SAPI started)");
+        BayLog.info("PharosRuntime: ready (libphp loaded, SAPI started)");
     }
 
     /**
@@ -205,7 +205,7 @@ public class PhpVerseRuntime {
             throw ioe;
         } catch (Throwable t) {
             throw new RuntimeException(
-                    "PhpVerse runScript failed: " + label, t);
+                    "Pharos runScript failed: " + label, t);
         } finally {
             // Clear per-request fields so a leaked Tour reference doesn't
             // pin memory between requests. tsrmRegistered stays sticky.
