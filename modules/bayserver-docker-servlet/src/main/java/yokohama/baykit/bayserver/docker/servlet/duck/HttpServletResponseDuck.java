@@ -411,23 +411,47 @@ public abstract class HttpServletResponseDuck {
         }
     }
 
+    /**
+     * Object the Train thread waits on while the inbound ship's
+     * write buffer is full. Woken up by the consume listener below
+     * when the network side has drained bytes from the socket.
+     *
+     * Old code (= 3.3.2 release) polled with Thread.sleep(100) per
+     * write; for a 100KB response that meant ~400-500ms per request
+     * just from the polling interval.
+     */
+    private final Object backpressureLock = new Object();
+
     public final void sendHeaders() throws IOException {
         setCookieHeaders();
 
-        tour.res.setConsumeListener(ContentConsumeListener.devNull);
+        tour.res.setConsumeListener((len, resume) -> {
+            if (resume) {
+                synchronized (backpressureLock) {
+                    backpressureLock.notifyAll();
+                }
+            }
+        });
         tour.res.sendHeaders(tourId);
     }
 
     public void sendContent(byte[] b, int off, int len) throws IOException {
         boolean available = tour.res.sendResContent(tourId, b, off, len);
-        while(!available) {
-            try {
-                Thread.sleep(100);
+        if (!available) {
+            // Wait for the consume listener to wake us. Cap each wait
+            // at 100ms as a safety net in case the notify is missed
+            // (e.g., listener was replaced or the ship was torn down
+            // out of band).
+            synchronized (backpressureLock) {
+                while (!tour.ship.bufferAvailable()) {
+                    try {
+                        backpressureLock.wait(100);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new IOException(e);
+                    }
+                }
             }
-            catch(InterruptedException e) {
-                throw new IOException(e);
-            }
-            available = tour.ship.bufferAvailable();
         }
     }
 }
