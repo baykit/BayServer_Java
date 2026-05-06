@@ -37,34 +37,37 @@ public class ObjectStore<T extends Reusable> implements Reusable{
     // Other methods
     ////////////////////////////////////////////////////////////////////////////////
 
+    /**
+     * rent / Return are concurrent: a single agent's PacketStore is
+     * accessed by both the agent's grand-agent thread (= when an inbound
+     * packet is read from the network) and arbitrary Taxi threads (=
+     * when a Train sends a response). ArrayDeque is not thread-safe,
+     * so concurrent {@code freeList.poll()} can race -- two callers
+     * pass {@code isEmpty()} and one ends up with {@code null}, then
+     * {@code throw new Sink()} fires and the request is broken. The
+     * synchronized blocks below make rent/Return atomic w.r.t. the
+     * freeList. Fall back to {@code factory.createObject()} on miss
+     * so an emptied store keeps serving without throwing.
+     */
     public T rent() {
         T obj;
-        //BayLog.debug(owner + " rent freeList=" + freeList);
-        if(freeList.isEmpty()) {
-            obj = factory.createObject();
-        }
-        else {
+        synchronized (freeList) {
             obj = freeList.poll();
+        }
+        if(obj == null) {
+            obj = factory.createObject();
         }
         if(obj == null)
             throw new Sink();
-        //activeList.add(obj);
-        //BayLog.debug(owner + " rent object " + obj);
         return obj;
     }
 
     public void Return(T obj, boolean reuse) {
-        //BayLog.debug(" return object " + obj.hashCode());
-        //if(freeList.contains(obj))
-        //    throw new Sink("This object already returned: " + obj);
-
-        //if(!activeList.contains(obj))
-        //    throw new Sink("This object is not active: " + obj);
-
-        //activeList.remove(obj);
         if(reuse) {
-            freeList.add(obj);
             obj.reset();
+            synchronized (freeList) {
+                freeList.add(obj);
+            }
         }
     }
 
