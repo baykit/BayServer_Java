@@ -39,6 +39,47 @@ import java.util.Map;
 
 public abstract class WarpBase extends ClubBase implements Warp {
 
+    /**
+     * jdk.net.ExtendedSocketOptions.TCP_QUICKACK if running on a JDK that
+     * exposes it (= JDK 10+ on Linux). Cached once at class init via
+     * reflection so we don't take a hard compile-time dep on the
+     * jdk.net module. null on platforms / JDKs that don't support it.
+     *
+     * Why: when the upstream backend (= php-fpm and friends) doesn't set
+     * TCP_NODELAY on its accepted socket, response bodies between MSS
+     * and a few MTUs get split into two segments, the second carrying
+     * the small tail. The tail waits for an ACK (= Nagle algorithm on
+     * the backend), the proxy schedules the ACK with the kernel's
+     * delayed-ACK timer (~40ms on Linux), and the request hits a 40ms
+     * stall per round-trip. Setting TCP_QUICKACK on the warp side tells
+     * the kernel to send the ACK immediately, breaking the loop.
+     */
+    private static final java.net.SocketOption<Boolean> TCP_QUICKACK_OPT;
+    static {
+        java.net.SocketOption<Boolean> opt = null;
+        try {
+            Class<?> cls = Class.forName("jdk.net.ExtendedSocketOptions");
+            Object o = cls.getField("TCP_QUICKACK").get(null);
+            if (o instanceof java.net.SocketOption) {
+                @SuppressWarnings("unchecked")
+                java.net.SocketOption<Boolean> so = (java.net.SocketOption<Boolean>) o;
+                opt = so;
+            }
+        }
+        catch (Throwable ignore) {
+            // Pre-JDK-10 / non-Linux: leave null and skip.
+        }
+        TCP_QUICKACK_OPT = opt;
+    }
+
+    private static void applyQuickAck(java.nio.channels.NetworkChannel ch) {
+        if (TCP_QUICKACK_OPT == null) return;
+        try { ch.setOption(TCP_QUICKACK_OPT, true); }
+        catch (Throwable t) {
+            BayLog.debug(t, "TCP_QUICKACK setsockopt failed (skipping)");
+        }
+    }
+
     class AgentListener implements LifecycleListener {
 
         @Override
@@ -185,8 +226,10 @@ public abstract class WarpBase extends ClubBase implements Warp {
                         ch = AsynchronousSocketChannel.open();
                     else
                         throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Asynchronous mode not supported for UNIX domain socket");
-                    if (hostAddr instanceof InetSocketAddress)
+                    if (hostAddr instanceof InetSocketAddress) {
                         ch.setOption(java.net.StandardSocketOptions.TCP_NODELAY, true);
+                        applyQuickAck(ch);
+                    }
                     rd = new AsynchronousSocketChannelRudder(ch);
                 }
                 else {
@@ -195,8 +238,10 @@ public abstract class WarpBase extends ClubBase implements Warp {
                         ch = SocketChannel.open();
                     else
                         ch = SysUtil.openUnixDomainSocketChannel();
-                    if (hostAddr instanceof InetSocketAddress)
+                    if (hostAddr instanceof InetSocketAddress) {
                         ch.setOption(java.net.StandardSocketOptions.TCP_NODELAY, true);
+                        applyQuickAck(ch);
+                    }
                     rd = new SocketChannelRudder(ch);
                 }
 

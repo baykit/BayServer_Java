@@ -639,6 +639,17 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
                 else
                     st.readBuf.flip();
                 BayLog.debug("%s read %d bytes", this, st.readBuf.limit());
+                // Re-enable quickack so the pending ACK is sent immediately
+                // instead of being held by the kernel's delayed-ACK timer.
+                // TCP_QUICKACK is a one-shot toggle on Linux (= reverts on
+                // the next packet), so we have to re-set it after every
+                // read for the next ACK we owe back to the peer.
+                //
+                // This breaks the 40ms stall that hits warp -> backend
+                // (php-fpm and similar) at body sizes between MSS and a
+                // few MTUs, where the backend keeps Nagle on and waits
+                // for our ACK before sending the tail of the response.
+                applyQuickAck(st.rudder);
             }
         }
         catch(IOException e) {
@@ -747,6 +758,43 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
         agent.sendClosedLetter(st.rudder, this, false);
     }
 
+
+    /**
+     * jdk.net.ExtendedSocketOptions.TCP_QUICKACK or null if the JVM /
+     * platform doesn't expose it. Looked up reflectively so the module
+     * doesn't take a hard compile-time dep on the jdk.net module.
+     */
+    private static final java.net.SocketOption<Boolean> TCP_QUICKACK_OPT;
+    static {
+        java.net.SocketOption<Boolean> opt = null;
+        try {
+            Class<?> cls = Class.forName("jdk.net.ExtendedSocketOptions");
+            Object o = cls.getField("TCP_QUICKACK").get(null);
+            if (o instanceof java.net.SocketOption) {
+                @SuppressWarnings("unchecked")
+                java.net.SocketOption<Boolean> so = (java.net.SocketOption<Boolean>) o;
+                opt = so;
+            }
+        }
+        catch (Throwable ignore) {
+            // Pre-JDK-10 / non-Linux: leave null and skip.
+        }
+        TCP_QUICKACK_OPT = opt;
+    }
+
+    private static void applyQuickAck(Rudder rd) {
+        if (TCP_QUICKACK_OPT == null) return;
+        try {
+            Channel ch = ChannelRudder.getChannel(rd);
+            if (ch instanceof java.nio.channels.NetworkChannel) {
+                ((java.nio.channels.NetworkChannel) ch)
+                        .setOption(TCP_QUICKACK_OPT, true);
+            }
+        }
+        catch (Throwable ignore) {
+            // Hot path -- swallow per-call failures rather than logging.
+        }
+    }
 
     private static String opMode(int mode) {
         String modeStr = null;
