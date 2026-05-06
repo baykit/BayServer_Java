@@ -268,6 +268,12 @@ public abstract class WarpBase extends ClubBase implements Warp {
             if(needConnect) {
                 RudderState st = RudderStateStore.getStore(agt.agentId).rent();
                 st.init(wsip.rudder, tp);
+                // Mark this state so the multiplexer re-arms TCP_QUICKACK
+                // after each read on this upstream socket. Backends like
+                // php-fpm leave Nagle on, so without QUICKACK the proxy's
+                // delayed-ACK timer adds 40 ms per response in the few-MTU
+                // body range. Skip for unix-domain sockets.
+                st.quickAck = (hostAddr instanceof InetSocketAddress);
                 agt.netMultiplexer.addRudderState(wsip.rudder, st);
                 agt.netMultiplexer.getTransporter(wsip.rudder).reqConnect(wsip.rudder, hostAddr);
             }

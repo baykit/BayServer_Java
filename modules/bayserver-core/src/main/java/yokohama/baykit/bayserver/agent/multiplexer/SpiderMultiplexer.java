@@ -639,17 +639,15 @@ public class SpiderMultiplexer extends MultiplexerBase implements TimerHandler, 
                 else
                     st.readBuf.flip();
                 BayLog.debug("%s read %d bytes", this, st.readBuf.limit());
-                // Re-enable quickack so the pending ACK is sent immediately
-                // instead of being held by the kernel's delayed-ACK timer.
-                // TCP_QUICKACK is a one-shot toggle on Linux (= reverts on
-                // the next packet), so we have to re-set it after every
-                // read for the next ACK we owe back to the peer.
-                //
-                // This breaks the 40ms stall that hits warp -> backend
-                // (php-fpm and similar) at body sizes between MSS and a
-                // few MTUs, where the backend keeps Nagle on and waits
-                // for our ACK before sending the tail of the response.
-                applyQuickAck(st.rudder);
+                // Warp upstreams (= php-fpm, AJP backends) leave Nagle on,
+                // and the kernel's delayed-ACK timer pairs with that to
+                // add a 40ms stall to every response in the few-MTU body
+                // range. Re-arm TCP_QUICKACK on those sockets after each
+                // read so the next ACK fires immediately. Skip for inbound
+                // (= client-facing) sockets to avoid the per-read syscall
+                // cost; clients (wrk / browsers / load balancers) set
+                // TCP_NODELAY themselves and don't need this.
+                if (st.quickAck) applyQuickAck(st.rudder);
             }
         }
         catch(IOException e) {
