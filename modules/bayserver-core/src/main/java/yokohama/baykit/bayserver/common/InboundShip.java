@@ -206,14 +206,23 @@ public class InboundShip extends Ship {
     public boolean sendResContent(int chkId, Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
         checkShipId(chkId);
 
+        // Hoist the per-call maxLen lookup and tour handler out of the
+        // chunk loop. For a 1 MB body @ 64 KB packet size this is 16
+        // iterations; the previous tail-recursive form re-evaluated
+        // protocolHandler.maxResPacketDataSize() and re-walked the
+        // chkId guard on each level.
         int maxLen = protocolHandler.maxResPacketDataSize();
-        if(len > maxLen) {
-            sendResContent(Tour.TOUR_ID_NOCHECK, tur, bytes, ofs, maxLen, null);
-            return sendResContent(Tour.TOUR_ID_NOCHECK, tur, bytes, ofs + maxLen, len - maxLen, lis);
+        TourHandler handler = tourHandler();
+
+        // All but the last chunk pass null as the listener so the
+        // listener fires exactly once when the last chunk drains.
+        // Returns the bufferAvailable flag from the LAST handler.sendContent.
+        while (len > maxLen) {
+            handler.sendContent(tur, bytes, ofs, maxLen, null);
+            ofs += maxLen;
+            len -= maxLen;
         }
-        else {
-            return tourHandler().sendContent(tur, bytes, ofs, len, lis);
-        }
+        return handler.sendContent(tur, bytes, ofs, len, lis);
     }
 
 
