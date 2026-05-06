@@ -43,6 +43,18 @@ class ServletTrain extends Train implements ReqContentHandler {
     @Override
     public void depart() {
 
+        // Once endResContent is called, the tour completes and -- if the
+        // listener fires synchronously -- the Tour is `reset()` back into
+        // the free pool: tour.ship goes null, tour.res.headerSent goes
+        // back to false, and the same Tour object can even be re-rented
+        // for a new request on the same connection. Anything in this
+        // method's finally block that re-dereferences `tour` after that
+        // point will NPE or interfere with the next request.
+        //
+        // Track whether the end-of-response path has been taken; the
+        // finally block then skips the redundant flush in those cases.
+        boolean responseClosed = false;
+
         docker.setContextLoader();
         BayLog.debug(tour + " Run chain asyncSupported=" + req.isAsyncSupported() + " on " + Thread.currentThread());
         try {
@@ -83,6 +95,7 @@ class ServletTrain extends Train implements ReqContentHandler {
                     if(!tour.res.headerSent())
                         tour.res.sendHeaders(tour.tourId);
                     tour.res.endResContent(tour.tourId);
+                    responseClosed = true;
                 }
             } catch (Throwable ex) {
                 BayLog.error(ex);
@@ -92,6 +105,9 @@ class ServletTrain extends Train implements ReqContentHandler {
         } catch (Throwable e) {
             try {
                 tour.res.sendError(tour.tourId, HttpStatus.INTERNAL_SERVER_ERROR, null, e);
+                // sendError funnels into endResContent internally, so the
+                // tour may have been reset by the time we reach finally.
+                responseClosed = true;
             } catch (IOException ex) {
                 BayLog.error(ex);
             }
@@ -100,18 +116,27 @@ class ServletTrain extends Train implements ReqContentHandler {
             if (ses != null)
                 ses.update();
 
-            try {
-                if (!tour.res.headerSent()) {
-                    //tour.sendHeaders();
-                } else {
-                    if (res.useStream()) {
-                        res.getOutputStreamObject().flush();
-                    } else if (res.useWriter()) {
-                        res.getWriter().flush();
+            // The flush below is the safety net for code paths that
+            // didn't end the response themselves (e.g. async dispatch
+            // that hasn't completed yet). When responseClosed is true,
+            // the response is already finished and tour state may be
+            // halfway through reset() -- dereferencing tour.res or
+            // tour.ship from here can NPE or, worse, send stray bytes
+            // onto a connection now serving a different tour.
+            if (!responseClosed) {
+                try {
+                    if (!tour.res.headerSent()) {
+                        //tour.sendHeaders();
+                    } else {
+                        if (res.useStream()) {
+                            res.getOutputStreamObject().flush();
+                        } else if (res.useWriter()) {
+                            res.getWriter().flush();
+                        }
                     }
+                } catch (Throwable e) {
+                    BayLog.error(e);
                 }
-            } catch (Throwable e) {
-                BayLog.error(e);
             }
 
             // Invoke event handlers
