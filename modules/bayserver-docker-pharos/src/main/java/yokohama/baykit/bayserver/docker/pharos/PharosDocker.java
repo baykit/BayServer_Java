@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.docker.phpverse;
+package yokohama.baykit.bayserver.docker.pharos;
 
 import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.ConfigException;
@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  *   each request -> arrive(Tour)       [grand agent thread]
  *                  - resolve docroot/uri -> .php file
- *                  - install PhpVerseContentHandler
+ *                  - install PharosContentHandler
  *
  *                  -> handler.onEndReqContent(Tour)  [same grand agent]
  *                     - first-time TSRM register on this thread
@@ -53,7 +53,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *                     - send headers + body to tour.res
  * </pre>
  */
-public class PhpVerseDocker extends ClubBase {
+public class PharosDocker extends ClubBase {
 
     /** Path to the ZTS embed build of {@code libphp.so}. Required. */
     public String libPhpPath;
@@ -64,7 +64,7 @@ public class PhpVerseDocker extends ClubBase {
     public String iniPath;
 
     /** Shared runtime, lazily initialised on first plan parse. */
-    private static final AtomicReference<PhpVerseRuntime> RUNTIME =
+    private static final AtomicReference<PharosRuntime> RUNTIME =
             new AtomicReference<>();
 
     @Override
@@ -73,7 +73,7 @@ public class PhpVerseDocker extends ClubBase {
 
         if (StringUtil.empty(libPhpPath)) {
             throw new ConfigException(elm.fileName, elm.lineNo,
-                    "PhpVerseDocker requires 'libPhpPath' "
+                    "PharosDocker requires 'libPhpPath' "
                             + "(/path/to/libphp.so, ZTS embed build)");
         }
 
@@ -81,16 +81,16 @@ public class PhpVerseDocker extends ClubBase {
         // since plan parse is single-thread, but cheap to guard) lose here:
         // first writer wins, others observe the existing instance.
         if (RUNTIME.get() == null) {
-            synchronized (PhpVerseDocker.class) {
+            synchronized (PharosDocker.class) {
                 if (RUNTIME.get() == null) {
-                    PhpVerseRuntime rt = new PhpVerseRuntime(libPhpPath);
+                    PharosRuntime rt = new PharosRuntime(libPhpPath);
                     rt.init();
                     RUNTIME.set(rt);
                 }
             }
         }
 
-        BayLog.info("PhpVerseDocker ready: libPhpPath=%s ini=%s",
+        BayLog.info("PharosDocker ready: libPhpPath=%s ini=%s",
                 libPhpPath, iniPath);
     }
 
@@ -133,16 +133,16 @@ public class PhpVerseDocker extends ClubBase {
             throw new HttpException(HttpStatus.NOT_FOUND, file.toString());
         }
 
-        PhpVerseRuntime rt = RUNTIME.get();
+        PharosRuntime rt = RUNTIME.get();
         if (rt == null) {
             // Should not happen: init() guarantees RUNTIME is set before
             // arrive() is reachable.
             throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "PhpVerseRuntime not initialised");
+                    "PharosRuntime not initialised");
         }
 
-        PhpVerseContentHandler handler =
-                new PhpVerseContentHandler(tur, file, rt);
+        PharosContentHandler handler =
+                new PharosContentHandler(tur, file, rt);
         tur.req.setReqContentHandler(handler);
     }
 }

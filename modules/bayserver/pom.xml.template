@@ -44,7 +44,7 @@
     </dependency>
     <dependency>
       <groupId>yokohama.baykit</groupId>
-      <artifactId>bayserver-docker-phpverse</artifactId>
+      <artifactId>bayserver-docker-pharos</artifactId>
       <version>${env.VERSION}</version>
       <scope>compile</scope>
     </dependency>

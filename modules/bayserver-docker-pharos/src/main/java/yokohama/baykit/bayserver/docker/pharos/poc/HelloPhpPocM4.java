@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.docker.phpverse.poc;
+package yokohama.baykit.bayserver.docker.pharos.poc;
 
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;

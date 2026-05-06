@@ -1,4 +1,4 @@
-package yokohama.baykit.bayserver.docker.phpverse.poc;
+package yokohama.baykit.bayserver.docker.pharos.poc;
 
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
@@ -21,8 +21,8 @@ import java.nio.file.Path;
  * <p>Run with:
  * <pre>
  * java --enable-native-access=ALL-UNNAMED \
- *      -cp modules/bayserver-docker-phpverse/target/classes \
- *      yokohama.baykit.bayserver.docker.phpverse.poc.HelloPhpPoc \
+ *      -cp modules/bayserver-docker-pharos/target/classes \
+ *      yokohama.baykit.bayserver.docker.pharos.poc.HelloPhpPoc \
  *      &lt;repo&gt;/.phpenv/versions/8.4.10-zts-embed/lib/libphp.so
  * </pre>
  *

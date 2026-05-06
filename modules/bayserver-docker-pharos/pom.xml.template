@@ -5,9 +5,9 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>yokohama.baykit</groupId>
-  <artifactId>bayserver-docker-phpverse</artifactId>
+  <artifactId>bayserver-docker-pharos</artifactId>
   <version>${env.VERSION}</version>
-  <name>bayserver-docker-phpverse</name>
+  <name>bayserver-docker-pharos</name>
   <description>PHP via in-process libphp embedding (Project Panama / FFM API).
     Loads libphp.so once into the BayServer JVM and runs the per-request
     SAPI lifecycle (php_request_startup / php_request_shutdown) directly,

@@ -1,0 +1,13 @@
+# Maven build output
+target/
+
+# Generated from pom.xml.template by build.sh / sed envsubst
+modules/*/pom.xml
+pom.xml
+
+# JVM crash dumps
+hs_err_pid*.log
+core.*
+
+# Editor
+.*.swp
