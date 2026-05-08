@@ -18,14 +18,22 @@ public class CmdRstStream extends H2Command {
 
     public int errorCode;
 
-    public CmdRstStream(int streamId, H2Flags flags) {
-        super(H2Type.RstStream, streamId, flags);
+    public CmdRstStream() {
+        super(H2Type.RstStream);
     }
 
-    public CmdRstStream(int streamId) {
-        this(streamId, null);
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
     }
 
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
     @Override
     public void unpack(H2Packet pkt) throws IOException {
         super.unpack(pkt);

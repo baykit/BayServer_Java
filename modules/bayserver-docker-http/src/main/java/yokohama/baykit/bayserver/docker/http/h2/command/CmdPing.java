@@ -12,15 +12,26 @@ public class CmdPing extends H2Command {
 
     public byte[] opaqueData;
 
-    public CmdPing(int streamId, H2Flags flags, byte[] opaqueData) {
-        super(H2Type.Ping, streamId, flags);
+    public CmdPing() {
+        super(H2Type.Ping);
+    }
+
+    public void init(int streamId, H2Flags flags, byte[] opaqueData) {
+        this.init(streamId, flags);
         this.opaqueData = (opaqueData != null) ? opaqueData : new byte[8];
     }
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
 
-    public CmdPing(int streamId, H2Flags flags) {
-        this(streamId, flags, null);
+    @Override
+    public void reset() {
+
     }
 
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
     @Override
     public void unpack(H2Packet pkt) throws IOException {
         super.unpack(pkt);

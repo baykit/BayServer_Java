@@ -64,10 +64,25 @@ public class CmdSendHeaders extends AjpCommand {
 
     public CmdSendHeaders() {
         super(AjpType.SendHeaders, false);
+    }
+
+    public void init() {
         this.status = HttpStatus.OK;
         this.desc = null;
     }
 
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
+    }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
     @Override
     public void pack(AjpPacket pkt) throws IOException {
         AjpPacket.AjpAccessor acc = pkt.newAjpDataAccessor();

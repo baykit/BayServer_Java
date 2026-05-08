@@ -25,15 +25,22 @@ public class CmdContinuation extends H2Command {
 
     public ArrayList<HeaderBlock> headerBlocks = new ArrayList<>();
 
-    public CmdContinuation(int streamId, H2Flags flags) {
-        super(H2Type.Continuation, streamId, flags);
+    public CmdContinuation() {
+        super(H2Type.Continuation);
     }
 
-    public CmdContinuation(int streamId) {
-        this(streamId, null);
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
     }
 
-
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
 
     @Override
     public void unpack(H2Packet pkt) throws IOException {

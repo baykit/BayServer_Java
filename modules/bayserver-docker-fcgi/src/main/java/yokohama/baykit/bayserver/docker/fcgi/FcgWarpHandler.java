@@ -26,9 +26,10 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
 
         @Override
         public ProtocolHandler<FcgCommand, FcgPacket> createProtocolHandler(
-                PacketStore<FcgPacket> pktStore) {
+                PacketStore<FcgPacket> pktStore,
+                CommandStore<FcgCommand> cmdStore) {
             FcgWarpHandler warpHandler = new FcgWarpHandler();
-            FcgCommandUnPacker commandUnpacker = new FcgCommandUnPacker(warpHandler);
+            FcgCommandUnPacker commandUnpacker = new FcgCommandUnPacker(warpHandler, cmdStore);
             FcgPacketUnPacker packetUnpacker = new FcgPacketUnPacker(commandUnpacker, pktStore);
             PacketPacker packetPacker = new PacketPacker<>();
             CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
@@ -39,6 +40,7 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
                             packetPacker,
                             commandUnpacker,
                             commandPacker,
+                            cmdStore,
                             false);
             warpHandler.init(protocolHandler);
             return protocolHandler;
@@ -298,15 +300,19 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
 
 
     private void sendStdIn(Tour tur, byte[] data, int ofs, int len, DataConsumeListener lis) throws IOException {
-        CmdStdIn cmd = new CmdStdIn(WarpData.get(tur).warpId, data, ofs, len);
+        CmdStdIn cmd = (CmdStdIn) protocolHandler.commandStore.rent(FcgType.Stdin);
+        cmd.init(WarpData.get(tur).warpId, data, ofs, len);
         ship().post(cmd, lis);
+        protocolHandler.commandStore.Return(cmd);
     }
 
     private void sendBeginReq(Tour tur) throws IOException {
-        CmdBeginRequest cmd = new CmdBeginRequest(WarpData.get(tur).warpId);
+        CmdBeginRequest cmd = (CmdBeginRequest) protocolHandler.commandStore.rent(FcgType.BeginRequest);
+        cmd.init(WarpData.get(tur).warpId);
         cmd.role = CmdBeginRequest.FCGI_RESPONDER;
         cmd.keepConn = true;
         ship().post(cmd);
+        protocolHandler.commandStore.Return(cmd);
     }
 
 
@@ -328,7 +334,8 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
         }
 
         int warpId = WarpData.get(tur).warpId;
-        final CmdParams cmd = new CmdParams(warpId);
+        final CmdParams cmd = (CmdParams) protocolHandler.commandStore.rent(FcgType.Params);
+        cmd.init(warpId);
 
         final String scriptFname[] = new String[1];
         try {
@@ -359,9 +366,12 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
         }
 
         ship().post(cmd);
+        protocolHandler.commandStore.Return(cmd);
 
-        CmdParams cmdParamsEnd = new CmdParams(warpId);
+        CmdParams cmdParamsEnd = (CmdParams) protocolHandler.commandStore.rent(FcgType.Params);
+        cmdParamsEnd.init(warpId);
         ship().post(cmdParamsEnd);
+        protocolHandler.commandStore.Return(cmdParamsEnd);
     }
 
     WarpShip ship() {

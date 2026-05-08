@@ -15,8 +15,8 @@ import java.io.IOException;
  */
 public class CmdStdErr extends InOutCommandBase {
 
-    public CmdStdErr(int reqId) {
-        super(FcgType.Stderr, reqId);
+    public CmdStdErr() {
+        super(FcgType.Stderr);
     }
 
     @Override

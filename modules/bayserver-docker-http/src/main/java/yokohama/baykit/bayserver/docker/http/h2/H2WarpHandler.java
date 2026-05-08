@@ -24,16 +24,17 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
 
         @Override
         public ProtocolHandler<H2Command, H2Packet> createProtocolHandler(
-                PacketStore<H2Packet> pktStore) {
+                PacketStore<H2Packet> pktStore,
+                CommandStore<H2Command> cmdStore) {
 
             H2WarpHandler warpHandler = new H2WarpHandler();
-            H2CommandUnPacker commandUnpacker = new H2CommandUnPacker(warpHandler);
+            H2CommandUnPacker commandUnpacker = new H2CommandUnPacker(warpHandler, cmdStore);
             // serverMode=false on the warp side: we send the preface, we don't expect to receive it.
             H2PacketUnPacker packetUnpacker = new H2PacketUnPacker(commandUnpacker, pktStore, false);
             PacketPacker packetPacker = new PacketPacker<>();
             CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
             H2ProtocolHandler protocolHandler =
-                    new H2ProtocolHandler(warpHandler, packetUnpacker, packetPacker, commandUnpacker, commandPacker, false);
+                    new H2ProtocolHandler(warpHandler, packetUnpacker, packetPacker, commandUnpacker, commandPacker, cmdStore, false);
             warpHandler.init(protocolHandler);
             return protocolHandler;
         }
@@ -122,18 +123,21 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
                 WarpData wd = WarpData.get(tur);
                 wd.pendingStreamWindow += cmd.length;
                 if (wd.pendingStreamWindow >= WINDOW_UPDATE_THRESHOLD) {
-                    CmdWindowUpdate upd = new CmdWindowUpdate(cmd.streamId);
+                    CmdWindowUpdate upd = (CmdWindowUpdate) protocolHandler.commandStore.rent(H2Type.WindowUpdate);
+                    upd.init(cmd.streamId);
                     upd.windowSizeIncrement = wd.pendingStreamWindow;
                     ship().post(upd);
+                    protocolHandler.commandStore.Return(upd);
                     wd.pendingStreamWindow = 0;
                 }
             }
             // Per-connection: always accumulate, flush on threshold.
             pendingConnWindow += cmd.length;
             if (pendingConnWindow >= WINDOW_UPDATE_THRESHOLD) {
-                CmdWindowUpdate upd2 = new CmdWindowUpdate(0);
-                upd2.windowSizeIncrement = pendingConnWindow;
+                CmdWindowUpdate upd2 = (CmdWindowUpdate) protocolHandler.commandStore.rent(H2Type.WindowUpdate);
+                upd2.init(0);
                 ship().post(upd2);
+                protocolHandler.commandStore.Return(upd2);
                 pendingConnWindow = 0;
             }
         }
@@ -237,8 +241,10 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
     @Override
     public NextSocketAction handleSettings(CmdSettings cmd) throws IOException {
         if(!cmd.flags.ack()){
-            CmdSettings res = new CmdSettings(0, new H2Flags(H2Flags.FLAGS_ACK));
+            CmdSettings res = (CmdSettings) protocolHandler.commandStore.rent(H2Type.Settings);
+            res.init(0, new H2Flags(H2Flags.FLAGS_ACK));
             protocolHandler.post(res, true);
+            protocolHandler.commandStore.Return(res);
         }
         return NextSocketAction.Continue;
     }
@@ -277,7 +283,8 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
 
     @Override
     public NextSocketAction handlePing(CmdPing cmd) throws IOException {
-        CmdPing res = new CmdPing(cmd.streamId, new H2Flags(H2Flags.FLAGS_ACK), cmd.opaqueData);
+        CmdPing res = (CmdPing) protocolHandler.commandStore.rent(H2Type.Ping);
+        res.init(cmd.streamId, new H2Flags(H2Flags.FLAGS_ACK), cmd.opaqueData);
         protocolHandler.post(res, true);
         return NextSocketAction.Continue;
     }
@@ -358,12 +365,14 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
             return;
         }
         int streamId = WarpData.get(tur).warpId;
-        CmdData cmd = new CmdData(streamId, null, new byte[0], 0, 0);
+        CmdData cmd = (CmdData) protocolHandler.commandStore.rent(H2Type.Data);
+        cmd.init(streamId, null, new byte[0], 0, 0);
         cmd.flags.setEndStream(true);
         // WarpShip.post handles the !connected case via cmdBuf; once the
         // connection is up, post becomes a flush-true forward to
         // protocolHandler.post under the hood.
         ship().post(cmd, lis);
+        protocolHandler.commandStore.Return(cmd);
     }
 
     @Override
@@ -407,8 +416,10 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
         // commands in cmdBuf while !connected and drains them via flush()
         // after notifyConnect. protocolHandler.post bypasses that and tries
         // to write straight to a connection-pending channel (NotYetConnected).
-        CmdPreface preface = new CmdPreface(0, null);
+        CmdPreface preface = (CmdPreface) protocolHandler.commandStore.rent(H2Type.Preface);
+        preface.init(0, null);
         ship().post(preface);
+        protocolHandler.commandStore.Return(preface);
 
         // 2. Initial SETTINGS frame on the control stream (id=0), no ACK.
         // INITIAL_WINDOW_SIZE here only applies to per-stream windows on
@@ -418,19 +429,22 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
         // We use a generous 16 MiB so that single large responses (1 MB
         // body) don't even hit the per-stream window threshold; backends
         // (Nginx, Envoy, …) honour any value <= 2^31-1.
-        CmdSettings set = new CmdSettings(H2ProtocolHandler.CTL_STREAM_ID);
+        CmdSettings set = (CmdSettings) protocolHandler.commandStore.rent(H2Type.Settings);
+        set.init(H2ProtocolHandler.CTL_STREAM_ID);
         set.streamId = 0;
         set.items.add(new CmdSettings.Item(CmdSettings.MAX_CONCURRENT_STREAMS,
                 Math.max(BayServer.harbor.maxToursPerShip(), 100)));
         set.items.add(new CmdSettings.Item(CmdSettings.INITIAL_WINDOW_SIZE,
                 INITIAL_WINDOW_SIZE_OUT));
         ship().post(set);
+        protocolHandler.commandStore.Return(set);
 
         // 3. Connection-level WINDOW_UPDATE: bump stream 0's window from
         //    the spec-mandated 65535 to (initial + INITIAL_WINDOW_SIZE_OUT)
         //    so multi-MB bodies aren't rate-limited by the connection
         //    window before our reactive WINDOW_UPDATEs in handleData kick in.
-        CmdWindowUpdate connUp = new CmdWindowUpdate(0);
+        CmdWindowUpdate connUp = (CmdWindowUpdate) protocolHandler.commandStore.rent(H2Type.WindowUpdate);
+        connUp.init(0);
         connUp.windowSizeIncrement = INITIAL_WINDOW_SIZE_OUT;
         ship().post(connUp);
 
@@ -498,7 +512,8 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
         // Always emit at least one HEADERS frame, even if HPACK rendered to
         // zero bytes (defensive; in practice we always have :method etc.).
         if (len == 0) {
-            CmdHeaders hcmd = new CmdHeaders(streamId);
+            CmdHeaders hcmd = (CmdHeaders) protocolHandler.commandStore.rent(H2Type.Headers);
+            hcmd.init(streamId);
             hcmd.excluded = false;
             hcmd.data = encoded;
             hcmd.start = 0;
@@ -506,6 +521,7 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
             hcmd.flags.setEndHeaders(true);
             if (endStream) hcmd.flags.setEndStream(true);
             sip.post(hcmd);
+            protocolHandler.commandStore.Return(hcmd);
             return;
         }
 
@@ -514,7 +530,8 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
 
             H2Command cmd;
             if (pos == 0) {
-                CmdHeaders hcmd = new CmdHeaders(streamId);
+                CmdHeaders hcmd = (CmdHeaders) protocolHandler.commandStore.rent(H2Type.Headers);
+                hcmd.init(streamId);
                 hcmd.excluded = false;
                 hcmd.data = encoded;
                 hcmd.start = pos;
@@ -522,7 +539,8 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
                 cmd = hcmd;
             }
             else {
-                CmdContinuation ccmd = new CmdContinuation(streamId);
+                CmdContinuation ccmd = (CmdContinuation) protocolHandler.commandStore.rent(H2Type.Continuation);
+                ccmd.init(streamId);
                 ccmd.data = encoded;
                 ccmd.start = pos;
                 ccmd.length = chunkLen;
@@ -541,20 +559,17 @@ public class H2WarpHandler implements WarpHandler, H2Handler {
             // Use WarpShip.post: it buffers when !connected (which is the
             // case during startWarpTour, before notifyConnect fires).
             sip.post(cmd);
+            protocolHandler.commandStore.Return(cmd);
         }
     }
 
 
     void sendReqDataCommand(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
         int streamId = WarpData.get(tur).warpId;
-        CmdData cmd =
-                new CmdData(
-                        streamId,
-                        null,
-                        buf,
-                        start,
-                        len);
+        CmdData cmd = (CmdData) protocolHandler.commandStore.rent(H2Type.Data);
+        cmd.init(streamId, null, buf, start, len);
         ship().post(cmd, lis);
+        protocolHandler.commandStore.Return(cmd);
     }
 
 

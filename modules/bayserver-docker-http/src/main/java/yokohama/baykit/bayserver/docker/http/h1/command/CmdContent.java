@@ -15,15 +15,29 @@ public class CmdContent extends H1Command {
     public int len;
     
     public CmdContent() {
-        this(null, 0, 0);
+        super(H1Type.Content);
     }
 
-    public CmdContent(byte[] buf, int start, int len) {
-        super(H1Type.Content);
+    public void init(byte[] buf, int start, int len) {
         this.buffer = buf;
         this.start = start;
         this.len = len;
     }
+
+
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
+    }
+
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
 
     @Override
     public void unpack(H1Packet pkt) {
@@ -42,4 +56,5 @@ public class CmdContent extends H1Command {
     public NextSocketAction handle(H1CommandHandler handler) throws IOException {
         return handler.handleContent(this);
     }
+
 }

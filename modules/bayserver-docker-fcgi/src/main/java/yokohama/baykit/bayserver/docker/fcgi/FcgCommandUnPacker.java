@@ -1,5 +1,6 @@
 package yokohama.baykit.bayserver.docker.fcgi;
 
+import yokohama.baykit.bayserver.protocol.CommandStore;
 import yokohama.baykit.bayserver.protocol.CommandUnPacker;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.fcgi.command.*;
@@ -17,47 +18,24 @@ import java.io.IOException;
 public class FcgCommandUnPacker extends CommandUnPacker<FcgPacket> {
 
     FcgCommandHandler handler;
+    CommandStore<FcgCommand> cmdStore;
 
-    public FcgCommandUnPacker(FcgCommandHandler handler) {
+    public FcgCommandUnPacker(FcgCommandHandler handler, CommandStore<FcgCommand> cmdStore) {
         this.handler = handler;
+        this.cmdStore = cmdStore;
         reset();
     }
 
     @Override
     public NextSocketAction packetReceived(FcgPacket pkt) throws IOException {
 
-        FcgCommand cmd;
-        switch (pkt.type()) {
-            case FcgType.BeginRequest:
-                cmd = new CmdBeginRequest(pkt.reqId);
-                break;
-
-            case FcgType.EndRequest:
-                cmd = new CmdEndRequest(pkt.reqId);
-                break;
-
-            case FcgType.Params:
-                cmd = new CmdParams(pkt.reqId);
-                break;
-
-            case FcgType.Stdin:
-                cmd = new CmdStdIn(pkt.reqId);
-                break;
-
-            case FcgType.Stdout:
-                cmd = new CmdStdOut(pkt.reqId);
-                break;
-
-            case FcgType.Stderr:
-                cmd = new CmdStdErr(pkt.reqId);
-                break;
-
-            default:
-                throw new IllegalStateException();
-        }
+        FcgCommand cmd = cmdStore.rent(pkt.type());
+        cmd.init(pkt.reqId);
 
         cmd.unpack(pkt);
-        return cmd.handle(handler);
+        NextSocketAction res = cmd.handle(handler);
+        cmdStore.Return(cmd);
+        return res;
     }
 
     @Override

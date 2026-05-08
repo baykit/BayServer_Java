@@ -8,6 +8,7 @@ import yokohama.baykit.bayserver.bcf.BcfElement;
 import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.base.WarpBase;
+import yokohama.baykit.bayserver.protocol.CommandStore;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
 import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
@@ -80,6 +81,10 @@ public class FcgWarpDocker extends WarpBase implements FcgDocker {
         PacketStore.registerProtocol(
                 PROTO_NAME,
                 new FcgPacketFactory()
+        );
+        CommandStore.registerProtocol(
+                PROTO_NAME,
+                new FcgCommandFactory()
         );
         ProtocolHandlerStore.registerProtocol(
                 PROTO_NAME,

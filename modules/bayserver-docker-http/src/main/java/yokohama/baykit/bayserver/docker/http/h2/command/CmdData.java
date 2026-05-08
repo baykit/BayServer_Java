@@ -27,17 +27,29 @@ public class CmdData extends H2Command {
     public int length;
     public byte[] data;
 
-    public CmdData(int streamId, H2Flags flags) {
-        this(streamId, flags, null, 0, 0);
+    public CmdData() {
+        super(H2Type.Data);
     }
     
-    public CmdData(int streamId, H2Flags flags, byte[] data, int start, int len) {
-        super(H2Type.Data, streamId, flags);
+    public void init(int streamId, H2Flags flags, byte[] data, int start, int len) {
+        super.init(streamId, flags);
         this.data = data;
         this.start = start;
         this.length = len;
     }
 
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
+    }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
     @Override
     public void unpack(H2Packet pkt) throws IOException {
         super.unpack(pkt);

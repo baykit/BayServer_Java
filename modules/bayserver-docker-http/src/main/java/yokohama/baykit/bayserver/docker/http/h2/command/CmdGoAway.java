@@ -24,14 +24,22 @@ public class CmdGoAway extends H2Command {
     public int errorCode;
     public byte[] debugData;
 
-    public CmdGoAway(int streamId, H2Flags flags) {
-        super(H2Type.Goaway, streamId, flags);
+    public CmdGoAway() {
+        super(H2Type.GoAway);
     }
 
-    public CmdGoAway(int streamId) {
-        this(streamId, null);
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
     }
 
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
     @Override
     public void unpack(H2Packet pkt) throws IOException {
         super.unpack(pkt);

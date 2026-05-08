@@ -68,9 +68,22 @@ public class CmdParams extends FcgCommand {
 
     public ArrayList<String[]> params = new ArrayList<>();
 
-    public CmdParams(int reqId) {
-        super(FcgType.Params, reqId);
+    public CmdParams() {
+        super(FcgType.Params);
     }
+
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
+    }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
 
     @Override
     public void unpack(FcgPacket pkt) throws IOException {
