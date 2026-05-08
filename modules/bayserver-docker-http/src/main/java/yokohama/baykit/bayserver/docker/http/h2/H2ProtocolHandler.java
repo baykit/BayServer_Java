@@ -13,8 +13,9 @@ public class H2ProtocolHandler extends ProtocolHandler<H2Command, H2Packet>  {
             PacketPacker<H2Packet> packetPacker,
             CommandUnPacker<H2Packet> commandUnpacker,
             CommandPacker<H2Command, H2Packet, ?> commandPacker,
+            CommandStore<H2Command> cmdStore,
             boolean serverMode) {
-        super(packetUnpacker, packetPacker, commandUnpacker, commandPacker, h2Handler, serverMode);
+        super(packetUnpacker, packetPacker, commandUnpacker, commandPacker, h2Handler, cmdStore, serverMode);
     }
 
 

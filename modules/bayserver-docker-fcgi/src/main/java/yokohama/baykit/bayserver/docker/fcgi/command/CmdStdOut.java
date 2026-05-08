@@ -15,12 +15,8 @@ import java.io.IOException;
  */
 public class CmdStdOut extends InOutCommandBase {
 
-    public CmdStdOut(int reqId) {
-        this(reqId, new byte[0], 0, 0);
-    }
-
-    public CmdStdOut(int reqId, byte[] data, int start, int len) {
-        super(FcgType.Stdout, reqId, data, start, len);
+    public CmdStdOut() {
+        super(FcgType.Stdout);
     }
 
     @Override

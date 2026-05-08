@@ -25,15 +25,16 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
 
         @Override
         public ProtocolHandler<H2Command, H2Packet> createProtocolHandler(
-                PacketStore<H2Packet> pktStore) {
+                PacketStore<H2Packet> pktStore,
+                CommandStore<H2Command> cmdStore) {
 
             H2InboundHandler inboundHandler = new H2InboundHandler();
-            H2CommandUnPacker commandUnpacker = new H2CommandUnPacker(inboundHandler);
+            H2CommandUnPacker commandUnpacker = new H2CommandUnPacker(inboundHandler, cmdStore);
             H2PacketUnPacker packetUnpacker = new H2PacketUnPacker(commandUnpacker, pktStore, true);
             PacketPacker packetPacker = new PacketPacker<>();
             CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
             H2ProtocolHandler protocolHandler =
-                    new H2ProtocolHandler(inboundHandler, packetUnpacker, packetPacker, commandUnpacker, commandPacker, true);
+                    new H2ProtocolHandler(inboundHandler, packetUnpacker, packetPacker, commandUnpacker, commandPacker, cmdStore, true);
             inboundHandler.init(protocolHandler);
             return protocolHandler;
         }
@@ -134,7 +135,8 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
 
             H2Command cmd;
             if(pos == 0) {
-                CmdHeaders hcmd = new CmdHeaders(tur.req.key);
+                CmdHeaders hcmd = (CmdHeaders) protocolHandler.commandStore.rent(H2Type.Headers);
+                hcmd.init(tur.req.key);
                 hcmd.excluded = false;
                 hcmd.data = buf.bytes();
                 hcmd.start = pos;
@@ -142,7 +144,8 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
                 cmd = hcmd;
             }
             else {
-                CmdContinuation ccmd = new CmdContinuation(tur.req.key);
+                CmdContinuation ccmd =(CmdContinuation) protocolHandler.commandStore.rent(H2Type.Continuation);
+                ccmd.init(tur.req.key);
                 ccmd.data = buf.bytes();
                 ccmd.start = pos;
                 ccmd.length = len;
@@ -174,8 +177,11 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
             long strWin = streamSendWindows.getOrDefault(streamId, DEFAULT_INITIAL_WINDOW) - len;
             streamSendWindows.put(streamId, strWin);
         }
-        CmdData cmd = new CmdData(tur.req.key, null, bytes, ofs, len);
-        return protocolHandler.post(cmd, false, lis);
+        CmdData cmd = (CmdData) protocolHandler.commandStore.rent(H2Type.Data);
+        cmd.init(tur.req.key, null, bytes, ofs, len);
+        boolean available = protocolHandler.post(cmd, false, lis);
+        protocolHandler.commandStore.Return(cmd);
+        return available;
     }
 
     @Override
@@ -185,9 +191,11 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
 
     @Override
     public void sendEndTour(Tour tur, DataConsumeListener lis) throws IOException {
-        CmdData cmd = new CmdData(tur.req.key, null, new byte[0], 0, 0);
+        CmdData cmd = (CmdData) protocolHandler.commandStore.rent(H2Type.Data);
+        cmd.init(tur.req.key, null, new byte[0], 0, 0);
         cmd.flags.setEndStream(true);
         protocolHandler.post(cmd, true, lis);
+        protocolHandler.commandStore.Return(cmd);
         // NOTE: We intentionally do NOT mark the stream CLOSED in the
         // command unpacker here. Doing so while the last DATA frames are
         // still in flight under concurrent streams caused the send pipeline
@@ -204,7 +212,8 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
     public boolean onProtocolError(ProtocolException e) {
         BayLog.debug(e);
         BayLog.error(e, e.getMessage());
-        CmdGoAway cmd = new CmdGoAway(H2ProtocolHandler.CTL_STREAM_ID);
+        CmdGoAway cmd = (CmdGoAway) protocolHandler.commandStore.rent(H2Type.GoAway);
+        cmd.init(H2ProtocolHandler.CTL_STREAM_ID);
         cmd.streamId = 0;
         cmd.lastStreamId = 0;
         // H2ProtocolException carries a caller-specified error code (e.g.
@@ -226,6 +235,7 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
         catch(IOException ex) {
             BayLog.error(ex);
         }
+        protocolHandler.commandStore.Return(cmd);
         return false;
     }
 
@@ -242,16 +252,13 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
 
         httpProtocol = cmd.protocol;
 
-        CmdSettings set = new CmdSettings(H2ProtocolHandler.CTL_STREAM_ID);
+        CmdSettings set = (CmdSettings) protocolHandler.commandStore.rent(H2Type.Settings);
+        set.init(H2ProtocolHandler.CTL_STREAM_ID);
         set.streamId = 0;
         set.items.add(new CmdSettings.Item(CmdSettings.MAX_CONCURRENT_STREAMS, BayServer.harbor.maxToursPerShip()));
         set.items.add(new CmdSettings.Item(CmdSettings.INITIAL_WINDOW_SIZE, windowSize));
         protocolHandler.post(set, true);
-
-        set = new CmdSettings(H2ProtocolHandler.CTL_STREAM_ID);
-        set.streamId = 0;
-        set.flags.setAck(true);
-        //cmdPacker.send(set);
+        protocolHandler.commandStore.Return(set);
 
         return NextSocketAction.Continue;
     }
@@ -310,9 +317,12 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
                                     tur.checkTourId(tid);
 
                                     if (len > 0) {
-                                        CmdWindowUpdate upd = new CmdWindowUpdate(cmd.streamId);
+                                        CmdWindowUpdate upd = (CmdWindowUpdate) protocolHandler.commandStore.rent(H2Type.WindowUpdate);
+                                        upd.init(cmd.streamId);
                                         upd.windowSizeIncrement = len;
-                                        CmdWindowUpdate upd2 = new CmdWindowUpdate(0);
+
+                                        CmdWindowUpdate upd2 = (CmdWindowUpdate) protocolHandler.commandStore.rent(H2Type.WindowUpdate);
+                                        upd2.init(0);
                                         upd2.windowSizeIncrement = len;
                                         try {
                                             protocolHandler.post(upd, false);
@@ -321,6 +331,8 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
                                         catch(IOException e) {
                                             BayLog.error(e);
                                         }
+                                        protocolHandler.commandStore.Return(upd);
+                                        protocolHandler.commandStore.Return(upd2);
                                     }
 
                                     if (resume)
@@ -407,8 +419,10 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
             }
         }
 
-        CmdSettings res = new CmdSettings(0, new H2Flags(H2Flags.FLAGS_ACK));
+        CmdSettings res = (CmdSettings) protocolHandler.commandStore.rent(H2Type.Settings);
+        res.init(0, new H2Flags(H2Flags.FLAGS_ACK));
         protocolHandler.post(res, true);
+        protocolHandler.commandStore.Return(res);
         return NextSocketAction.Continue;
     }
 
@@ -433,9 +447,11 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
             long win = streamSendWindows.getOrDefault(cmd.streamId, DEFAULT_INITIAL_WINDOW)
                     + (cmd.windowSizeIncrement & 0xFFFFFFFFL);
             if (win > MAX_WINDOW) {
-                CmdRstStream rst = new CmdRstStream(cmd.streamId);
+                CmdRstStream rst = (CmdRstStream) protocolHandler.commandStore.rent(H2Type.RstStream);
+                rst.init(cmd.streamId);
                 rst.errorCode = H2ErrorCode.FLOW_CONTROL_ERROR;
                 protocolHandler.post(rst, true);
+                protocolHandler.commandStore.Return(rst);
                 streamSendWindows.remove(cmd.streamId);
                 return NextSocketAction.Continue;
             }
@@ -474,8 +490,10 @@ public class H2InboundHandler implements H2Handler, InboundHandler {
         if (cmd.flags.ack())
             return NextSocketAction.Continue;
 
-        CmdPing res = new CmdPing(cmd.streamId, new H2Flags(H2Flags.FLAGS_ACK), cmd.opaqueData);
+        CmdPing res = (CmdPing) protocolHandler.commandStore.rent(H2Type.Ping);
+        res.init(cmd.streamId, new H2Flags(H2Flags.FLAGS_ACK), cmd.opaqueData);
         protocolHandler.post(res, true);
+        protocolHandler.commandStore.Return(res);
         return NextSocketAction.Continue;
     }
 

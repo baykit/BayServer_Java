@@ -33,9 +33,22 @@ public class CmdEndRequest extends FcgCommand {
     int appStatus;
     int protocolStatus = FCGI_REQUEST_COMPLETE;
 
-    public CmdEndRequest(int reqId) {
-        super(FcgType.EndRequest, reqId);
+    public CmdEndRequest() {
+        super(FcgType.EndRequest);
     }
+
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
+    }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
 
     @Override
     public void unpack(FcgPacket pkt) throws IOException {

@@ -19,8 +19,9 @@ public class AjpProtocolHandler
             PacketPacker<AjpPacket> packetPacker,
             CommandUnPacker<AjpPacket> commandUnpacker,
             CommandPacker<AjpCommand, AjpPacket, ?> commandPacker,
+            CommandStore<AjpCommand> cmdStore,
             boolean serverMode) {
-        super(packetUnpacker, packetPacker, commandUnpacker, commandPacker, ajpHandler, serverMode);
+        super(packetUnpacker, packetPacker, commandUnpacker, commandPacker, ajpHandler, cmdStore, serverMode);
     }
 
     @Override

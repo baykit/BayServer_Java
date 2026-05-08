@@ -26,9 +26,10 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
 
         @Override
         public ProtocolHandler<FcgCommand, FcgPacket> createProtocolHandler(
-                PacketStore<FcgPacket> pktStore) {
+                PacketStore<FcgPacket> pktStore,
+                CommandStore<FcgCommand> cmdStore) {
             FcgInboundHandler inboundHandler = new FcgInboundHandler();
-            FcgCommandUnPacker commandUnpacker = new FcgCommandUnPacker(inboundHandler);
+            FcgCommandUnPacker commandUnpacker = new FcgCommandUnPacker(inboundHandler, cmdStore);
             FcgPacketUnPacker packetUnpacker = new FcgPacketUnPacker(commandUnpacker, pktStore);
             PacketPacker packetPacker = new PacketPacker<>();
             CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
@@ -39,6 +40,7 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
                             packetPacker,
                             commandUnpacker,
                             commandPacker,
+                            cmdStore,
                             true);
             inboundHandler.init(protocolHandler);
             return protocolHandler;
@@ -108,13 +110,16 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
         HttpUtil.sendMimeHeaders(tur.res.headers, hout);
         HttpUtil.sendNewLine(hout);
         byte[] data = hout.toByteArray();
-        FcgCommand cmd = new CmdStdOut(tur.req.key, data, 0, data.length);
+        CmdStdOut cmd = (CmdStdOut) protocolHandler.commandStore.rent(FcgType.Stdout);
+        cmd.init(tur.req.key, data, 0, data.length);
         protocolHandler.post(cmd, false);
+        protocolHandler.commandStore.Return(cmd);
     }
 
     @Override
     public boolean sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
-        CmdStdOut cmd = new CmdStdOut(tur.req.key, bytes, ofs, len);
+        CmdStdOut cmd = (CmdStdOut) protocolHandler.commandStore.rent(FcgType.Stdout);
+        cmd.init(tur.req.key, bytes, ofs, len);
         return protocolHandler.post(cmd, false, lis);
     }
 
@@ -129,11 +134,14 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
         BayLog.debug("%s PH:endTour: tur=%s", ship(), tur);
 
         // Send empty stdout command
-        FcgCommand cmd = new CmdStdOut(tur.req.key);
+        FcgCommand cmd = protocolHandler.commandStore.rent(FcgType.Stdout);
+        cmd.init(tur.req.key);
         protocolHandler.post(cmd, true);
+        protocolHandler.commandStore.Return(cmd);
 
         // Send end request command
-        cmd = new CmdEndRequest(tur.req.key);
+        cmd = protocolHandler.commandStore.rent(FcgType.EndRequest);
+        cmd.init(tur.req.key);
         Runnable ensureFunc = () -> {
             // DO NOT close socket by FCGI server
             //if(!keepAlive)
@@ -151,6 +159,9 @@ public class FcgInboundHandler implements InboundHandler, FcgHandler {
             BayLog.debug("%s post faile in sendEndTour: tur=%s", ship(), tur);
             ensureFunc.run();
             throw e;
+        }
+        finally {
+            protocolHandler.commandStore.Return(cmd);
         }
     }
 

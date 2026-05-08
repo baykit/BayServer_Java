@@ -46,11 +46,12 @@ public class ProtocolHandlerStore extends ObjectStore<ProtocolHandler> {
 
 
         public void addAgent(int agtId) {
-            PacketStore store = PacketStore.getStore(protocol, agtId);
+            PacketStore pktStore = PacketStore.getStore(protocol, agtId);
+            CommandStore cmdStore = CommandStore.getStore(protocol, agtId);
             while(stores.size() < agtId) {
                 stores.add(null);
             }
-            stores.set(agtId-1, new ProtocolHandlerStore(protocol, serverMode, protocolHandlerFactory, store));
+            stores.set(agtId-1, new ProtocolHandlerStore(protocol, serverMode, protocolHandlerFactory, pktStore, cmdStore));
         }
 
         public void removeAgent(int agtId) {
@@ -67,11 +68,12 @@ public class ProtocolHandlerStore extends ObjectStore<ProtocolHandler> {
             String protocol,
             boolean svrMode,
             ProtocolHandlerFactory<?, ?> phFactory,
-            PacketStore pktStore) {
+            PacketStore pktStore,
+            CommandStore cmdStore) {
         this.protocol = protocol;
         this.serverMode = svrMode;
         factory = (() -> {
-            return phFactory.createProtocolHandler(pktStore);
+            return phFactory.createProtocolHandler(pktStore, cmdStore);
         });
     }
 

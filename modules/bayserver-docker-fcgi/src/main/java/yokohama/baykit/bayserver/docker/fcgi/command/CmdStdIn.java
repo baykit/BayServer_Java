@@ -15,12 +15,8 @@ import java.io.IOException;
  */
 public class CmdStdIn extends InOutCommandBase {
 
-    public CmdStdIn(int reqId) {
-        super(FcgType.Stdin, reqId);
-    }
-
-    public CmdStdIn(int reqId, byte[] data, int start, int len) {
-        super(FcgType.Stdin, reqId, data, start, len);
+    public CmdStdIn() {
+        super(FcgType.Stdin);
     }
 
     @Override

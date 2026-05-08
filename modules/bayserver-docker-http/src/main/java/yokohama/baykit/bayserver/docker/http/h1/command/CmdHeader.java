@@ -70,54 +70,49 @@ public class CmdHeader extends H1Command {
     private static final byte[] H11_200 = "HTTP/1.1 200 OK\r\n".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
     private static final byte[] H10_200 = "HTTP/1.0 200 OK\r\n".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
 
-    public CmdHeader(boolean req) {
+    public CmdHeader() {
         super(H1Type.Header);
+    }
+
+    public void init(boolean req) {
         this.req = req;
     }
 
-    public static CmdHeader newReqHeader(String method, String uri, String version) {
-        CmdHeader h = new CmdHeader(true);
-        h.method = method;
-        h.uri = uri;
-        h.version = version;
-        return h;
+    public void initReqHeader(String method, String uri, String version) {
+        this.req = true;
+        this.method = method;
+        this.uri = uri;
+        this.version = version;
     }
 
 
-    public static CmdHeader newResHeader(Headers headers, String version) {
-        CmdHeader h = new CmdHeader(false);
-        h.version = version;
-        h.status = headers.status();
+    public void initResHeader(Headers headers, String version) {
+        this.req = false;
+        this.version = version;
+        this.status = headers.status();
         for(String name : headers.headerNames()) {
             for(String value : headers.headerValues(name)) {
-                h.addHeader(name, value);
+                this.addHeader(name, value);
             }
-        }
-        return h;
-    }
-
-    public void addHeader(String name, String value) {
-        if(value == null) {
-            BayLog.warn("Header value is null: " + name);
-        }
-        else {
-            headers.add(new String[]{name, value});
         }
     }
 
-    public void setHeader(String name, String value) {
-        if(value == null) {
-            BayLog.warn("Header value is null: " + name);
-            return;
-        }
-        for(String[] nv : headers) {
-            if (nv[0].equalsIgnoreCase(name)) {
-                nv[1] = value;
-                return;
-            }
-        }
-        headers.add(new String[]{name, value});
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+        this.req = false;
+        this.method = null;
+        this.uri = null;
+        this.version = null;
+        headers.clear();
     }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
 
     @Override
     public void unpack(H1Packet pkt) throws IOException {
@@ -128,7 +123,7 @@ public class CmdHeader extends H1Command {
         int lineStartPos = 0;
         int lineLen = 0;
 
-loop:
+        loop:
         for (pos = 0; pos < dataLen; pos++) {
             int b = acc.getByte();
             switch(b) {
@@ -182,6 +177,33 @@ loop:
     @Override
     public NextSocketAction handle(H1CommandHandler handler) throws IOException {
         return handler.handleHeader(this);
+    }
+
+    ///////////////////////////////////////////////
+    // Custom methods
+    ///////////////////////////////////////////////
+
+    public void addHeader(String name, String value) {
+        if(value == null) {
+            BayLog.warn("Header value is null: " + name);
+        }
+        else {
+            headers.add(new String[]{name, value});
+        }
+    }
+
+    public void setHeader(String name, String value) {
+        if(value == null) {
+            BayLog.warn("Header value is null: " + name);
+            return;
+        }
+        for(String[] nv : headers) {
+            if (nv[0].equalsIgnoreCase(name)) {
+                nv[1] = value;
+                return;
+            }
+        }
+        headers.add(new String[]{name, value});
     }
 
 

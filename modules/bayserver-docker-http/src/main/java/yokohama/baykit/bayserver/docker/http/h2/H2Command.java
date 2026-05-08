@@ -9,17 +9,20 @@ public abstract class H2Command extends Command<H2Command, H2Packet, H2CommandHa
     public H2Flags flags;
     public int streamId;
 
-    public H2Command(int type, int streamId) {
-        this(type, streamId, null);
+    public H2Command(int type) {
+        super(type);
     }
 
-    public H2Command(int type, int streamId, H2Flags flags) {
-        super(type);
+    public void init(int streamId, H2Flags flags) {
         this.streamId = streamId;
         if(flags == null)
             this.flags = new H2Flags();
         else
             this.flags = flags;
+    }
+
+    public void init(int streamId) {
+        this.init(streamId, null);
     }
 
     @Override

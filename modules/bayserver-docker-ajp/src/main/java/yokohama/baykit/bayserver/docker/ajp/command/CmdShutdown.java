@@ -19,6 +19,20 @@ public class CmdShutdown extends AjpCommand {
         super(AjpType.Shutdown, true);
     }
 
+
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
+    }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
+
     @Override
     public void unpack(AjpPacket pkt) throws IOException {
         super.unpack(pkt);
@@ -33,4 +47,6 @@ public class CmdShutdown extends AjpCommand {
     public NextSocketAction handle(AjpCommandHandler handler) throws IOException {
         return handler.handleShutdown(this);
     }
+
+
 }

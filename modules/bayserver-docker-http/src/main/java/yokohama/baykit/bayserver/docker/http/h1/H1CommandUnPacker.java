@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.docker.http.h1;
 
 import yokohama.baykit.bayserver.BayLog;
+import yokohama.baykit.bayserver.protocol.CommandStore;
 import yokohama.baykit.bayserver.protocol.CommandUnPacker;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.http.h1.command.*;
@@ -13,9 +14,11 @@ public class H1CommandUnPacker extends CommandUnPacker<H1Packet> {
 
     boolean serverMode;
     H1CommandHandler handler;
+    CommandStore<H1Command> store;
 
-    public H1CommandUnPacker(H1CommandHandler handler, boolean svrMode) {
+    public H1CommandUnPacker(H1CommandHandler handler, CommandStore<H1Command> store, boolean svrMode) {
         this.handler = handler;
+        this.store = store;
         this.serverMode = svrMode;
         reset();
     }
@@ -40,11 +43,12 @@ public class H1CommandUnPacker extends CommandUnPacker<H1Packet> {
         H1Command cmd;
         switch(pac.type()) {
             case H1Type.Header:
-                cmd = new CmdHeader(serverMode);
+                cmd = store.rent(H1Type.Header);
+                ((CmdHeader)cmd).init(serverMode);
                 break;
 
             case H1Type.Content:
-                cmd = new CmdContent();
+                cmd = store.rent(H1Type.Content);
                 break;
 
             default:
@@ -53,7 +57,9 @@ public class H1CommandUnPacker extends CommandUnPacker<H1Packet> {
         }
 
         cmd.unpack(pac);
-        return cmd.handle(handler);
+        NextSocketAction res = cmd.handle(handler);
+        store.Return(cmd);
+        return res;
     }
 
     public boolean reqFinished() {

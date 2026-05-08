@@ -46,14 +46,22 @@ public class CmdSettings extends H2Command {
     public ArrayList<Item> items = new ArrayList<>();
 
 
-    public CmdSettings(int streamId) {
-        this(streamId, null);
+    public CmdSettings() {
+        super(H2Type.Settings);
     }
 
-    public CmdSettings(int streamId, H2Flags flags) {
-        super(H2Type.Settings, streamId, flags);
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
     }
 
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
     @Override
     public void unpack(H2Packet pkt) throws IOException {
         super.unpack(pkt);

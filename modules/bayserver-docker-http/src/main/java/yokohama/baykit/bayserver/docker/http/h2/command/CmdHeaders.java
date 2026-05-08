@@ -36,15 +36,22 @@ public class CmdHeaders extends H2Command {
     public int streamDependency;
     public int weight;
     
-    public CmdHeaders(int streamId, H2Flags flags) {
-        super(H2Type.Headers, streamId, flags);
+    public CmdHeaders() {
+        super(H2Type.Headers);
     }
 
-    public CmdHeaders(int streamId) {
-        this(streamId, null);
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
     }
 
-
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
 
     @Override
     public void unpack(H2Packet pkt) throws IOException {

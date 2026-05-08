@@ -24,9 +24,10 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
 
         @Override
         public ProtocolHandler<AjpCommand, AjpPacket> createProtocolHandler(
-                PacketStore<AjpPacket> pktStore) {
+                PacketStore<AjpPacket> pktStore,
+                CommandStore<AjpCommand> cmdStore) {
             AjpInboundHandler inboundHandler = new AjpInboundHandler();
-            AjpCommandUnPacker commandUnpacker = new AjpCommandUnPacker(inboundHandler);
+            AjpCommandUnPacker commandUnpacker = new AjpCommandUnPacker(inboundHandler, cmdStore);
             AjpPacketUnPacker packetUnpacker = new AjpPacketUnPacker(pktStore, commandUnpacker);
             PacketPacker packetPacker = new PacketPacker<>();
             CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
@@ -37,6 +38,7 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
                             packetPacker,
                             commandUnpacker,
                             commandPacker,
+                            cmdStore,
                             true);
             inboundHandler.init(protocolHandler);
             return protocolHandler;
@@ -102,8 +104,11 @@ public class AjpInboundHandler implements InboundHandler, AjpHandler {
 
     @Override
     public boolean sendContent(Tour tur, byte[] bytes, int ofs, int len, DataConsumeListener lis) throws IOException {
-        CmdSendBodyChunk cmd = new CmdSendBodyChunk(bytes, ofs, len);
-        return protocolHandler.post(cmd, false, lis);
+        CmdSendBodyChunk cmd = (CmdSendBodyChunk) protocolHandler.commandStore.rent(AjpType.SendBodyChunk);
+        cmd.init(bytes, ofs, len);
+        boolean available = protocolHandler.post(cmd, false, lis);
+        protocolHandler.commandStore.Return(cmd);
+        return available;
     }
 
     @Override

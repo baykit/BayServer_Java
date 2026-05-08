@@ -13,10 +13,13 @@ import yokohama.baykit.bayserver.bcf.BcfKeyVal;
 import yokohama.baykit.bayserver.common.WarpShip;
 import yokohama.baykit.bayserver.docker.Docker;
 import yokohama.baykit.bayserver.docker.base.WarpBase;
+import yokohama.baykit.bayserver.docker.http.h1.H1CommandFactory;
 import yokohama.baykit.bayserver.docker.http.h1.H1PacketFactory;
 import yokohama.baykit.bayserver.docker.http.h1.H1WarpHandler;
+import yokohama.baykit.bayserver.docker.http.h2.H2CommandFactory;
 import yokohama.baykit.bayserver.docker.http.h2.H2PacketFactory;
 import yokohama.baykit.bayserver.docker.http.h2.H2WarpHandler;
+import yokohama.baykit.bayserver.protocol.CommandStore;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
 import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
@@ -245,6 +248,14 @@ public class HtpWarpDocker extends WarpBase implements HtpDocker {
         PacketStore.registerProtocol(
                 H2_PROTO_NAME,
                 new H2PacketFactory()
+        );
+        CommandStore.registerProtocol(
+                H1_PROTO_NAME,
+                new H1CommandFactory()
+        );
+        CommandStore.registerProtocol(
+                H2_PROTO_NAME,
+                new H2CommandFactory()
         );
         ProtocolHandlerStore.registerProtocol(
                 H1_PROTO_NAME,

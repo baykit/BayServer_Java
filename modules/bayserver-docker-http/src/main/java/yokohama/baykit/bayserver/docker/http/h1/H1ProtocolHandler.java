@@ -14,8 +14,9 @@ public class H1ProtocolHandler extends ProtocolHandler<H1Command, H1Packet> {
             PacketPacker<H1Packet> packetPacker,
             CommandUnPacker<H1Packet> commandUnpacker,
             CommandPacker<H1Command, H1Packet, ?> commandPacker,
+            CommandStore<H1Command> cmdStore,
             boolean serverMode) {
-        super(packetUnpacker, packetPacker, commandUnpacker, commandPacker, h1Handler, serverMode);
+        super(packetUnpacker, packetPacker, commandUnpacker, commandPacker, h1Handler, cmdStore, serverMode);
     }
 
 

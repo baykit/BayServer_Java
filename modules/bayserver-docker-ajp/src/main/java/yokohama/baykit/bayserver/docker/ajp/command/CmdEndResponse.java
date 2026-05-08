@@ -23,6 +23,19 @@ public class CmdEndResponse extends AjpCommand {
         super(AjpType.EndResponse, false);
     }
 
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+        reuse = false;
+    }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
+    ///
     @Override
     public void pack(AjpPacket pkt) throws IOException {
         AjpPacket.AjpAccessor acc = pkt.newAjpDataAccessor();

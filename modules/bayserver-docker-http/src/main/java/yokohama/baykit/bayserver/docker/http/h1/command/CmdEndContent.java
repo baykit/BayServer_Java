@@ -17,6 +17,19 @@ public class CmdEndContent extends H1Command {
         super(H1Type.EndContent);
     }
 
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
+    }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
+
     @Override
     public void unpack(H1Packet pkt) {
     }

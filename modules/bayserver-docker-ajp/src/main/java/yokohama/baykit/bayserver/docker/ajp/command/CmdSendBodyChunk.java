@@ -23,12 +23,28 @@ public class CmdSendBodyChunk extends AjpCommand {
 
     public static final int MAX_CHUNKLEN = AjpPacket.MAX_DATA_LEN - 4;
 
-    public CmdSendBodyChunk(byte[] buf, int ofs, int len) {
+    public CmdSendBodyChunk() {
         super(AjpType.SendBodyChunk, false);
+    }
+
+    public void init(byte[] buf, int ofs, int len) {
         this.chunk = buf;
         this.offset = ofs;
         this.length = len;
     }
+
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
+    }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
 
     @Override
     public void pack(AjpPacket pkt) throws IOException {

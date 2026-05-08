@@ -9,8 +9,11 @@ public abstract class FcgCommand extends Command<FcgCommand, FcgPacket, FcgComma
 
     public int reqId;
 
-    public FcgCommand(int type, int reqId) {
+    public FcgCommand(int type) {
         super(type);
+    }
+
+    public void init(int reqId) {
         this.reqId = reqId;
     }
 

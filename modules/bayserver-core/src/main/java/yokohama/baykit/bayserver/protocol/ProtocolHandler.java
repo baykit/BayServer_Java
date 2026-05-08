@@ -17,6 +17,7 @@ public abstract class ProtocolHandler<C extends Command<C, P, ?>, P extends Pack
     public final CommandUnPacker<P> commandUnpacker;
     public final CommandPacker<C, P, ?> commandPacker;
     public final CommandHandler<C>  commandHandler;
+    public final CommandStore<C> commandStore;
     public final boolean serverMode;
     public Ship ship;
 
@@ -25,12 +26,15 @@ public abstract class ProtocolHandler<C extends Command<C, P, ?>, P extends Pack
             PacketPacker<P> packetPacker,
             CommandUnPacker<P> commandUnpacker,
             CommandPacker<C, P, ?> commandPacker,
-            CommandHandler<C> commandHandler, boolean serverMode) {
+            CommandHandler<C> commandHandler,
+            CommandStore<C> cmdStore,
+            boolean serverMode) {
         this.packetUnpacker = packetUnpacker;
         this.packetPacker = packetPacker;
         this.commandUnpacker = commandUnpacker;
         this.commandPacker = commandPacker;
         this.commandHandler = commandHandler;
+        this.commandStore = cmdStore;
         this.serverMode = serverMode;
     }
 

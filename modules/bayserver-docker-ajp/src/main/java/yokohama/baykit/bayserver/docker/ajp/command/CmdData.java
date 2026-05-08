@@ -23,11 +23,10 @@ public class CmdData extends AjpCommand {
     public byte[] data;
 
     public CmdData() {
-        this(null, 0, 0);
+        super(AjpType.Data, true);
     }
 
-    public CmdData(byte[] data, int start, int length) {
-        super(AjpType.Data, true);
+    public void init(byte[] data, int start, int length) {
         this.start = start;
         this.length = length;
         this.data = data;
@@ -42,6 +41,19 @@ public class CmdData extends AjpCommand {
         return s;*/
         return "Data";
     }
+
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
+    }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
 
     @Override
     public void unpack(AjpPacket pkt) throws IOException {

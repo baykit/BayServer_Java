@@ -23,6 +23,18 @@ public class CmdGetBodyChunk extends AjpCommand {
         super(AjpType.GetBodyChunk, false);
     }
 
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
+    }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
     @Override
     public void pack(AjpPacket pkt) throws IOException {
         AjpPacket.AjpAccessor acc = pkt.newAjpDataAccessor();

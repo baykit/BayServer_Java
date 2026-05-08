@@ -25,9 +25,10 @@ public class H1WarpHandler implements WarpHandler, H1Handler {
 
         @Override
         public ProtocolHandler<H1Command, H1Packet> createProtocolHandler(
-                PacketStore<H1Packet> pktStore) {
+                PacketStore<H1Packet> pktStore,
+                CommandStore<H1Command> cmdStore) {
             H1WarpHandler warpHandler = new H1WarpHandler();
-            H1CommandUnPacker commandUnpacker = new H1CommandUnPacker(warpHandler, false);
+            H1CommandUnPacker commandUnpacker = new H1CommandUnPacker(warpHandler, cmdStore, false);
             H1PacketUnpacker packetUnpacker = new H1PacketUnpacker(commandUnpacker, pktStore);
             PacketPacker packetPacker = new PacketPacker<>();
             CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
@@ -38,6 +39,7 @@ public class H1WarpHandler implements WarpHandler, H1Handler {
                             packetPacker,
                             commandUnpacker,
                             commandPacker,
+                            cmdStore,
                             false);
             warpHandler.init(protocolHandler);
             return protocolHandler;
@@ -188,11 +190,8 @@ public class H1WarpHandler implements WarpHandler, H1Handler {
         WarpShip sip = ship();
         String newUri = sip.docker().warpBase() + tur.req.uri.substring(townPath.length());
 
-        CmdHeader cmd =
-                CmdHeader.newReqHeader(
-                        tur.req.method,
-                        newUri,
-                        "HTTP/1.1");
+        CmdHeader cmd = (CmdHeader) protocolHandler.commandStore.rent(H1Type.Header);
+        cmd.initReqHeader(tur.req.method, newUri, "HTTP/1.1");
 
         tur.req.headers.headerNames().forEach(
                 name -> {
@@ -233,14 +232,17 @@ public class H1WarpHandler implements WarpHandler, H1Handler {
 
     @Override
     public void sendReqContent(Tour tur, byte[] buf, int start, int len, DataConsumeListener lis) throws IOException {
-        CmdContent cmd = new CmdContent(buf, start, len);
-       ship().post(cmd, lis);
+        CmdContent cmd = (CmdContent) protocolHandler.commandStore.rent(H1Type.Content);
+        cmd.init(buf, start, len);
+        ship().post(cmd, lis);
+        protocolHandler.commandStore.Return(cmd);
     }
 
     @Override
     public void sendEndReq(Tour tur, boolean keepAlive, DataConsumeListener lis) throws IOException {
-        CmdEndContent cmd = new CmdEndContent();
+        CmdEndContent cmd = (CmdEndContent) protocolHandler.commandStore.rent(H1Type.EndContent);
         ship().post(cmd, lis);
+        protocolHandler.commandStore.Return(cmd);
     }
 
     @Override

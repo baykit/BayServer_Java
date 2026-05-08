@@ -24,18 +24,33 @@ public abstract class InOutCommandBase extends FcgCommand {
     public int length;
     public byte[] data;
 
-    public InOutCommandBase(int type, int reqId) {
-        super(type, reqId);
+    public InOutCommandBase(int type) {
+        super(type);
     }
 
-    public InOutCommandBase(int type, int reqId, byte[] data, int start, int len) {
-        super(type, reqId);
+    public void init(int reqId, byte[] data, int start, int len) {
+        super.init(reqId);
         if(data == null)
             throw new NullPointerException();
         this.data = data;
         this.start = start;
         this.length = len;
     }
+
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+        data = null;
+        start = 0;
+        length = 0;
+    }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
 
     @Override
     public void unpack(FcgPacket pkt) throws IOException {
