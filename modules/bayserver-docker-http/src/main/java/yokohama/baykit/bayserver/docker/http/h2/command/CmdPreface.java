@@ -16,10 +16,22 @@ public class CmdPreface extends H2Command {
     public static final byte[] prefaceBytes = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes();
     public String protocol;
 
-    public CmdPreface(int streamId, H2Flags flags) {
-        super(H2Type.Preface, streamId, flags);
+    public CmdPreface() {
+        super(H2Type.Preface);
     }
 
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
+    }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
     @Override
     public void unpack(H2Packet pkt) throws IOException {
         PacketPartAccessor acc = pkt.newDataAccessor();

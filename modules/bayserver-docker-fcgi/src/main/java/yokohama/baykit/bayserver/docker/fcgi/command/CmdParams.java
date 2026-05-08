@@ -68,9 +68,28 @@ public class CmdParams extends FcgCommand {
 
     public ArrayList<String[]> params = new ArrayList<>();
 
-    public CmdParams(int reqId) {
-        super(FcgType.Params, reqId);
+    public CmdParams() {
+        super(FcgType.Params);
     }
+
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+        // Clear the accumulated name/value pairs — without this, a
+        // pool-reused CmdParams keeps the previous request's params and
+        // addParam() in the next request just appends, growing the
+        // encoded PARAMS payload unboundedly. The upstream FCGI
+        // worker then either parses garbage names/values or hits its
+        // own buffer limit.
+        params.clear();
+    }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
 
     @Override
     public void unpack(FcgPacket pkt) throws IOException {

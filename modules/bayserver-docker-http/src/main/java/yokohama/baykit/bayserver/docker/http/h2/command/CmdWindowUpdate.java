@@ -18,14 +18,22 @@ public class CmdWindowUpdate extends H2Command {
 
     public int windowSizeIncrement;
 
-    public CmdWindowUpdate(int streamId, H2Flags flags) {
-        super(H2Type.WindowUpdate, streamId, flags);
+    public CmdWindowUpdate() {
+        super(H2Type.WindowUpdate);
     }
 
-    public CmdWindowUpdate(int streamId) {
-        this(streamId, null);
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
     }
 
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
     @Override
     public void unpack(H2Packet pkt) throws IOException {
         super.unpack(pkt);

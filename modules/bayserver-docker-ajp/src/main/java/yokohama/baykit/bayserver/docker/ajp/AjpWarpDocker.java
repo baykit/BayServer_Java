@@ -3,6 +3,7 @@ package yokohama.baykit.bayserver.docker.ajp;
 import yokohama.baykit.bayserver.agent.GrandAgent;
 import yokohama.baykit.bayserver.agent.multiplexer.PlainTransporter;
 import yokohama.baykit.bayserver.docker.base.WarpBase;
+import yokohama.baykit.bayserver.protocol.CommandStore;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
 import yokohama.baykit.bayserver.rudder.NetworkChannelRudder;
@@ -43,6 +44,10 @@ public class AjpWarpDocker extends WarpBase implements AjpDocker {
         PacketStore.registerProtocol(
                 PROTO_NAME,
                 new AjpPacketFactory()
+        );
+        CommandStore.registerProtocol(
+                PROTO_NAME,
+                new AjpCommandFactory()
         );
         ProtocolHandlerStore.registerProtocol(
                 PROTO_NAME,

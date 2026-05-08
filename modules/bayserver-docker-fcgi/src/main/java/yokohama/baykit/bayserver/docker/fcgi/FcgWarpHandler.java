@@ -26,9 +26,10 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
 
         @Override
         public ProtocolHandler<FcgCommand, FcgPacket> createProtocolHandler(
-                PacketStore<FcgPacket> pktStore) {
+                PacketStore<FcgPacket> pktStore,
+                CommandStore<FcgCommand> cmdStore) {
             FcgWarpHandler warpHandler = new FcgWarpHandler();
-            FcgCommandUnPacker commandUnpacker = new FcgCommandUnPacker(warpHandler);
+            FcgCommandUnPacker commandUnpacker = new FcgCommandUnPacker(warpHandler, cmdStore);
             FcgPacketUnPacker packetUnpacker = new FcgPacketUnPacker(commandUnpacker, pktStore);
             PacketPacker packetPacker = new PacketPacker<>();
             CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
@@ -39,6 +40,7 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
                             packetPacker,
                             commandUnpacker,
                             commandPacker,
+                            cmdStore,
                             false);
             warpHandler.init(protocolHandler);
             return protocolHandler;
@@ -298,15 +300,27 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
 
 
     private void sendStdIn(Tour tur, byte[] data, int ofs, int len, DataConsumeListener lis) throws IOException {
-        CmdStdIn cmd = new CmdStdIn(WarpData.get(tur).warpId, data, ofs, len);
-        ship().post(cmd, lis);
+        CmdStdIn cmd = (CmdStdIn) protocolHandler.commandStore.rent(FcgType.Stdin);
+        cmd.init(WarpData.get(tur).warpId, data, ofs, len);
+        // Return via the listener so the pool object stays held until after
+        // cmd.pack() has actually run on it. When the warp socket isn't
+        // connected yet, ship.post() queues the cmd reference into cmdBuf
+        // and pack runs only at flush; returning inline would put a still-
+        // referenced cmd back into the pool where a subsequent rent could
+        // mutate it before pack reads it. See sendParams() for the same
+        // pattern.
+        ship().post(cmd, avail -> {
+            protocolHandler.commandStore.Return(cmd);
+            if (lis != null) lis.dataConsumed(avail);
+        });
     }
 
     private void sendBeginReq(Tour tur) throws IOException {
-        CmdBeginRequest cmd = new CmdBeginRequest(WarpData.get(tur).warpId);
+        CmdBeginRequest cmd = (CmdBeginRequest) protocolHandler.commandStore.rent(FcgType.BeginRequest);
+        cmd.init(WarpData.get(tur).warpId);
         cmd.role = CmdBeginRequest.FCGI_RESPONDER;
         cmd.keepConn = true;
-        ship().post(cmd);
+        ship().post(cmd, avail -> protocolHandler.commandStore.Return(cmd));
     }
 
 
@@ -328,7 +342,8 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
         }
 
         int warpId = WarpData.get(tur).warpId;
-        final CmdParams cmd = new CmdParams(warpId);
+        final CmdParams cmd = (CmdParams) protocolHandler.commandStore.rent(FcgType.Params);
+        cmd.init(warpId);
 
         final String scriptFname[] = new String[1];
         try {
@@ -358,10 +373,17 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
                     BayLog.info("%s fcgi_warp: env: %s=%s", ship(), kv[0], kv[1]));
         }
 
-        ship().post(cmd);
+        // Return via the listener — cf. sendStdIn() above. Returning
+        // inline would race with cmdBuf flush (= ship not connected yet)
+        // and would let the second rent pick up the just-Returned cmd
+        // with its params freshly reset, producing two empty PARAMS
+        // records at flush time. The listener path defers Return until
+        // after pack has actually consumed the cmd's state.
+        ship().post(cmd, avail -> protocolHandler.commandStore.Return(cmd));
 
-        CmdParams cmdParamsEnd = new CmdParams(warpId);
-        ship().post(cmdParamsEnd);
+        CmdParams cmdParamsEnd = (CmdParams) protocolHandler.commandStore.rent(FcgType.Params);
+        cmdParamsEnd.init(warpId);
+        ship().post(cmdParamsEnd, avail -> protocolHandler.commandStore.Return(cmdParamsEnd));
     }
 
     WarpShip ship() {

@@ -25,9 +25,10 @@ public class AjpWarpHandler implements WarpHandler, AjpHandler {
 
         @Override
         public ProtocolHandler<AjpCommand, AjpPacket> createProtocolHandler(
-                PacketStore<AjpPacket> pktStore) {
+                PacketStore<AjpPacket> pktStore,
+                CommandStore<AjpCommand> cmdStore) {
             AjpWarpHandler warpHandler = new AjpWarpHandler();
-            AjpCommandUnPacker commandUnpacker = new AjpCommandUnPacker(warpHandler);
+            AjpCommandUnPacker commandUnpacker = new AjpCommandUnPacker(warpHandler, cmdStore);
             AjpPacketUnPacker packetUnpacker = new AjpPacketUnPacker(pktStore, commandUnpacker);
             PacketPacker packetPacker = new PacketPacker<>();
             CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
@@ -38,6 +39,7 @@ public class AjpWarpHandler implements WarpHandler, AjpHandler {
                             packetPacker,
                             commandUnpacker,
                             commandPacker,
+                            cmdStore,
                             true);
             warpHandler.init(protocolHandler);
             return protocolHandler;
@@ -292,9 +294,11 @@ public class AjpWarpHandler implements WarpHandler, AjpHandler {
         BayLog.debug("%s construct contents", tur);
         WarpShip wsip = ship();
 
-        CmdData cmd = new CmdData(data, ofs, len);
+        CmdData cmd = (CmdData) protocolHandler.commandStore.rent(AjpType.Data);
+        cmd.init(data, ofs, len);
         cmd.toServer = true;
         ship().post(cmd, lis);
+        protocolHandler.commandStore.Return(cmd);
     }
 
     WarpShip ship() {

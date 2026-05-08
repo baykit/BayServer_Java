@@ -147,6 +147,28 @@ public class CmdForwardRequest extends AjpCommand {
         return s;
     }
 
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+        method = null;
+        protocol = null;
+        reqUri = null;
+        remoteAddr = null;
+        remoteHost = null;
+        serverName = null;
+        serverPort = 0;
+        isSsl = false;
+        headers.clear();
+        attributes.clear();
+    }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
+
     @Override
     public void pack(AjpPacket pkt) throws IOException {
         //BayLog.info("%s", this);

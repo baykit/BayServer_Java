@@ -29,9 +29,10 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
 
         @Override
         public ProtocolHandler<H1Command, H1Packet> createProtocolHandler(
-                PacketStore<H1Packet> pktStore) {
+                PacketStore<H1Packet> pktStore,
+                CommandStore<H1Command> cmdStore) {
             H1InboundHandler inboundHandler = new H1InboundHandler();
-            H1CommandUnPacker commandUnpacker = new H1CommandUnPacker(inboundHandler, true);
+            H1CommandUnPacker commandUnpacker = new H1CommandUnPacker(inboundHandler, cmdStore, true);
             H1PacketUnpacker packetUnpacker = new H1PacketUnpacker(commandUnpacker, pktStore);
             PacketPacker packetPacker = new PacketPacker<>();
             CommandPacker commandPacker = new CommandPacker<>(packetPacker, pktStore);
@@ -42,6 +43,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
                             packetPacker,
                             commandUnpacker,
                             commandPacker,
+                            cmdStore,
                             true);
             inboundHandler.init(protocolHandler);
             return protocolHandler;
@@ -159,7 +161,9 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
                             BayLog.info("%s resHeader:%s=%s", tur, name, value)));
         }
 
-        CmdHeader cmd = CmdHeader.newResHeader(tur.res.headers, tur.req.protocol);
+        CmdHeader cmd = (CmdHeader) protocolHandler.commandStore.rent(H1Type.Header);
+        cmd.init(false);
+        cmd.initResHeader(tur.res.headers, tur.req.protocol);
         protocolHandler.post(cmd, false);
     }
 
@@ -176,11 +180,17 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
             buf[p++] = '\r'; buf[p++] = '\n';
             System.arraycopy(bytes, ofs, buf, p, len); p += len;
             buf[p++] = '\r'; buf[p] = '\n';
-            CmdContent cmd = new CmdContent(buf, 0, buf.length);
-            return protocolHandler.post(cmd, false, lis);
+            CmdContent cmd = (CmdContent) protocolHandler.commandStore.rent(H1Type.Content);
+            cmd.init(buf, 0, buf.length);
+            boolean available = protocolHandler.post(cmd, false, lis);
+            protocolHandler.commandStore.Return(cmd);
+            return available;
         }
-        CmdContent cmd = new CmdContent(bytes, ofs, len);
-        return protocolHandler.post(cmd, false, lis);
+        CmdContent cmd = (CmdContent) protocolHandler.commandStore.rent(H1Type.Content);
+        cmd.init(bytes, ofs, len);
+        boolean available = protocolHandler.post(cmd, false, lis);
+        protocolHandler.commandStore.Return(cmd);
+        return available;
     }
 
     @Override
@@ -199,9 +209,12 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         // CmdEndContent below, which carries the keepalive callback.
         if (chunkedResponse) {
             try {
+                CmdContent cmd = (CmdContent) protocolHandler.commandStore.rent(H1Type.Content);
+                cmd.init(LAST_CHUNK, 0, LAST_CHUNK.length);
                 protocolHandler.post(
-                        new CmdContent(LAST_CHUNK, 0, LAST_CHUNK.length),
+                        cmd,
                         false);
+                protocolHandler.commandStore.Return(cmd);
             }
             catch (IOException ioe) {
                 BayLog.debug(ioe, "%s post(last-chunk) failed", ship);
@@ -211,7 +224,7 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         }
 
         // Send end request command
-        CmdEndContent cmd = new CmdEndContent();
+        CmdEndContent cmd = (CmdEndContent) protocolHandler.commandStore.rent(H1Type.EndContent);
         int sid = ship.shipId;
         Runnable ensureFunc = () -> {
             BayLog.debug("%s H1 callback of sendEnd: keep=%s", ship, keepAlive);
@@ -233,6 +246,9 @@ public class H1InboundHandler implements H1Handler, InboundHandler {
         catch(IOException e) {
             ensureFunc.run();
             throw e;
+        }
+        finally {
+            protocolHandler.commandStore.Return(cmd);
         }
 
     }

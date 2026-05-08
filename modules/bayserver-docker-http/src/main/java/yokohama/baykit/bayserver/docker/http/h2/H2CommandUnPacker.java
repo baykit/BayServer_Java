@@ -1,9 +1,9 @@
 package yokohama.baykit.bayserver.docker.http.h2;
 
 import yokohama.baykit.bayserver.BayLog;
-import yokohama.baykit.bayserver.BayServer;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.http.h2.command.*;
+import yokohama.baykit.bayserver.protocol.CommandStore;
 import yokohama.baykit.bayserver.protocol.CommandUnPacker;
 import yokohama.baykit.bayserver.protocol.ProtocolException;
 
@@ -33,6 +33,7 @@ public class H2CommandUnPacker extends CommandUnPacker<H2Packet> {
     }
 
     H2CommandHandler cmdHandler;
+    CommandStore<H2Command> store;
 
     // RFC 7540 § 6.2 and § 6.10: a HEADERS/PUSH_PROMISE frame without
     // END_HEADERS starts a header block that must be terminated by a
@@ -51,8 +52,9 @@ public class H2CommandUnPacker extends CommandUnPacker<H2Packet> {
     // distinguish "idle" from "closed" when a stream is absent from the map.
     int highestSeenStreamId;
 
-    public H2CommandUnPacker(H2CommandHandler cmdHandler) {
+    public H2CommandUnPacker(H2CommandHandler cmdHandler, CommandStore<H2Command> store) {
         this.cmdHandler = cmdHandler;
+        this.store = store;
         reset();
     }
 
@@ -85,52 +87,8 @@ public class H2CommandUnPacker extends CommandUnPacker<H2Packet> {
         validateFrame(pkt);
         validateStreamState(pkt);
 
-        H2Command cmd;
-        switch (type) {
-            case H2Type.Preface:
-                cmd = new CmdPreface(pkt.streamId, pkt.flags);
-                break;
-
-            case H2Type.Headers:
-                cmd = new CmdHeaders(pkt.streamId, pkt.flags);
-                break;
-
-            case H2Type.Priority:
-                cmd = new CmdPriority(pkt.streamId, pkt.flags);
-                break;
-
-            case H2Type.Settings:
-                cmd = new CmdSettings(pkt.streamId, pkt.flags);
-                break;
-
-            case H2Type.WindowUpdate:
-                cmd = new CmdWindowUpdate(pkt.streamId, pkt.flags);
-                break;
-
-            case H2Type.Data:
-                cmd = new CmdData(pkt.streamId, pkt.flags);
-                break;
-
-            case H2Type.Goaway:
-                cmd = new CmdGoAway(pkt.streamId, pkt.flags);
-                break;
-
-            case H2Type.Ping:
-                cmd = new CmdPing(pkt.streamId, pkt.flags);
-                break;
-
-            case H2Type.RstStream:
-                cmd = new CmdRstStream(pkt.streamId);
-                break;
-
-            case H2Type.Continuation:
-                cmd = new CmdContinuation(pkt.streamId);
-                break;
-
-            default:
-                // Unreachable: isKnownType() above guards this.
-                throw new IllegalStateException("Received packet: " + pkt);
-        }
+        H2Command cmd = store.rent(type);
+        cmd.init(pkt.streamId, pkt.flags);
 
         updateHeaderBlockState(pkt);
         updateStreamState(pkt);
@@ -149,7 +107,7 @@ public class H2CommandUnPacker extends CommandUnPacker<H2Packet> {
             case H2Type.Settings:
             case H2Type.PushPromise:
             case H2Type.Ping:
-            case H2Type.Goaway:
+            case H2Type.GoAway:
             case H2Type.WindowUpdate:
             case H2Type.Continuation:
                 return true;
@@ -192,7 +150,7 @@ public class H2CommandUnPacker extends CommandUnPacker<H2Packet> {
                 break;
             case H2Type.Settings:
             case H2Type.Ping:
-            case H2Type.Goaway:
+            case H2Type.GoAway:
                 if (streamId != 0)
                     throw new ProtocolException(
                             "Frame type " + type + " requires stream id 0, got " + streamId);

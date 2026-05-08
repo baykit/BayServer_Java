@@ -5,6 +5,7 @@ import yokohama.baykit.bayserver.agent.monitor.GrandAgentMonitor;
 import yokohama.baykit.bayserver.agent.signal.SignalAgent;
 import yokohama.baykit.bayserver.agent.signal.SignalSender;
 import yokohama.baykit.bayserver.common.*;
+import yokohama.baykit.bayserver.protocol.CommandStore;
 import yokohama.baykit.bayserver.rudder.*;
 import yokohama.baykit.bayserver.taxi.TaxiRunner;
 import yokohama.baykit.bayserver.train.TrainRunner;
@@ -233,6 +234,7 @@ public class BayServer {
 
             /** Init stores, memory usage managers */
             PacketStore.init();
+            CommandStore.init();
             RudderStateStore.init();
             InboundShipStore.init();
             ProtocolHandlerStore.init();

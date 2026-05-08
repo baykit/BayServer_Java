@@ -17,8 +17,9 @@ public class FcgProtocolHandler
             PacketPacker<FcgPacket> packetPacker,
             CommandUnPacker<FcgPacket> commandUnpacker,
             CommandPacker<FcgCommand, FcgPacket, ?> commandPacker,
+            CommandStore<FcgCommand> cmdStore,
             boolean serverMode) {
-        super(packetUnpacker, packetPacker, commandUnpacker, commandPacker, fcgHandler, serverMode);
+        super(packetUnpacker, packetPacker, commandUnpacker, commandPacker, fcgHandler, cmdStore, serverMode);
     }
 
     @Override

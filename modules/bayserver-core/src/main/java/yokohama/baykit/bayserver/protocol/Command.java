@@ -1,10 +1,11 @@
 package yokohama.baykit.bayserver.protocol;
 
 import yokohama.baykit.bayserver.agent.NextSocketAction;
+import yokohama.baykit.bayserver.util.Reusable;
 
 import java.io.IOException;
 
-public abstract class Command<C extends Command<C, P, H>, P extends Packet, H extends CommandHandler<C>> {
+public abstract class Command<C extends Command<C, P, H>, P extends Packet, H extends CommandHandler<C>> implements Reusable {
 
     public int type;
 

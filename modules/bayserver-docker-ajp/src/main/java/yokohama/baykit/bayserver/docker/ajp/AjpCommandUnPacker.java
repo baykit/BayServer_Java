@@ -4,6 +4,7 @@ import yokohama.baykit.bayserver.BayLog;
 import yokohama.baykit.bayserver.Sink;
 import yokohama.baykit.bayserver.agent.NextSocketAction;
 import yokohama.baykit.bayserver.docker.ajp.command.*;
+import yokohama.baykit.bayserver.protocol.CommandStore;
 import yokohama.baykit.bayserver.protocol.CommandUnPacker;
 
 import java.io.IOException;
@@ -11,9 +12,11 @@ import java.io.IOException;
 public class AjpCommandUnPacker extends CommandUnPacker<AjpPacket> {
 
     AjpCommandHandler cmdHandler;
+    CommandStore<AjpCommand> cmdStore;
 
-    public AjpCommandUnPacker(AjpCommandHandler cmdHandler) {
+    public AjpCommandUnPacker(AjpCommandHandler cmdHandler, CommandStore<AjpCommand> cmdStore) {
         this.cmdHandler = cmdHandler;
+        this.cmdStore = cmdStore;
         reset();
     }
 
@@ -25,35 +28,14 @@ public class AjpCommandUnPacker extends CommandUnPacker<AjpPacket> {
     public NextSocketAction packetReceived(AjpPacket pkt) throws IOException {
 
         BayLog.debug("ajp:  packet received: type=%s datalen=%d", pkt.type(), pkt.dataLen());
-        AjpCommand cmd;
-        switch (pkt.type()) {
-            case AjpType.Data:
-                cmd = new CmdData();
-                break;
-            case AjpType.ForwardRequest:
-                cmd = new CmdForwardRequest();
-                break;
-            case AjpType.SendBodyChunk:
-                cmd = new CmdSendBodyChunk(pkt.buf, pkt.headerLen, pkt.dataLen());
-                break;
-            case AjpType.SendHeaders:
-                cmd = new CmdSendHeaders();
-                break;
-            case AjpType.EndResponse:
-                cmd = new CmdEndResponse();
-                break;
-            case AjpType.Shutdown:
-                cmd = new CmdShutdown();
-                break;
-            case AjpType.GetBodyChunk:
-                cmd = new CmdGetBodyChunk();
-                break;
-            default:
-                throw new Sink();
-        }
+        AjpCommand cmd = cmdStore.rent(pkt.type());
+        if(pkt.type() == AjpType.SendBodyChunk)
+            ((CmdSendBodyChunk)cmd).init(pkt.buf, pkt.headerLen, pkt.dataLen());
 
         cmd.unpack(pkt);
-        return cmd.handle(cmdHandler);
+        NextSocketAction res = cmd.handle(cmdHandler);
+        cmdStore.Return(cmd);
+        return res;
     }
 
     public boolean needData() {

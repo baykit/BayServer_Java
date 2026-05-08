@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.docker.fcgi;
 
 import yokohama.baykit.bayserver.docker.base.PortBase;
+import yokohama.baykit.bayserver.protocol.CommandStore;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
 
@@ -35,6 +36,10 @@ public class FcgPortDocker extends PortBase implements FcgDocker{
         PacketStore.registerProtocol(
                 PROTO_NAME,
                 new FcgPacketFactory()
+        );
+        CommandStore.registerProtocol(
+                PROTO_NAME,
+                new FcgCommandFactory()
         );
         ProtocolHandlerStore.registerProtocol(
                 PROTO_NAME,

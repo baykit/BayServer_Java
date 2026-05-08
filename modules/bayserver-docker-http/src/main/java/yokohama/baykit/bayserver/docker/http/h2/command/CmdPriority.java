@@ -23,10 +23,22 @@ public class CmdPriority extends H2Command {
     public boolean excluded;
     public int streamDependency;
 
-    public CmdPriority(int streamId, H2Flags flags) {
-        super(H2Type.Priority, streamId, flags);
+    public CmdPriority() {
+        super(H2Type.Priority);
     }
 
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
+    }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
     @Override
     public void unpack(H2Packet pkt) throws IOException {
         super.unpack(pkt);

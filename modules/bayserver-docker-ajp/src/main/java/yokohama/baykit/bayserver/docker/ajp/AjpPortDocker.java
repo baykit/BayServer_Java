@@ -1,6 +1,7 @@
 package yokohama.baykit.bayserver.docker.ajp;
 
 import yokohama.baykit.bayserver.docker.base.PortBase;
+import yokohama.baykit.bayserver.protocol.CommandStore;
 import yokohama.baykit.bayserver.protocol.PacketStore;
 import yokohama.baykit.bayserver.protocol.ProtocolHandlerStore;
 
@@ -35,6 +36,10 @@ public class AjpPortDocker extends PortBase implements AjpDocker {
         PacketStore.registerProtocol(
                 PROTO_NAME,
                 new AjpPacketFactory()
+        );
+        CommandStore.registerProtocol(
+                PROTO_NAME,
+                new AjpCommandFactory()
         );
         ProtocolHandlerStore.registerProtocol(
                 PROTO_NAME,

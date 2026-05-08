@@ -10,7 +10,7 @@ public class H2Type {
     public static final int Settings = 4;
     public static final int PushPromise = 5;
     public static final int Ping = 6;
-    public static final int Goaway = 7;
+    public static final int GoAway = 7;
     public static final int WindowUpdate = 8;
     public static final int Continuation = 9;
 
@@ -22,7 +22,7 @@ public class H2Type {
             Settings,
             PushPromise,
             Ping,
-            Goaway,
+            GoAway,
             WindowUpdate,
             Continuation
     };

@@ -33,9 +33,22 @@ public class CmdBeginRequest extends FcgCommand {
     public int role;
     public boolean keepConn;
 
-    public CmdBeginRequest(int reqId) {
-        super(FcgType.BeginRequest, reqId);
+    public CmdBeginRequest() {
+        super(FcgType.BeginRequest);
     }
+
+    ///////////////////////////////////////////////
+    // Implements Reusable
+    ///////////////////////////////////////////////
+
+    @Override
+    public void reset() {
+
+    }
+
+    ///////////////////////////////////////////////
+    // Implements Command
+    ///////////////////////////////////////////////
 
     @Override
     public void unpack(FcgPacket pkt) throws IOException {
