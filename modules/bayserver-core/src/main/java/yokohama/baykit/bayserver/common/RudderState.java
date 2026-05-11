@@ -48,6 +48,21 @@ public class RudderState implements Reusable {
     public EOFChecker eofChecker;
     public int timeoutSec;
     public int bufsize;
+    /**
+     * If true, the SpiderMultiplexer re-arms TCP_QUICKACK on this socket
+     * after every read so the kernel sends the ACK immediately instead
+     * of holding it on the delayed-ACK timer. Only meaningful for warp
+     * upstream connections to backends that keep Nagle on (= php-fpm and
+     * friends): the delayed-ACK timer combined with backend Nagle
+     * stalls responses that span a few segments.
+     *
+     * Inbound (= client-facing) sockets don't need this -- clients
+     * usually set TCP_NODELAY themselves, and a setsockopt per read
+     * costs CPU -- so warp
+     * code sets the flag explicitly when wiring up the upstream socket,
+     * leaving inbound sockets untouched.
+     */
+    public boolean quickAck;
 
     public RudderState() {
 
@@ -118,6 +133,7 @@ public class RudderState implements Reusable {
         writing[0] = false;
         eofChecker = null;
         timeoutSec = 0;
+        quickAck = false;
     }
 
     ////////////////////////////////////////////
