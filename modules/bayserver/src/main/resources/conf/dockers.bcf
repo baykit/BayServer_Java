@@ -14,6 +14,7 @@ club:phpCgi         yokohama.baykit.bayserver.docker.cgi.PhpCgiDocker
 club:pharos         yokohama.baykit.bayserver.docker.pharos.PharosDocker
 club:ajpWarp        yokohama.baykit.bayserver.docker.ajp.AjpWarpDocker
 club:fcgiWarp       yokohama.baykit.bayserver.docker.fcgi.FcgWarpDocker
+club:phpverse         yokohama.baykit.bayserver.docker.phpverse.PhpVerseDocker
 club:httpWarp       yokohama.baykit.bayserver.docker.http.HtpWarpDocker
 log                 yokohama.baykit.bayserver.docker.builtin.BuiltInLogDocker
 permission          yokohama.baykit.bayserver.docker.builtin.BuiltInPermissionDocker

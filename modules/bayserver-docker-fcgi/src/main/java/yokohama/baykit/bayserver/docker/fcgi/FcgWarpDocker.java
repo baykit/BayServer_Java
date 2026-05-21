@@ -57,6 +57,20 @@ public class FcgWarpDocker extends WarpBase implements FcgDocker {
         return false;
     }
 
+    /**
+     * Decorate the SCRIPT_FILENAME FCGI parameter before sending it to
+     * the upstream. The default `proxy:fcgi://host:port` prefix
+     * disarms php-fpm's defensive URL-reinterpretation of the value
+     * (see php.net/manual/en/security.cgi-bin.attack.php), so it's
+     * the right default for any php-fpm-style backend. Subclasses that
+     * talk to a backend without that quirk (= PhpVerseDocker / phpverse,
+     * which just uses SCRIPT_FILENAME as a filesystem path) override
+     * to return the raw path.
+     */
+    public String decorateScriptFilename(String scriptFname) {
+        return "proxy:fcgi://" + host + ":" + port + scriptFname;
+    }
+
     //////////////////////////////////////////////////////////////////////////////////////////
     // Implements WarpDockerBase
     //////////////////////////////////////////////////////////////////////////////////////////
