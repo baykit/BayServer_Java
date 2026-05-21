@@ -12,6 +12,7 @@
     <module>modules/bayserver-docker-ajp</module>
     <module>modules/bayserver-docker-cgi</module>
     <module>modules/bayserver-docker-fcgi</module>
+    <module>modules/bayserver-docker-phpverse</module>
     <module>modules/bayserver-docker-http</module>
     <module>modules/bayserver-docker-pharos</module>
     <module>modules/bayserver-docker-http3</module>

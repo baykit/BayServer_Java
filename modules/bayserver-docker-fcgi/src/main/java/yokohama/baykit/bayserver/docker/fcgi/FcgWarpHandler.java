@@ -359,7 +359,7 @@ public class FcgWarpHandler implements WarpHandler, FcgHandler {
             throw new ProtocolException("Invalid CGI environment value");
         }
 
-        scriptFname[0] = "proxy:fcgi://" +  ((FcgWarpDocker) ship().docker()).host + ":" +  ship().docker().port() + scriptFname[0];
+        scriptFname[0] = ((FcgWarpDocker) ship().docker()).decorateScriptFilename(scriptFname[0]);
         cmd.addParam(CGIUtil.SCRIPT_FILENAME, scriptFname[0]);
 
         cmd.addParam(FcgParams.CONTEXT_PREFIX, "");

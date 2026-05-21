@@ -57,7 +57,7 @@ public abstract class WarpBase extends ClubBase implements Warp {
     public int port = -1;
     public String warpBase;
     protected int maxShips = -1;
-    SocketAddress hostAddr;
+    protected SocketAddress hostAddr;
     int timeoutSec = -1; // -1 means "Use harbor.socketTimeoutSec"
 
     final List<Tour> tourList = new ArrayList<>();
@@ -174,6 +174,12 @@ public abstract class WarpBase extends ClubBase implements Warp {
 
         try {
             BayLog.trace("%s got from store", wsip);
+            // Resolve once per arrive(). Subclasses that have per-agent
+            // upstream addresses (= e.g. PhpVerseDocker spawning one
+            // phpverse daemon per grand agent) override hostAddrFor()
+            // to return an agent-specific SocketAddress instead of the
+            // single shared this.hostAddr.
+            SocketAddress addr = hostAddrFor(agt.agentId);
             boolean needConnect = false;
             Transporter tp = null;
             if (!wsip.initialized) {
@@ -181,21 +187,21 @@ public abstract class WarpBase extends ClubBase implements Warp {
 
                 if(agt.netMultiplexer.useAsyncAPI()) {
                     AsynchronousSocketChannel ch;
-                    if(hostAddr instanceof InetSocketAddress)
+                    if(addr instanceof InetSocketAddress)
                         ch = AsynchronousSocketChannel.open();
                     else
                         throw new HttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Asynchronous mode not supported for UNIX domain socket");
-                    if (hostAddr instanceof InetSocketAddress)
+                    if (addr instanceof InetSocketAddress)
                         ch.setOption(java.net.StandardSocketOptions.TCP_NODELAY, true);
                     rd = new AsynchronousSocketChannelRudder(ch);
                 }
                 else {
                     SocketChannel ch;
-                    if(hostAddr instanceof InetSocketAddress)
+                    if(addr instanceof InetSocketAddress)
                         ch = SocketChannel.open();
                     else
                         ch = SysUtil.openUnixDomainSocketChannel();
-                    if (hostAddr instanceof InetSocketAddress)
+                    if (addr instanceof InetSocketAddress)
                         ch.setOption(java.net.StandardSocketOptions.TCP_NODELAY, true);
                     rd = new SocketChannelRudder(ch);
                 }
@@ -224,7 +230,7 @@ public abstract class WarpBase extends ClubBase implements Warp {
                 RudderState st = RudderStateStore.getStore(agt.agentId).rent();
                 st.init(wsip.rudder, tp);
                 agt.netMultiplexer.addRudderState(wsip.rudder, st);
-                agt.netMultiplexer.getTransporter(wsip.rudder).reqConnect(wsip.rudder, hostAddr);
+                agt.netMultiplexer.getTransporter(wsip.rudder).reqConnect(wsip.rudder, addr);
             }
 
         }
@@ -254,6 +260,18 @@ public abstract class WarpBase extends ClubBase implements Warp {
      * reuse pool. Default no-op.
      */
     protected void onShipRented(GrandAgent agt, WarpShip wsip) {
+    }
+
+    /**
+     * Resolve the upstream connect address for a given grand agent.
+     * Default returns the single shared {@link #hostAddr} populated by
+     * init() from the plan's host / port keys. Subclasses that maintain
+     * a per-agent upstream (= e.g. PhpVerseDocker spawning one phpverse
+     * daemon per grand agent on a per-agent unix sock) override this
+     * to return the agent-specific SocketAddress.
+     */
+    protected SocketAddress hostAddrFor(int agentId) {
+        return hostAddr;
     }
 
     /////////////////////////////////////

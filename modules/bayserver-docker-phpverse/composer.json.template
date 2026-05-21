@@ -1,0 +1,25 @@
+{
+    "name": "baykit/bayserver-docker-phpverse",
+    "description": "Composer side of BayServer's PhpVerseDocker (= PHP runtime: PHPVerse).",
+    "license": "LicenseRef-Baykit-1.1",
+    "type": "library",
+    "homepage": "http://baykit.yokohama",
+    "require": {
+        "php": ">=8.1",
+        "baykit/phpverse": "*"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "${PHPVERSE_PATH}",
+            "options": {
+                "symlink": false
+            }
+        }
+    ],
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
